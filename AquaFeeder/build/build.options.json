@@ -1,0 +1,9 @@
+{
+  "additionalFiles": "..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..,..\\..",
+  "compiler.optimization_flags": "-Os",
+  "customBuildProperties": "",
+  "fqbn": "esp32:esp32:esp32",
+  "hardwareFolders": "C:\\Users\\nsaty\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0,C:\\Users\\nsaty\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0",
+  "otherLibrariesFolders": "C:\\Users\\nsaty\\Documents\\Arduino\\libraries",
+  "sketchLocation": "C:\\Users\\nsaty\\Documents\\Dilip Work\\Aqua_feeder\\AquaFeeder"
+}
