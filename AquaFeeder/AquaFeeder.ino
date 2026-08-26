@@ -573,6 +573,19 @@ void runHardwareDiagnostics() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// CLOUD FREERTOS TASK (Runs on Core 0)
+// ═══════════════════════════════════════════════════════════════════════════
+void cloudTask(void* pvParameters) {
+    while (true) {
+        cloudMgr.loop();
+        if (loraMgr.isAvailable()) {
+            loraMgr.loop();
+        }
+        vTaskDelay(pdMS_TO_TICKS(10)); // Yield to IDLE task
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // SETUP
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -780,6 +793,17 @@ void setup() {
     hal.blinkGreen(3, 200);  // 3 blinks = boot OK
     Serial.println("\n[OK] Initialization complete! Type H for help.\n");
 
+    // ── Create FreeRTOS Task for Cloud / LoRa ──
+    xTaskCreatePinnedToCore(
+        cloudTask,       // Task function
+        "CloudTask",     // Name
+        8192,            // Stack size (bytes)
+        NULL,            // Parameters
+        1,               // Priority
+        NULL,            // Task handle
+        0                // Core 0 (Main loop runs on Core 1)
+    );
+
     // Start on status screen or AP config if first boot
     currentMenu = firstBoot ? MenuState::MAIN_STATUS : MenuState::MAIN_STATUS;
 }
@@ -952,14 +976,8 @@ void loop() {
     // ── 10. Telemetry Periodic Check ──
     telMgr.update(nowMs);
 
-    // ── 11. Cloud Manager (send queued telemetry) ──
-    cloudMgr.loop();
-
-    // ── 12. LoRa MAC Processing ──
-    if (loraMgr.isAvailable()) {
-        loraMgr.loop();
-    }
-
+    // ── 11. Cloud and LoRa processing moved to FreeRTOS CloudTask on Core 0 ──
+    
     // ── 13. GSM Processing ──
     if (gsmMgr.isAvailable()) {
         gsmMgr.loop();

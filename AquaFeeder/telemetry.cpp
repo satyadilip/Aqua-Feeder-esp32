@@ -7,6 +7,7 @@ void TelemetryManager::begin(SystemStatus* status, DeviceConfig* cfg) {
     _tail = 0;
     _count = 0;
     _lastPeriodicMs = 0;
+    _mutex = xSemaphoreCreateMutex();
 }
 
 void TelemetryManager::queueEvent(TelemetryMsgType type) {
@@ -38,40 +39,63 @@ void TelemetryManager::queueEvent(TelemetryMsgType type) {
 }
 
 void TelemetryManager::queueEvent(const TelemetryEvent& event) {
-    if (_count >= TELEMETRY_QUEUE_SIZE) {
-        // Drop oldest event
-        _tail = (_tail + 1) % TELEMETRY_QUEUE_SIZE;
-        _count--;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        if (_count >= TELEMETRY_QUEUE_SIZE) {
+            // Drop oldest event
+            _tail = (_tail + 1) % TELEMETRY_QUEUE_SIZE;
+            _count--;
+        }
+        _queue[_head] = event;
+        _head = (_head + 1) % TELEMETRY_QUEUE_SIZE;
+        _count++;
+        xSemaphoreGive(_mutex);
     }
-    _queue[_head] = event;
-    _head = (_head + 1) % TELEMETRY_QUEUE_SIZE;
-    _count++;
 }
 
 bool TelemetryManager::hasEvents() const {
-    return _count > 0;
+    bool has = false;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        has = _count > 0;
+        xSemaphoreGive(_mutex);
+    }
+    return has;
 }
 
 TelemetryEvent* TelemetryManager::peekNext() {
-    if (_count == 0) return nullptr;
-    return &_queue[_tail];
+    TelemetryEvent* ptr = nullptr;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        if (_count > 0) ptr = &_queue[_tail];
+        xSemaphoreGive(_mutex);
+    }
+    return ptr;
 }
 
 void TelemetryManager::markSent() {
-    if (_count > 0) {
-        _tail = (_tail + 1) % TELEMETRY_QUEUE_SIZE;
-        _count--;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        if (_count > 0) {
+            _tail = (_tail + 1) % TELEMETRY_QUEUE_SIZE;
+            _count--;
+        }
+        xSemaphoreGive(_mutex);
     }
 }
 
 void TelemetryManager::markFailed() {
-    if (_count > 0) {
-        _queue[_tail].retries++;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        if (_count > 0) {
+            _queue[_tail].retries++;
+        }
+        xSemaphoreGive(_mutex);
     }
 }
 
 int TelemetryManager::pendingCount() const {
-    return _count;
+    int c = 0;
+    if (_mutex && xSemaphoreTake(_mutex, portMAX_DELAY)) {
+        c = _count;
+        xSemaphoreGive(_mutex);
+    }
+    return c;
 }
 
 void TelemetryManager::update(unsigned long nowMs) {

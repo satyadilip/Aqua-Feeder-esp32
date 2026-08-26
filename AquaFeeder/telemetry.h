@@ -1,6 +1,8 @@
 #pragma once
 
 #include "config.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 
 class TelemetryManager {
 public:
@@ -22,4 +24,5 @@ private:
     int _tail;
     int _count;
     unsigned long _lastPeriodicMs;
+    SemaphoreHandle_t _mutex;
 };
