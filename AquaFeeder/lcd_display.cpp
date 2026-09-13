@@ -156,8 +156,8 @@ void LCDDisplay::update(const SystemStatus& status, const DeviceConfig& cfg, Men
         case MenuState::MENU_LIST: drawMenuList(menuCursor); break;
         case MenuState::EDIT_QTY: drawEditQty(editValue); break;
         case MenuState::EDIT_FPE: drawEditFPE(editValue); break;
-        case MenuState::EDIT_TIME: drawEditTime(editValue); break;
-        case MenuState::EDIT_START_TIME: drawEditStartTime(editValue, editField); break;
+        case MenuState::EDIT_START_TIME: drawEditStartTime(cfg, editValue, editField); break;
+        case MenuState::EDIT_END_TIME: drawEditEndTime(cfg, editValue, editField); break;
         case MenuState::EDIT_RATE: drawEditRate(editValue); break;
         case MenuState::EDIT_CLOCK: drawEditClock(status, editValue, editField); break;
         case MenuState::RUNNING: drawRunning(status); break;
@@ -203,10 +203,12 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
     if (status.feedActive) {
         if (status.feedState == FeedCycleState::FC_WAIT) {
             long remSec = status.nextFeedEpoch > status.currentEpoch ? (status.nextFeedEpoch - status.currentEpoch) : 0;
-            snprintf(buf, sizeof(buf), "E:%d/%ld W:%lds       ", status.currentEvent, status.totalEvents, remSec);
+            snprintf(buf, sizeof(buf), "E:%d/%ld W:%lds", status.currentEvent, status.totalEvents, remSec);
         } else {
-            snprintf(buf, sizeof(buf), "E:%d/%ld FEEDING      ", status.currentEvent, status.totalEvents);
+            snprintf(buf, sizeof(buf), "E:%d/%ld FEEDING", status.currentEvent, status.totalEvents);
         }
+        for(int i = strlen(buf); i < 20; i++) buf[i] = ' ';
+        buf[20] = '\0';
     } else {
         snprintf(buf, sizeof(buf), "Press [SEL] for Menu");
     }
@@ -214,7 +216,7 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
     
     // Line 4: Clean Network Connectivity Indicators
     lcd->setCursor(0, 3);
-    snprintf(buf, sizeof(buf), "LoRa:%-2s WiFi:%-2s GSM:%-2s", 
+    snprintf(buf, sizeof(buf), "LR:%-2s WF:%-2s GM:%-2s   ", 
         getConnStatusStr(status.loraStatus), 
         getConnStatusStr(status.wifiStatus), 
         getConnStatusStr(status.gsmStatus));
@@ -225,8 +227,8 @@ void LCDDisplay::drawMenuList(int menuCursor) {
     const char* items[] = {
         "Feed Quantity", 
         "Feed Per Event", 
-        "Duration Window", 
         "Start Time", 
+        "End Time", 
         "Discharge Rate", 
         "Set Real Clock", 
         "Start Feeding", 
@@ -268,7 +270,7 @@ void LCDDisplay::drawEditQty(int editValue) {
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Save");
+    lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
 }
 
 void LCDDisplay::drawEditFPE(int editValue) {
@@ -284,31 +286,16 @@ void LCDDisplay::drawEditFPE(int editValue) {
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Save");
+    lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
 }
 
-void LCDDisplay::drawEditTime(int editValue) {
-    lcd->setCursor(0, 0);
-    lcd->print("== FEED DURATION ===");
-    
-    char buf[21];
-    lcd->setCursor(0, 1);
-    snprintf(buf, sizeof(buf), "   Window: %2d Hours ", editValue);
-    lcd->print(buf);
-    
-    lcd->setCursor(0, 2);
-    lcd->print("                    ");
-    
-    lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Save");
-}
 
-void LCDDisplay::drawEditStartTime(int editValue, int editField) {
+void LCDDisplay::drawEditStartTime(const DeviceConfig& cfg, int editValue, int editField) {
     lcd->setCursor(0, 0);
     lcd->print("==== START TIME ====");
     
-    int hh = editValue / 100;
-    int mm = editValue % 100;
+    int hh = (editField == 0) ? editValue : cfg.startHour;
+    int mm = (editField == 1) ? editValue : cfg.startMinute;
     
     char buf[21];
     lcd->setCursor(0, 1);
@@ -323,7 +310,30 @@ void LCDDisplay::drawEditStartTime(int editValue, int editField) {
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Next");
+    lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
+}
+
+void LCDDisplay::drawEditEndTime(const DeviceConfig& cfg, int editValue, int editField) {
+    lcd->setCursor(0, 0);
+    lcd->print("===== END TIME =====");
+    
+    int hh = (editField == 0) ? editValue : cfg.endHour;
+    int mm = (editField == 1) ? editValue : cfg.endMinute;
+    
+    char buf[21];
+    lcd->setCursor(0, 1);
+    if (editField == 0) {
+        snprintf(buf, sizeof(buf), "    Time: [%02d]:%02d   ", hh, mm);
+    } else {
+        snprintf(buf, sizeof(buf), "    Time:  %02d:[%02d]  ", hh, mm);
+    }
+    lcd->print(buf);
+    
+    lcd->setCursor(0, 2);
+    lcd->print("                    ");
+    
+    lcd->setCursor(0, 3);
+    lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
 }
 
 void LCDDisplay::drawEditRate(int editValue) {
@@ -339,12 +349,12 @@ void LCDDisplay::drawEditRate(int editValue) {
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Save");
+    lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
 }
 
 void LCDDisplay::drawEditClock(const SystemStatus& status, int editValue, int editField) {
     lcd->setCursor(0, 0);
-    lcd->print("==== SET RTC CLOCK ===");
+    lcd->print("=== SET RTC CLOCK ==");
     
     int hh = editValue / 100;
     int mm = editValue % 100;
@@ -417,18 +427,18 @@ void LCDDisplay::drawPaused(const SystemStatus& status) {
     
     lcd->setCursor(0, 1);
     if (status.proximityTriggered) {
-        lcd->print("Reason: CHUTE BLOCKED");
+        lcd->print("Error: CHUTE BLOCKED");
     } else if (status.currentMA > OVERCURRENT_LIMIT_MA) {
-        lcd->print("Reason: OVERCURRENT ");
+        lcd->print("Error: OVERCURRENT  ");
     } else {
-        lcd->print("Reason: MANUAL STOP ");
+        lcd->print("Error: MANUAL STOP  ");
     }
     
     lcd->setCursor(0, 2);
-    lcd->print("Press [SEL] to Resume");
+    lcd->print("[SEL]: Resume       ");
     
     lcd->setCursor(0, 3);
-    lcd->print("Press [BACK] to Cancel");
+    lcd->print("[BACK]: Cancel      ");
 }
 
 void LCDDisplay::drawFinished(const SystemStatus& status) {
@@ -473,15 +483,15 @@ void LCDDisplay::drawPowerInfo(const SystemStatus& status) {
     lcd->print("=== POWER MONITOR ==");
     
     lcd->setCursor(0, 1);
-    snprintf(buf, sizeof(buf), " Voltage: %5.2f V    ", status.voltageV);
+    snprintf(buf, sizeof(buf), " Voltage: %5.2f V   ", status.voltageV);
     lcd->print(buf);
     
     lcd->setCursor(0, 2);
-    snprintf(buf, sizeof(buf), " Current: %5.0f mA   ", status.currentMA);
+    snprintf(buf, sizeof(buf), " Current: %5.0f mA  ", status.currentMA);
     lcd->print(buf);
     
     lcd->setCursor(0, 3);
-    snprintf(buf, sizeof(buf), " Power:   %5.0f mW   ", status.powerMW);
+    snprintf(buf, sizeof(buf), " Power:   %5.0f mW  ", status.powerMW);
     lcd->print(buf);
 }
 

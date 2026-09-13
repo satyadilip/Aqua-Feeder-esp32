@@ -3,19 +3,19 @@
 // Global instance defined in AquaFeeder.ino via af_hal.h extern declaration
 
 void HardwareLayer::begin() {
-    // Relays
+    // Relays (Active LOW)
     pinMode(PIN_RELAY_LOADER, OUTPUT);
-    digitalWrite(PIN_RELAY_LOADER, LOW);
+    digitalWrite(PIN_RELAY_LOADER, HIGH);
     pinMode(PIN_RELAY_DISPENSER, OUTPUT);
-    digitalWrite(PIN_RELAY_DISPENSER, LOW);
+    digitalWrite(PIN_RELAY_DISPENSER, HIGH);
     
     // LEDs & Hooter
     pinMode(PIN_LED_RED, OUTPUT);
-    digitalWrite(PIN_LED_RED, LOW);
+    digitalWrite(PIN_LED_RED, LOW); // Assuming LEDs are active HIGH based on normal design, if not we will invert later
     pinMode(PIN_LED_GREEN, OUTPUT);
     digitalWrite(PIN_LED_GREEN, LOW);
     pinMode(PIN_HOOTER, OUTPUT);
-    digitalWrite(PIN_HOOTER, LOW);
+    digitalWrite(PIN_HOOTER, HIGH); // Hooter is Active LOW
 
     // Proximity
     pinMode(PIN_PROXIMITY, INPUT_PULLUP);
@@ -47,23 +47,23 @@ void HardwareLayer::initButton(ButtonState& btn, uint8_t pin) {
 
 void HardwareLayer::setRelay(int relay, bool on) {
     uint8_t pin = (relay == 1) ? PIN_RELAY_LOADER : PIN_RELAY_DISPENSER;
-    digitalWrite(pin, on ? HIGH : LOW);
+    digitalWrite(pin, on ? LOW : HIGH); // Active LOW
     delay(100); // 100ms delay for relay settle
     Serial.printf("[HAL] Relay %d set to %s\n", relay, on ? "ON" : "OFF");
 }
 
 void HardwareLayer::motorsOff() {
-    digitalWrite(PIN_RELAY_LOADER, LOW);
-    digitalWrite(PIN_RELAY_DISPENSER, LOW);
+    digitalWrite(PIN_RELAY_LOADER, HIGH); // Active LOW
+    digitalWrite(PIN_RELAY_DISPENSER, HIGH);
     delay(100);
     
     bool r1 = digitalRead(PIN_RELAY_LOADER);
     bool r2 = digitalRead(PIN_RELAY_DISPENSER);
     
-    if (r1 != LOW || r2 != LOW) {
+    if (r1 != HIGH || r2 != HIGH) {
         Serial.println("[HAL] Mismatch reading relay state. Retrying...");
-        digitalWrite(PIN_RELAY_LOADER, LOW);
-        digitalWrite(PIN_RELAY_DISPENSER, LOW);
+        digitalWrite(PIN_RELAY_LOADER, HIGH);
+        digitalWrite(PIN_RELAY_DISPENSER, HIGH);
         delay(100);
         r1 = digitalRead(PIN_RELAY_LOADER);
         r2 = digitalRead(PIN_RELAY_DISPENSER);
@@ -73,7 +73,7 @@ void HardwareLayer::motorsOff() {
 }
 
 void HardwareLayer::setHooter(bool on) {
-    digitalWrite(PIN_HOOTER, on ? HIGH : LOW);
+    digitalWrite(PIN_HOOTER, on ? LOW : HIGH); // Active LOW
 }
 
 void HardwareLayer::setLedRed(bool on) {

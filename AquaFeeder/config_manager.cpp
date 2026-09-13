@@ -1,5 +1,6 @@
 #include "config_manager.h"
 #include <Preferences.h>
+#include <esp_mac.h>
 
 ConfigManager configManager;
 static Preferences prefs;
@@ -13,23 +14,32 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     
     cfg.feedQuantity = prefs.getFloat("qty", FEED_QTY_DEFAULT);
     cfg.feedPerEvent = prefs.getInt("fpe", FEED_FPE_DEFAULT);
-    cfg.feedTime = prefs.getInt("ftime", FEED_TIME_DEFAULT);
     cfg.startHour = prefs.getInt("shour", FEED_START_HOUR_DEFAULT);
     cfg.startMinute = prefs.getInt("smin", FEED_START_MIN_DEFAULT);
+    cfg.endHour = prefs.getInt("ehour", FEED_END_HOUR_DEFAULT);
+    cfg.endMinute = prefs.getInt("emin", FEED_END_MIN_DEFAULT);
     cfg.dischargeRate = prefs.getInt("drate", FEED_RATE_DEFAULT);
     
     cfg.telemetryIntervalS = prefs.getUInt("txIntv", TELEMETRY_INTERVAL_DEFAULT_S);
     cfg.uplinkMode = (UplinkMode)prefs.getUChar("uplnk", (uint8_t)UplinkMode::AUTO_FAILOVER);
     
-    const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x01 };
-    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
     const uint8_t defaultAppKey[16] = { 
         0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 
         0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C 
     };
 
-    if (prefs.getBytesLength("devEUI") == 8) prefs.getBytes("devEUI", cfg.loraDevEUI, 8);
-    else memcpy(cfg.loraDevEUI, defaultDevEUI, 8);
+    // Auto-generate DevEUI from ESP32 default MAC address (EUI-64 format)
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+    cfg.loraDevEUI[0] = mac[0];
+    cfg.loraDevEUI[1] = mac[1];
+    cfg.loraDevEUI[2] = mac[2];
+    cfg.loraDevEUI[3] = 0xFF;
+    cfg.loraDevEUI[4] = 0xFE;
+    cfg.loraDevEUI[5] = mac[3];
+    cfg.loraDevEUI[6] = mac[4];
+    cfg.loraDevEUI[7] = mac[5];
     
     if (prefs.getBytesLength("appEUI") == 8) prefs.getBytes("appEUI", cfg.loraAppEUI, 8);
     else memcpy(cfg.loraAppEUI, defaultAppEUI, 8);
@@ -61,7 +71,7 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     prefs.end();
     
     Serial.println("[CONFIG] Configuration loaded from NVS");
-    Serial.printf("[CONFIG] Qty: %.1f kg, FPE: %d g, Time: %d h\n", cfg.feedQuantity, cfg.feedPerEvent, cfg.feedTime);
+    Serial.printf("[CONFIG] Qty: %.1f kg, FPE: %d g, Time: %02d:%02d to %02d:%02d\n", cfg.feedQuantity, cfg.feedPerEvent, cfg.startHour, cfg.startMinute, cfg.endHour, cfg.endMinute);
 }
 
 void ConfigManager::saveConfig(const DeviceConfig& cfg) {
@@ -88,9 +98,10 @@ void ConfigManager::saveFeedParams(const DeviceConfig& cfg) {
     prefs.begin(NVS_NAMESPACE, false);
     prefs.putFloat("qty", cfg.feedQuantity);
     prefs.putInt("fpe", cfg.feedPerEvent);
-    prefs.putInt("ftime", cfg.feedTime);
     prefs.putInt("shour", cfg.startHour);
     prefs.putInt("smin", cfg.startMinute);
+    prefs.putInt("ehour", cfg.endHour);
+    prefs.putInt("emin", cfg.endMinute);
     prefs.putInt("drate", cfg.dischargeRate);
     prefs.end();
     Serial.println("[CONFIG] Feed parameters saved to NVS");
@@ -119,16 +130,17 @@ void ConfigManager::saveNetworkConfig(const DeviceConfig& cfg) {
 void ConfigManager::resetToDefaults(DeviceConfig& cfg) {
     cfg.feedQuantity = FEED_QTY_DEFAULT;
     cfg.feedPerEvent = FEED_FPE_DEFAULT;
-    cfg.feedTime = FEED_TIME_DEFAULT;
     cfg.startHour = FEED_START_HOUR_DEFAULT;
     cfg.startMinute = FEED_START_MIN_DEFAULT;
+    cfg.endHour = FEED_END_HOUR_DEFAULT;
+    cfg.endMinute = FEED_END_MIN_DEFAULT;
     cfg.dischargeRate = FEED_RATE_DEFAULT;
     
     cfg.telemetryIntervalS = TELEMETRY_INTERVAL_DEFAULT_S;
     cfg.uplinkMode = UplinkMode::AUTO_FAILOVER;
     
     const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x01 };
-    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
     const uint8_t defaultAppKey[16] = { 
         0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 
         0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C 

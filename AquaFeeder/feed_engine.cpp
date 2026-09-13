@@ -21,12 +21,19 @@ bool FeedEngine::calcSchedule() {
     _status->scheduleValid = false;
     memset(_status->schedError, 0, sizeof(_status->schedError));
     
-    if (_cfg->startHour < OP_START_HOUR || _cfg->startHour >= OP_END_HOUR) {
-        strncpy(_status->schedError, "Invalid Start", sizeof(_status->schedError)-1);
+    if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR) {
+        strncpy(_status->schedError, "Out of OP Window", sizeof(_status->schedError)-1);
         return false;
     }
     
-    if (_cfg->feedQuantity <= 0 || _cfg->feedPerEvent <= 0 || _cfg->dischargeRate <= 0 || _cfg->feedTime <= 0) {
+    int startMins = _cfg->startHour * 60 + _cfg->startMinute;
+    int endMins = _cfg->endHour * 60 + _cfg->endMinute;
+    if (endMins <= startMins) {
+        strncpy(_status->schedError, "End < Start", sizeof(_status->schedError)-1);
+        return false;
+    }
+    
+    if (_cfg->feedQuantity <= 0 || _cfg->feedPerEvent <= 0 || _cfg->dischargeRate <= 0) {
         strncpy(_status->schedError, "Invalid Params", sizeof(_status->schedError)-1);
         return false;
     }
@@ -39,12 +46,14 @@ bool FeedEngine::calcSchedule() {
         return false;
     }
     
-    unsigned long motorTime_ms = (float(_cfg->feedPerEvent) / _cfg->dischargeRate) * 1000UL;
+    float dRate = _cfg->dischargeRate;
+    if (dRate <= 0.1f) dRate = 50.0f; // Failsafe
+    unsigned long motorTime_ms = (float(_cfg->feedPerEvent) / dRate) * 1000.0f;
     if (motorTime_ms < MOTOR_MIN_RUN_MS) motorTime_ms = MOTOR_MIN_RUN_MS;
     _status->motorTimeMs = motorTime_ms;
     
     unsigned long totalMotor_ms = _status->totalEvents * motorTime_ms;
-    unsigned long feedTime_ms = _cfg->feedTime * 3600UL * 1000UL;
+    unsigned long feedTime_ms = (endMins - startMins) * 60UL * 1000UL;
     
     if (totalMotor_ms >= feedTime_ms) {
         strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
@@ -68,6 +77,7 @@ void FeedEngine::startFeed() {
     if (!_status) return;
     _status->feedActive = true;
     _status->currentEvent = 0;
+    _status->dispensedQuantity_g = 0.0f;
     _status->feedState = FeedCycleState::FC_IDLE;
     _fcState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
@@ -168,8 +178,9 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
             if (nowMs - _fcTimer >= MOTOR_POST_RUN_MS) {
                 if (_motorsOff) _motorsOff();
                 _status->currentEvent++;
+                _status->dispensedQuantity_g += _cfg->feedPerEvent;
                 
-                if (_status->currentEvent >= _status->totalEvents) {
+                if (_status->currentEvent >= _status->totalEvents || _status->dispensedQuantity_g >= (_cfg->feedQuantity * 1000.0f)) {
                     _status->state = SystemState::FEED_FINISHED;
                     _status->feedActive = false;
                     _fcState = FeedCycleState::FC_IDLE;
@@ -192,6 +203,57 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 _fcEntered = false;
             }
             break;
+    }
+}
+
+void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
+    if (!_status || !_cfg || !_status->feedActive) return;
+    
+    // Total remaining feed
+    float totalTarget_g = _cfg->feedQuantity * 1000.0f;
+    float remaining_g = totalTarget_g - _status->dispensedQuantity_g;
+    
+    if (remaining_g <= 0) {
+        // We've already dispensed the new target
+        stopFeed();
+        _status->state = SystemState::FEED_FINISHED;
+        return;
+    }
+    
+    // Remaining events
+    long remainingEvents = remaining_g / _cfg->feedPerEvent;
+    if (remainingEvents <= 0) remainingEvents = 1; // at least 1 event left
+    
+    // Update total events count
+    _status->totalEvents = _status->currentEvent + remainingEvents;
+    
+    // Recalculate motor time
+    float dRate = _cfg->dischargeRate;
+    if (dRate <= 0.1f) dRate = 50.0f;
+    unsigned long motorTime_ms = (float(_cfg->feedPerEvent) / dRate) * 1000.0f;
+    if (motorTime_ms < MOTOR_MIN_RUN_MS) motorTime_ms = MOTOR_MIN_RUN_MS;
+    _status->motorTimeMs = motorTime_ms;
+    
+    // Calculate remaining time
+    if (!_status->rtcOK) return;
+    
+    // Get current time from RTC epoch
+    uint32_t midnightEpoch = nowEpoch - (nowEpoch % 86400);
+    uint32_t endEpoch = midnightEpoch + (_cfg->endHour * 3600) + (_cfg->endMinute * 60);
+    
+    if (endEpoch <= nowEpoch) {
+        // We are already past end time! Feed as fast as possible.
+        _status->intervalMs = 0;
+        return;
+    }
+    
+    unsigned long remainingTimeMs = (endEpoch - nowEpoch) * 1000UL;
+    unsigned long remainingMotorMs = remainingEvents * motorTime_ms;
+    
+    if (remainingMotorMs >= remainingTimeMs) {
+        _status->intervalMs = 0; // No gap time left, run continuously
+    } else {
+        _status->intervalMs = (remainingTimeMs - remainingMotorMs) / remainingEvents;
     }
 }
 

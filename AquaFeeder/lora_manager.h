@@ -15,6 +15,10 @@ public:
     // OTAA join. Blocking up to LORA_JOIN_TIMEOUT_S. Return success.
     bool join(const uint8_t* devEUI, const uint8_t* appEUI, const uint8_t* appKey);
     
+    // Key Extraction for CLI
+    uint32_t getDevAddr();
+    void getSessionKeys(uint8_t* nwkSKey, uint8_t* appSKey);
+
     // Send uplink on specified port. Return true if ACK received or unconfirmed sent.
     bool send(const uint8_t* data, uint8_t len, uint8_t port);
     

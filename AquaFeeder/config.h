@@ -80,11 +80,10 @@
 #define FEED_FPE_MAX        500
 #define FEED_FPE_STEP       5
 
-#define FEED_TIME_DEFAULT   12      // hours (feed window duration)
-#define FEED_TIME_MIN       1
-#define FEED_TIME_MAX       12
+#define FEED_END_HOUR_DEFAULT    18
+#define FEED_END_MIN_DEFAULT     0
 
-#define FEED_RATE_DEFAULT   50      // grams/second (discharge rate)
+#define FEED_RATE_DEFAULT   100      // grams/second (discharge rate)
 #define FEED_RATE_MIN       1
 #define FEED_RATE_MAX       100
 
@@ -224,8 +223,8 @@ enum class MenuState : uint8_t {
     MENU_LIST,
     EDIT_QTY,
     EDIT_FPE,
-    EDIT_TIME,
     EDIT_START_TIME,
+    EDIT_END_TIME,
     EDIT_RATE,
     EDIT_CLOCK,
     RUNNING,
@@ -244,9 +243,10 @@ struct DeviceConfig {
     // Feed parameters
     float    feedQuantity;       // kg
     int      feedPerEvent;       // grams
-    int      feedTime;           // hours (feed window)
     int      startHour;
     int      startMinute;
+    int      endHour;
+    int      endMinute;
     int      dischargeRate;      // grams/second
 
     // Telemetry
@@ -318,6 +318,7 @@ struct SystemStatus {
     unsigned long   motorTimeMs;
     unsigned long   intervalMs;
     uint32_t        nextFeedEpoch;      // Next feed start (epoch seconds)
+    float           dispensedQuantity_g; // Dynamically track dispensed feed
 
     // Sensor readings
     float           voltageV;
@@ -381,23 +382,24 @@ struct __attribute__((packed)) LoRaSettingsPayload {
     uint8_t  msgType;          // SETTINGS_REPORT (0x22)
     uint32_t feedQuantity_g;   // feedQuantity * 1000
     uint16_t feedPerEvent_g;   // feedPerEvent
-    uint8_t  feedTime_h;       // feedTime
     uint8_t  startHour;        // startHour
     uint8_t  startMinute;      // startMinute
+    uint8_t  endHour;          // endHour
+    uint8_t  endMinute;        // endMinute
     uint16_t dischargeRate;    // dischargeRate
 };
 
 // LoRa binary downlink command packet (12 bytes)
 struct __attribute__((packed)) LoRaDownlinkPayload {
     uint8_t  msgType;          // CommandMsgType (0xA0 or 0xA1)
-    uint8_t  padding;          // Alignment padding
+    uint8_t  endMinute;        // Replaced padding with endMinute
     uint16_t feedQuantity;     // Target quantity in kg * 10
     uint16_t feedPerEvent;     // Grams per event
-    uint8_t  feedTime;         // Total window in hours
+    uint8_t  endHour;          // End hour
     uint8_t  startHour;        // Start hour
     uint8_t  startMinute;      // Start minute
     uint8_t  dischargeRate;    // g/sec
-    uint16_t reserved;         // Padding to 12 bytes
+    uint8_t  padding2[2];      // Pad to 12 bytes
 };
 
 // Button state (for debounce logic)

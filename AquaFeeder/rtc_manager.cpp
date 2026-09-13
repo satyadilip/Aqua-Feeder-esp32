@@ -15,9 +15,12 @@ bool RTCManager::begin() {
         return false;
     }
     
-    // Always set/sync DS3231 to current build compile time on boot
-    Serial.println("[RTC] Syncing DS3231 RTC with build time...");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    if (rtc.lostPower()) {
+        Serial.println("[RTC] RTC lost power, syncing with build time...");
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    } else {
+        Serial.println("[RTC] RTC retains time, skipping sync.");
+    }
     
     Serial.println("[RTC] Initialized successfully");
     return true;

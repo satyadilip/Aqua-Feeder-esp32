@@ -42,8 +42,8 @@ private:
     void drawMenuList(int menuCursor);
     void drawEditQty(int editValue);
     void drawEditFPE(int editValue);
-    void drawEditTime(int editValue);
-    void drawEditStartTime(int editValue, int editField);
+    void drawEditStartTime(const DeviceConfig& cfg, int editValue, int editField);
+    void drawEditEndTime(const DeviceConfig& cfg, int editValue, int editField);
     void drawEditRate(int editValue);
     void drawEditClock(const SystemStatus& status, int editValue, int editField);
     void drawRunning(const SystemStatus& status);

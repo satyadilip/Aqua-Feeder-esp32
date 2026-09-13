@@ -79,15 +79,15 @@ void WiFiManager_AF::setupWebServer(WebServer& server) {
         if (_server->hasArg("relay")) {
             int r = _server->arg("relay").toInt();
             if (r == 1 || r == 2) {
-                digitalWrite((r == 1) ? PIN_RELAY_LOADER : PIN_RELAY_DISPENSER, HIGH);
-                delay(2000);
                 digitalWrite((r == 1) ? PIN_RELAY_LOADER : PIN_RELAY_DISPENSER, LOW);
+                delay(2000);
+                digitalWrite((r == 1) ? PIN_RELAY_LOADER : PIN_RELAY_DISPENSER, HIGH);
             }
         }
         if (_server->hasArg("hooter")) {
-            digitalWrite(PIN_HOOTER, HIGH);
-            delay(1000);
             digitalWrite(PIN_HOOTER, LOW);
+            delay(1000);
+            digitalWrite(PIN_HOOTER, HIGH);
         }
         _server->send(200, "application/json", "{\"ok\":true}");
     });
@@ -183,7 +183,8 @@ void WiFiManager_AF::handleStatus() {
         JsonObject cfgObj = doc["cfg"].to<JsonObject>();
         cfgObj["qty"] = _cfg->feedQuantity;
         cfgObj["fpe"] = _cfg->feedPerEvent;
-        cfgObj["ftime"] = _cfg->feedTime;
+        cfgObj["ehour"] = _cfg->endHour;
+        cfgObj["emin"] = _cfg->endMinute;
         cfgObj["rate"] = _cfg->dischargeRate;
         cfgObj["shour"] = _cfg->startHour;
         cfgObj["smin"] = _cfg->startMinute;
@@ -229,7 +230,8 @@ void WiFiManager_AF::handleSettings() {
 
     if (_server->hasArg("qty"))   _cfg->feedQuantity = _server->arg("qty").toFloat();
     if (_server->hasArg("fpe"))   _cfg->feedPerEvent = _server->arg("fpe").toInt();
-    if (_server->hasArg("ftime")) _cfg->feedTime = _server->arg("ftime").toInt();
+    if (_server->hasArg("ehour")) _cfg->endHour = _server->arg("ehour").toInt();
+    if (_server->hasArg("emin"))  _cfg->endMinute = _server->arg("emin").toInt();
     if (_server->hasArg("rate"))  _cfg->dischargeRate = _server->arg("rate").toInt();
     if (_server->hasArg("shour")) _cfg->startHour = _server->arg("shour").toInt();
     if (_server->hasArg("smin"))  _cfg->startMinute = _server->arg("smin").toInt();

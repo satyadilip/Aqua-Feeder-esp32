@@ -131,9 +131,10 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         
         config.feedQuantity = dl.feedQuantity / 10.0f;
         config.feedPerEvent = dl.feedPerEvent;
-        config.feedTime = dl.feedTime;
         config.startHour = dl.startHour;
         config.startMinute = dl.startMinute;
+        config.endHour = dl.endHour;
+        config.endMinute = dl.endMinute;
         config.dischargeRate = dl.dischargeRate;
         
         cfgMgr.saveFeedParams(config);
@@ -170,10 +171,9 @@ void handleSerialCommand(String cmd) {
         Serial.print("/"); Serial.println(sysStatus.totalEvents);
         Serial.print("[QTY]   "); Serial.print(config.feedQuantity, 1); Serial.println(" kg");
         Serial.print("[FPE]   "); Serial.print(config.feedPerEvent); Serial.println(" g");
-        Serial.print("[DUR]   "); Serial.print(config.feedTime); Serial.println(" h");
         Serial.print("[RATE]  "); Serial.print(config.dischargeRate); Serial.println(" g/s");
-        Serial.print("[START] "); Serial.print(config.startHour);
-        Serial.print(":"); Serial.println(config.startMinute);
+        Serial.print("[TIME]  "); Serial.print(config.startHour); Serial.print(":"); Serial.print(config.startMinute);
+        Serial.print(" to "); Serial.print(config.endHour); Serial.print(":"); Serial.println(config.endMinute);
         Serial.print("[POWER] "); Serial.print(sysStatus.voltageV, 2); Serial.print("V ");
         Serial.print(sysStatus.currentMA, 0); Serial.print("mA ");
         Serial.print(sysStatus.powerMW, 0); Serial.println("mW");
@@ -183,6 +183,20 @@ void handleSerialCommand(String cmd) {
         Serial.print(" SD="); Serial.println(sysStatus.sdCardOK ? "OK" : "FAIL");
         Serial.print("[PROX]  "); Serial.println(sysStatus.proximityTriggered ? "TRIGGERED" : "Clear");
         Serial.print("[SCHED] "); Serial.println(sysStatus.scheduleValid ? "Valid" : sysStatus.schedError);
+    }
+    else if (cmd == "EUI") {
+        Serial.println("\n╔═══════════════════════════════════════╗");
+        Serial.println("║         LoRaWAN CREDENTIALS           ║");
+        Serial.println("╚═══════════════════════════════════════╝");
+        Serial.print("DevEUI: ");
+        for (int i=0; i<8; i++) { Serial.printf("%02X", config.loraDevEUI[i]); }
+        Serial.println();
+        Serial.print("AppEUI: ");
+        for (int i=0; i<8; i++) { Serial.printf("%02X", config.loraAppEUI[i]); }
+        Serial.println();
+        Serial.print("AppKey: ");
+        for (int i=0; i<16; i++) { Serial.printf("%02X", config.loraAppKey[i]); }
+        Serial.println();
     }
     else if (cmd == "RUN") {
         cbOnFeedStart();
@@ -225,6 +239,7 @@ void handleSerialCommand(String cmd) {
     }
     else if (cmd == "H" || cmd == "HELP") {
         Serial.println("  S/STATUS — Full status");
+        Serial.println("  EUI      — View LoRaWAN DevEUI/AppKey");
         Serial.println("  RUN      — Start feed cycle");
         Serial.println("  STOP/0   — Emergency stop");
         Serial.println("  R1       — Test Loader relay 2s");
@@ -242,8 +257,8 @@ void handleSerialCommand(String cmd) {
 
 // Menu items for the list view
 const char* menuLabels[] = {
-    "Feed Quantity", "Feed Per Event", "Feed Duration",
-    "Start Time", "Discharge Rate", "Set Clock",
+    "Feed Quantity", "Feed Per Event", "Start Time",
+    "End Time", "Discharge Rate", "Set Clock",
     "Run Feed", "Network Info", "Power Info"
 };
 const int MENU_ITEM_COUNT = 9;
@@ -256,13 +271,20 @@ void handleButtonNavigation() {
 
     if (!up.risingEdge && !dn.risingEdge && !sel.risingEdge && !cfg.risingEdge) return;
 
-    // SW4 (Config) — toggle AP config / return to main
+    // SW4 (Config) — toggle AP config / return to main / enter menu from running
     if (cfg.risingEdge) {
         if (currentMenu == MenuState::MENU_LIST || currentMenu == MenuState::MAIN_STATUS) {
             currentMenu = (currentMenu == MenuState::MAIN_STATUS) ?
                           MenuState::MENU_LIST : MenuState::MAIN_STATUS;
-        } else if (currentMenu != MenuState::RUNNING) {
-            currentMenu = MenuState::MENU_LIST;
+        } else if (currentMenu == MenuState::RUNNING) {
+            currentMenu = MenuState::MENU_LIST; // Allow entering menu while running
+        } else {
+            // Return to appropriate state
+            if (feedEng.isActive()) {
+                currentMenu = MenuState::RUNNING;
+            } else {
+                currentMenu = MenuState::MENU_LIST;
+            }
         }
         return;
     }
@@ -287,11 +309,12 @@ void handleButtonNavigation() {
                             currentMenu = MenuState::EDIT_QTY; break;
                     case 1: editVal = config.feedPerEvent;
                             currentMenu = MenuState::EDIT_FPE; break;
-                    case 2: editVal = config.feedTime;
-                            currentMenu = MenuState::EDIT_TIME; break;
-                    case 3: editVal = config.startHour;
-                            editFld = 0;  // Start editing hour
+                    case 2: editVal = config.startHour;
+                            editFld = 0;
                             currentMenu = MenuState::EDIT_START_TIME; break;
+                    case 3: editVal = config.endHour;
+                            editFld = 0;
+                            currentMenu = MenuState::EDIT_END_TIME; break;
                     case 4: editVal = config.dischargeRate;
                             currentMenu = MenuState::EDIT_RATE; break;
                     case 5: if (sysStatus.rtcOK) {
@@ -321,8 +344,9 @@ void handleButtonNavigation() {
             if (sel.risingEdge) {
                 config.feedQuantity = editVal / 10.0f;
                 cfgMgr.saveFeedParams(config);
-                feedEng.calcSchedule();
-                currentMenu = MenuState::MENU_LIST;
+                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
+                else feedEng.calcSchedule();
+                currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
             }
             break;
 
@@ -332,19 +356,32 @@ void handleButtonNavigation() {
             if (sel.risingEdge) {
                 config.feedPerEvent = editVal;
                 cfgMgr.saveFeedParams(config);
-                feedEng.calcSchedule();
-                currentMenu = MenuState::MENU_LIST;
+                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
+                else feedEng.calcSchedule();
+                currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
             }
             break;
 
-        case MenuState::EDIT_TIME:
-            if (up.risingEdge)   editVal = constrain(editVal + 1, FEED_TIME_MIN, FEED_TIME_MAX);
-            if (dn.risingEdge)   editVal = constrain(editVal - 1, FEED_TIME_MIN, FEED_TIME_MAX);
-            if (sel.risingEdge) {
-                config.feedTime = editVal;
-                cfgMgr.saveFeedParams(config);
-                feedEng.calcSchedule();
-                currentMenu = MenuState::MENU_LIST;
+        case MenuState::EDIT_END_TIME:
+            if (editFld == 0) {  // Editing hour
+                if (up.risingEdge)   editVal = (editVal + 1) % 24;
+                if (dn.risingEdge)   editVal = (editVal + 23) % 24;
+                if (sel.risingEdge) {
+                    config.endHour = editVal;
+                    editVal = config.endMinute;
+                    editFld = 1;  // Switch to minute
+                }
+            } else {  // Editing minute
+                if (up.risingEdge)   editVal = (editVal + 1) % 60;
+                if (dn.risingEdge)   editVal = (editVal + 59) % 60;
+                if (sel.risingEdge) {
+                    config.endMinute = editVal;
+                    cfgMgr.saveFeedParams(config);
+                    if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
+                    else feedEng.calcSchedule();
+                    currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                    editFld = 0;
+                }
             }
             break;
 
@@ -363,8 +400,9 @@ void handleButtonNavigation() {
                 if (sel.risingEdge) {
                     config.startMinute = editVal;
                     cfgMgr.saveFeedParams(config);
-                    feedEng.calcSchedule();
-                    currentMenu = MenuState::MENU_LIST;
+                    if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
+                    else feedEng.calcSchedule();
+                    currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                     editFld = 0;
                 }
             }
@@ -376,8 +414,9 @@ void handleButtonNavigation() {
             if (sel.risingEdge) {
                 config.dischargeRate = editVal;
                 cfgMgr.saveFeedParams(config);
-                feedEng.calcSchedule();
-                currentMenu = MenuState::MENU_LIST;
+                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
+                else feedEng.calcSchedule();
+                currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
             }
             break;
 
@@ -424,6 +463,7 @@ void handleButtonNavigation() {
             if (sel.risingEdge) {
                 // Check if proximity is clear before resuming
                 if (!hal.isProximityTriggered()) {
+                    hal.setHooter(false); // Stop hooter when resumed
                     feedEng.resumeFeed();
                     currentMenu = MenuState::RUNNING;
                     telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
@@ -460,6 +500,7 @@ void handleButtonNavigation() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 void updateSystemStatus() {
+    sysStatus.proximityTriggered = hal.isProximityTriggered();
     // Map menu state to system state
     switch (currentMenu) {
         case MenuState::MAIN_STATUS:
@@ -671,8 +712,9 @@ void setup() {
     Serial.print("[CFG]  Device ID: "); Serial.println(config.deviceId);
     Serial.print("[CFG]  Qty="); Serial.print(config.feedQuantity, 1);
     Serial.print("kg FPE="); Serial.print(config.feedPerEvent);
-    Serial.print("g Dur="); Serial.print(config.feedTime);
-    Serial.print("h Rate="); Serial.print(config.dischargeRate);
+    Serial.print("g End="); Serial.print(config.endHour);
+    Serial.print(":"); Serial.print(config.endMinute);
+    Serial.print(" Rate="); Serial.print(config.dischargeRate);
     Serial.print("g/s Start="); Serial.print(config.startHour);
     Serial.print(":"); Serial.println(config.startMinute);
 
@@ -697,7 +739,7 @@ void setup() {
             if (config.loraDevEUI[i] != 0) { allZero = false; break; }
         }
         if (allZero) {
-            const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x01 };
+            const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x05 };
             const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
             const uint8_t defaultAppKey[16] = { 
                 0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 
@@ -883,6 +925,23 @@ void loop() {
                         Serial.println("[ERROR] Invalid Serial ID. Must be 3-30 chars.");
                     }
                 }
+            } else if (upper == "GET LORA" || upper == "EUI") {
+                if (!techAuthenticated) {
+                    Serial.println("[REJECTED] Locked! Enter 'AUTH <PIN>' first.");
+                } else {
+                    Serial.println("\n[LORA CREDENTIALS (OTAA)]");
+                    Serial.print("  DevEUI  : "); 
+                    for(int i=0; i<8; i++) Serial.printf("%02X", config.loraDevEUI[i]);
+                    Serial.println();
+                    
+                    Serial.print("  AppEUI  : "); 
+                    for(int i=0; i<8; i++) Serial.printf("%02X", config.loraAppEUI[i]);
+                    Serial.println();
+                    
+                    Serial.print("  AppKey  : "); 
+                    for(int i=0; i<16; i++) Serial.printf("%02X", config.loraAppKey[i]);
+                    Serial.println("\n");
+                }
             } else if (upper == "HELP" || upper == "H" || upper == "?") {
                 Serial.println("\n══════════ AG_V1 TECHNICIAN SERIAL CLI ══════════");
                 Serial.printf("  Device Serial ID : %s\n", config.deviceId);
@@ -892,6 +951,7 @@ void loop() {
                 Serial.println("  DIAG               : Run 9-Point Hardware Diagnostic Scan");
                 Serial.println("  TEST MOTOR 1|2     : Pulse Motor 1 or 2 for 2 Seconds");
                 Serial.println("  SET ID <SERIAL_ID> : Set Permanent Enclosure Serial ID");
+                Serial.println("  GET LORA           : Print LoRaWAN ABP Credentials for AWS");
                 Serial.println("  REBOOT             : Soft Reset ESP32 Controller");
                 Serial.println("  HELP               : Print CLI Command Menu");
                 Serial.println("═══════════════════════════════════════════════════\n");
@@ -914,8 +974,6 @@ void loop() {
             feedEng.pauseFeed();
             currentMenu = MenuState::PAUSED;
             hal.setHooter(true);
-            delay(500);
-            hal.setHooter(false);
             telMgr.queueEvent(TelemetryMsgType::ALARM_PROXIMITY);
             Serial.println("[!] PROXIMITY PAUSE!");
         }

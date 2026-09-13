@@ -3,6 +3,8 @@
 
 static SX1262* radio = nullptr;
 static LoRaWANNode* node = nullptr;
+static uint32_t currentDevAddr = 0;
+static uint8_t currentAppKey[16];
 
 LoRaManager::LoRaManager() : _available(false), _status(ConnStatus::NOT_AVAILABLE), _lastRSSI(0), _lastSNR(0), _node(nullptr), _downlinkCb(nullptr) {}
 
@@ -57,26 +59,43 @@ ConnStatus LoRaManager::getStatus() {
 bool LoRaManager::join(const uint8_t* devEUI, const uint8_t* appEUI, const uint8_t* appKey) {
     if (!_available || _node == nullptr) return false;
     
-    Serial.println("[LORA] Configuring LoRaWAN ABP Session (IN865 Public Band)...");
+    memcpy(currentAppKey, appKey, 16);
+    
+    Serial.println("[LORA] Configuring LoRaWAN OTAA Session (IN865 Public Band)...");
     _status = ConnStatus::CONNECTING;
     digitalWrite(PIN_SD_CS, HIGH);
     
-    uint32_t devAddr = 0x0072A1F6; // Derived from DevEUI E072A1F6249C0001
+    // For LoRaWAN 1.0.x OTAA: joinEUI (appEUI), devEUI, nwkKey (appKey), appKey
+    uint64_t joinEUI_u64 = 0;
+    for(int i=0; i<8; i++) { joinEUI_u64 = (joinEUI_u64 << 8) | appEUI[i]; }
     
-    // Pass nullptr for first two keys to force LoRaWAN 1.0 ABP mode (NwkSKey, AppSKey)
-    _node->beginABP(devAddr, nullptr, nullptr, (uint8_t*)appKey, (uint8_t*)appKey);
+    uint64_t devEUI_u64 = 0;
+    for(int i=0; i<8; i++) { devEUI_u64 = (devEUI_u64 << 8) | devEUI[i]; }
+
+    _node->beginOTAA(joinEUI_u64, devEUI_u64, (uint8_t*)appKey, (uint8_t*)appKey);
     _node->setDutyCycle(false);
-    int16_t state = _node->activateABP();
+    
+    Serial.println("[LORA] Joining OTAA network...");
+    int16_t state = _node->activateOTAA();
     
     if (state == RADIOLIB_ERR_NONE || state >= 0) {
-        Serial.println("[LORA] LoRaWAN ABP Session active! Ready for continuous telemetry.");
+        Serial.println("[LORA] LoRaWAN OTAA Session active! Joined successfully.");
         _status = ConnStatus::CONNECTED;
         return true;
     } else {
-        Serial.printf("[LORA] activateABP status code: %d\n", state);
-        _status = ConnStatus::CONNECTED;
-        return true;
+        Serial.printf("[LORA] activateOTAA failed, status code: %d\n", state);
+        _status = ConnStatus::DISCONNECTED;
+        return false;
     }
+}
+
+uint32_t LoRaManager::getDevAddr() {
+    return currentDevAddr;
+}
+
+void LoRaManager::getSessionKeys(uint8_t* nwkSKey, uint8_t* appSKey) {
+    memcpy(nwkSKey, currentAppKey, 16);
+    memcpy(appSKey, currentAppKey, 16);
 }
 
 bool LoRaManager::send(const uint8_t* data, uint8_t len, uint8_t port) {
@@ -145,7 +164,8 @@ bool LoRaManager::sendSettings(const DeviceConfig& config) {
     payload.msgType = (uint8_t)TelemetryMsgType::SETTINGS_REPORT;
     payload.feedQuantity_g = (uint32_t)(config.feedQuantity * 1000.0f);
     payload.feedPerEvent_g = (uint16_t)config.feedPerEvent;
-    payload.feedTime_h = (uint8_t)config.feedTime;
+    payload.endHour = (uint8_t)config.endHour;
+    payload.endMinute = (uint8_t)config.endMinute;
     payload.startHour = (uint8_t)config.startHour;
     payload.startMinute = (uint8_t)config.startMinute;
     payload.dischargeRate = (uint16_t)config.dischargeRate;

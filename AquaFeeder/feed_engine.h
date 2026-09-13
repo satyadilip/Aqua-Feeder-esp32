@@ -11,6 +11,7 @@ public:
     void pauseFeed();
     void resumeFeed();
     void update(unsigned long nowMs, uint32_t nowEpoch);
+    void recalcDynamic(uint32_t nowEpoch);
     bool shouldAutoStart(uint32_t nowEpoch);
     bool isActive() const;
     bool isPaused() const;

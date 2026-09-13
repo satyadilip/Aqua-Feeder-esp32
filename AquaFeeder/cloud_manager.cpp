@@ -109,7 +109,7 @@ void CloudManager::loop() {
 }
 
 bool CloudManager::trySendLoRa(const TelemetryEvent& event) {
-    if (!_lora) return false;
+    if (!_lora || _status->loraStatus != ConnStatus::CONNECTED) return false;
     if (event.type == TelemetryMsgType::SETTINGS_REPORT) {
         if (_cfg) return _lora->sendSettings(*_cfg);
         return false;
