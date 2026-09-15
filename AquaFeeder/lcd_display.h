@@ -39,7 +39,7 @@ private:
 
     void drawProgressBar(int row, float percent);
     void drawMainStatus(const SystemStatus& status);
-    void drawMenuList(int menuCursor);
+    void drawMenuList(int menuCursor, bool isRunning);
     void drawEditQty(int editValue);
     void drawEditFPE(int editValue);
     void drawEditStartTime(const DeviceConfig& cfg, int editValue, int editField);

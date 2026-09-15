@@ -13,6 +13,7 @@ void FeedEngine::begin(SystemStatus* status, DeviceConfig* cfg) {
     _motorsOff = nullptr;
     _sendEvent = nullptr;
     _readCurrent = nullptr;
+    _saveState = nullptr;
 }
 
 bool FeedEngine::calcSchedule() {
@@ -82,6 +83,7 @@ void FeedEngine::startFeed() {
     _fcState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
     if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_STARTED);
+    if (_saveState) _saveState();
 }
 
 void FeedEngine::stopFeed() {
@@ -93,6 +95,7 @@ void FeedEngine::stopFeed() {
     _fcState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
     if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_STOPPED);
+    if (_saveState) _saveState();
 }
 
 void FeedEngine::pauseFeed() {
@@ -185,10 +188,12 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                     _status->feedActive = false;
                     _fcState = FeedCycleState::FC_IDLE;
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
+                    if (_saveState) _saveState();
                 } else {
                     _status->nextFeedEpoch = nowEpoch + (_status->intervalMs / 1000);
                     _fcState = FeedCycleState::FC_WAIT;
                     _fcEntered = false;
+                    if (_saveState) _saveState();
                 }
             }
             break;
@@ -260,6 +265,7 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
 bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
     if (!_status || !_cfg) return false;
     if (!_status->rtcOK || _status->feedActive || !_status->scheduleValid) return false;
+    if (!_cfg->hasBeenRun) return false;
     
     // Check if within OP window
     // (Needs proper RTC hour checking, for now assuming nextFeedEpoch is accurate)
@@ -281,3 +287,26 @@ void FeedEngine::setRelayCallback(void (*setRelay)(int relay, bool on)) { _setRe
 void FeedEngine::setMotorsOffCallback(void (*motorsOff)()) { _motorsOff = motorsOff; }
 void FeedEngine::setTelemetryCallback(void (*sendEvent)(TelemetryMsgType type)) { _sendEvent = sendEvent; }
 void FeedEngine::setCurrentReadCallback(float (*readCurrent)()) { _readCurrent = readCurrent; }
+void FeedEngine::setSaveStateCallback(void (*saveState)()) { _saveState = saveState; }
+
+void FeedEngine::resumeFromPowerFailure(uint32_t nowEpoch) {
+    if (!_status || !_cfg || !_status->feedActive) return;
+    
+    // Safety check - if somehow we resumed but we reached target
+    if (_status->dispensedQuantity_g >= (_cfg->feedQuantity * 1000.0f)) {
+        stopFeed();
+        _status->state = SystemState::FEED_FINISHED;
+        return;
+    }
+    
+    // Recalculate parameters for the remaining time
+    recalcDynamic(nowEpoch);
+    
+    if (_status->feedActive) {
+        // Place engine in WAIT state.
+        // If we missed events, nowEpoch > nextFeedEpoch, so it will transition to IDLE instantly.
+        // If we are still in a gap, it will wait naturally.
+        _fcState = FeedCycleState::FC_WAIT;
+        _fcEntered = false;
+    }
+}

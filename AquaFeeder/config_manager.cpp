@@ -23,7 +23,7 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     cfg.telemetryIntervalS = prefs.getUInt("txIntv", TELEMETRY_INTERVAL_DEFAULT_S);
     cfg.uplinkMode = (UplinkMode)prefs.getUChar("uplnk", (uint8_t)UplinkMode::AUTO_FAILOVER);
     
-    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 };
     const uint8_t defaultAppKey[16] = { 
         0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 
         0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C 
@@ -67,6 +67,7 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     prefs.getString("devId", "AQUA_001").toCharArray(cfg.deviceId, sizeof(cfg.deviceId));
     
     cfg.overcurrentLimit = prefs.getUShort("ocLimit", OVERCURRENT_LIMIT_MA);
+    cfg.hasBeenRun = prefs.getBool("hasRun", false);
     
     prefs.end();
     
@@ -89,6 +90,7 @@ void ConfigManager::saveConfig(const DeviceConfig& cfg) {
     
     prefs.putString("devId", cfg.deviceId);
     prefs.putUShort("ocLimit", cfg.overcurrentLimit);
+    prefs.putBool("hasRun", cfg.hasBeenRun);
     prefs.end();
     
     Serial.println("[CONFIG] Full configuration saved to NVS");
@@ -139,8 +141,8 @@ void ConfigManager::resetToDefaults(DeviceConfig& cfg) {
     cfg.telemetryIntervalS = TELEMETRY_INTERVAL_DEFAULT_S;
     cfg.uplinkMode = UplinkMode::AUTO_FAILOVER;
     
-    const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x01 };
-    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
+    const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x05 };
+    const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05 };
     const uint8_t defaultAppKey[16] = { 
         0x2B, 0x7E, 0x15, 0x16, 0x28, 0xAE, 0xD2, 0xA6, 
         0xAB, 0xF7, 0x15, 0x88, 0x09, 0xCF, 0x4F, 0x3C 
@@ -167,6 +169,7 @@ void ConfigManager::resetToDefaults(DeviceConfig& cfg) {
     
     strncpy(cfg.deviceId, "AQUA_001", sizeof(cfg.deviceId));
     cfg.overcurrentLimit = OVERCURRENT_LIMIT_MA;
+    cfg.hasBeenRun = false;
     
     saveConfig(cfg);
     Serial.println("[CONFIG] Reset to defaults");
@@ -184,4 +187,28 @@ void ConfigManager::markInitialized() {
     prefs.putBool("inited", true);
     prefs.end();
     Serial.println("[CONFIG] NVS marked as initialized");
+}
+
+void ConfigManager::saveRunState(const SystemStatus& status) {
+    prefs.begin("runstate", false);
+    prefs.putBool("active", status.feedActive);
+    prefs.putInt("curEvt", status.currentEvent);
+    prefs.putFloat("dispQty", status.dispensedQuantity_g);
+    prefs.putUInt("nxtEpoc", status.nextFeedEpoch);
+    prefs.end();
+}
+
+void ConfigManager::loadRunState(SystemStatus& status) {
+    prefs.begin("runstate", true);
+    status.feedActive = prefs.getBool("active", false);
+    status.currentEvent = prefs.getInt("curEvt", 0);
+    status.dispensedQuantity_g = prefs.getFloat("dispQty", 0.0f);
+    status.nextFeedEpoch = prefs.getUInt("nxtEpoc", 0);
+    prefs.end();
+}
+
+void ConfigManager::clearRunState() {
+    prefs.begin("runstate", false);
+    prefs.putBool("active", false);
+    prefs.end();
 }

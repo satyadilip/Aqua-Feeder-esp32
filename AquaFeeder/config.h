@@ -194,6 +194,7 @@ enum class TelemetryMsgType : uint8_t {
     FEED_PAUSED        = 0x04,
     FEED_RESUMED       = 0x05,
     FEED_STOPPED       = 0x06,
+    TRAY_CHECKIN       = 0x0A,
     ALARM_OVERCURRENT  = 0x0E,
     ALARM_PROXIMITY    = 0x0F,
     ALARM_RTC_FAULT    = 0x10,
@@ -284,6 +285,9 @@ struct DeviceConfig {
 
     // Overcurrent threshold (mA)
     uint16_t overcurrentLimit;
+
+    // Has the feeder been run at least once since factory reset?
+    bool     hasBeenRun;
 };
 
 struct HardwareDiagnostics {

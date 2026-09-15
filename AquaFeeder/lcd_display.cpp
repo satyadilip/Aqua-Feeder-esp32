@@ -57,9 +57,9 @@ void LCDDisplay::showSplash() {
     lcd->setCursor(0, 0);
     lcd->print("====================");
     lcd->setCursor(0, 1);
-    lcd->print("  Aqua Feeder v4.0  ");
+    lcd->print("    Aqua Feeder     ");
     lcd->setCursor(0, 2);
-    lcd->print(" Athena Engineering ");
+    lcd->print("  Athena Engg Corp  ");
     lcd->setCursor(0, 3);
     lcd->print("====================");
     delay(2000);
@@ -114,12 +114,12 @@ void LCDDisplay::drawProgressBar(int row, float percent) {
     lcd->setCursor(0, row);
     lcd->print("[");
     
-    // 18 chars total -> 16 bar slots inside brackets
-    int totalSubPixels = round((percent / 100.0f) * 80.0f); // 16 * 5 = 80 sub-pixels
+    // 20 chars total -> 18 bar slots inside brackets
+    int totalSubPixels = round((percent / 100.0f) * 90.0f); // 18 * 5 = 90 sub-pixels
     int fullChars = totalSubPixels / 5;
     int remainder = totalSubPixels % 5;
     
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 18; i++) {
         if (i < fullChars) {
             lcd->write((uint8_t)4); // Solid block
         } else if (i == fullChars && remainder > 0) {
@@ -153,7 +153,7 @@ void LCDDisplay::update(const SystemStatus& status, const DeviceConfig& cfg, Men
     
     switch (menuState) {
         case MenuState::MAIN_STATUS: drawMainStatus(status); break;
-        case MenuState::MENU_LIST: drawMenuList(menuCursor); break;
+        case MenuState::MENU_LIST: drawMenuList(menuCursor, status.feedActive); break;
         case MenuState::EDIT_QTY: drawEditQty(editValue); break;
         case MenuState::EDIT_FPE: drawEditFPE(editValue); break;
         case MenuState::EDIT_START_TIME: drawEditStartTime(cfg, editValue, editField); break;
@@ -205,7 +205,7 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
             long remSec = status.nextFeedEpoch > status.currentEpoch ? (status.nextFeedEpoch - status.currentEpoch) : 0;
             snprintf(buf, sizeof(buf), "E:%d/%ld W:%lds", status.currentEvent, status.totalEvents, remSec);
         } else {
-            snprintf(buf, sizeof(buf), "E:%d/%ld FEEDING", status.currentEvent, status.totalEvents);
+            snprintf(buf, sizeof(buf), "E:%d/%ld RUN", status.currentEvent, status.totalEvents);
         }
         for(int i = strlen(buf); i < 20; i++) buf[i] = ' ';
         buf[20] = '\0';
@@ -223,8 +223,8 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
     lcd->print(buf);
 }
 
-void LCDDisplay::drawMenuList(int menuCursor) {
-    const char* items[] = {
+void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
+    const char* staticItems[] = {
         "Feed Quantity", 
         "Feed Per Event", 
         "Start Time", 
@@ -235,7 +235,9 @@ void LCDDisplay::drawMenuList(int menuCursor) {
         "Network Info", 
         "Power Monitor"
     };
+    
     int totalItems = 9;
+    if (isRunning) totalItems += 2;
     
     int startIdx = (menuCursor / 4) * 4;
     
@@ -244,10 +246,20 @@ void LCDDisplay::drawMenuList(int menuCursor) {
         int itemIdx = startIdx + i;
         if (itemIdx < totalItems) {
             char buf[21];
-            if (itemIdx == menuCursor) {
-                snprintf(buf, sizeof(buf), "> %-18s", items[itemIdx]);
+            const char* text = "";
+            
+            if (isRunning) {
+                if (itemIdx == 0) text = "Check Tray";
+                else if (itemIdx == 1) text = "Stop Feed";
+                else text = staticItems[itemIdx - 2];
             } else {
-                snprintf(buf, sizeof(buf), "  %-18s", items[itemIdx]);
+                text = staticItems[itemIdx];
+            }
+            
+            if (itemIdx == menuCursor) {
+                snprintf(buf, sizeof(buf), "> %-18s", text);
+            } else {
+                snprintf(buf, sizeof(buf), "  %-18s", text);
             }
             lcd->print(buf);
         } else {
@@ -372,7 +384,7 @@ void LCDDisplay::drawEditClock(const SystemStatus& status, int editValue, int ed
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F: Adjust  [SEL]: Next");
+    lcd->print("\x7E\x7F:Adj  [SEL]:Next  ");
 }
 
 void LCDDisplay::drawRunning(const SystemStatus& status) {
@@ -380,7 +392,9 @@ void LCDDisplay::drawRunning(const SystemStatus& status) {
     
     // Line 1: Header + Event Counter
     lcd->setCursor(0, 0);
-    snprintf(buf, sizeof(buf), "Running     E:%d/%ld", status.currentEvent, status.totalEvents);
+    snprintf(buf, sizeof(buf), "Run E:%d/%ld", status.currentEvent, status.totalEvents);
+    for(int i = strlen(buf); i < 20; i++) buf[i] = ' ';
+    buf[20] = '\0';
     lcd->print(buf);
     
     // Line 2: Stage & Gap Timer
@@ -393,7 +407,9 @@ void LCDDisplay::drawRunning(const SystemStatus& status) {
         snprintf(buf, sizeof(buf), "Stage: POST-CLEAR   ");
     } else if (status.feedState == FeedCycleState::FC_WAIT) {
         long remSec = status.nextFeedEpoch > status.currentEpoch ? (status.nextFeedEpoch - status.currentEpoch) : 0;
-        snprintf(buf, sizeof(buf), "Gap Delay: %lds     ", remSec);
+        snprintf(buf, sizeof(buf), "Wait Gap: %lds", remSec);
+        for(int i = strlen(buf); i < 20; i++) buf[i] = ' ';
+        buf[20] = '\0';
     } else {
         snprintf(buf, sizeof(buf), "Stage: IDLE         ");
     }
@@ -418,7 +434,7 @@ void LCDDisplay::drawRunning(const SystemStatus& status) {
     
     // Line 4: Clear Emergency Stop Instruction (fits 20 chars)
     lcd->setCursor(0, 3);
-    lcd->print("[SEL]: Press to STOP");
+    lcd->print("Press [SEL] for Menu");
 }
 
 void LCDDisplay::drawPaused(const SystemStatus& status) {

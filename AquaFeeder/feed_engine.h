@@ -13,6 +13,8 @@ public:
     void update(unsigned long nowMs, uint32_t nowEpoch);
     void recalcDynamic(uint32_t nowEpoch);
     bool shouldAutoStart(uint32_t nowEpoch);
+    void resumeFromPowerFailure(uint32_t nowEpoch);
+
     bool isActive() const;
     bool isPaused() const;
 
@@ -20,6 +22,7 @@ public:
     void setMotorsOffCallback(void (*motorsOff)());
     void setTelemetryCallback(void (*sendEvent)(TelemetryMsgType type));
     void setCurrentReadCallback(float (*readCurrent)());
+    void setSaveStateCallback(void (*saveState)());
 
 private:
     SystemStatus* _status;
@@ -34,4 +37,5 @@ private:
     void (*_motorsOff)();
     void (*_sendEvent)(TelemetryMsgType type);
     float (*_readCurrent)();
+    void (*_saveState)();
 };

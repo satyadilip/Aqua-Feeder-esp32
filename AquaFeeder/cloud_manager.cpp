@@ -26,10 +26,30 @@ void CloudManager::loop() {
     if (!_tm || !_cfg || !_status) return;
     
     unsigned long nowMs = millis();
-    if (nowMs - _lastSendAttemptMs < 5000) return; // 5-second interval for continuous testing
-    _lastSendAttemptMs = nowMs;
+    // Use 30 seconds interval if we are disconnected/error (Join Retry), otherwise 5 seconds for telemetry check
+    unsigned long interval = (_status->loraStatus == ConnStatus::ERROR || _status->loraStatus == ConnStatus::DISCONNECTED) ? 30000 : 5000;
+    
+    if (nowMs - _lastSendAttemptMs < interval) return;
     
     Serial.println("[CLOUD] Processing telemetry uplink check...");
+    
+    // Auto-reconnect LoRaWAN if it failed previously
+    if (_lora && (_status->loraStatus == ConnStatus::ERROR || _status->loraStatus == ConnStatus::DISCONNECTED)) {
+        if (_cfg->uplinkMode == UplinkMode::LORAWAN_ONLY || _cfg->uplinkMode == UplinkMode::AUTO_FAILOVER) {
+            Serial.println("[LORA] Retrying LoRaWAN Join (30s cooldown)...");
+            if (_lora->join(_cfg->loraDevEUI, _cfg->loraAppEUI, _cfg->loraAppKey)) {
+                _status->loraStatus = ConnStatus::CONNECTED;
+                Serial.println("[LORA] LoRaWAN Join SUCCESS upon retry!");
+            } else {
+                _status->loraStatus = ConnStatus::ERROR;
+                Serial.println("[LORA] LoRaWAN Join retry FAILED.");
+            }
+            _lastSendAttemptMs = millis(); // Reset timer AFTER the attempt!
+            return; // Give it a break before processing telemetry
+        }
+    }
+    
+    _lastSendAttemptMs = millis(); // Reset timer for normal telemetry checks
     
     TelemetryEvent heartBeatEvent;
     TelemetryEvent* event = nullptr;

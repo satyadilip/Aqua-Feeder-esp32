@@ -96,7 +96,15 @@ float cbReadCurrent() {
     return sysStatus.currentMA;
 }
 
+void cbOnSaveRunState() {
+    cfgMgr.saveRunState(sysStatus);
+}
+
 void cbOnFeedStart() {
+    if (!config.hasBeenRun) {
+        config.hasBeenRun = true;
+        cfgMgr.saveConfig(config); // Save the flag so it persists
+    }
     feedEng.calcSchedule();
     if (sysStatus.scheduleValid) {
         feedEng.startFeed();
@@ -274,8 +282,11 @@ void handleButtonNavigation() {
     // SW4 (Config) — toggle AP config / return to main / enter menu from running
     if (cfg.risingEdge) {
         if (currentMenu == MenuState::MENU_LIST || currentMenu == MenuState::MAIN_STATUS) {
-            currentMenu = (currentMenu == MenuState::MAIN_STATUS) ?
-                          MenuState::MENU_LIST : MenuState::MAIN_STATUS;
+            if (currentMenu == MenuState::MAIN_STATUS) {
+                currentMenu = MenuState::MENU_LIST;
+            } else {
+                currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MAIN_STATUS;
+            }
         } else if (currentMenu == MenuState::RUNNING) {
             currentMenu = MenuState::MENU_LIST; // Allow entering menu while running
         } else {
@@ -294,17 +305,37 @@ void handleButtonNavigation() {
             if (sel.risingEdge) currentMenu = MenuState::MENU_LIST;
             break;
 
-        case MenuState::MENU_LIST:
+        case MenuState::MENU_LIST: {
+            int maxItems = feedEng.isActive() ? MENU_ITEM_COUNT + 2 : MENU_ITEM_COUNT;
+            
             if (up.risingEdge) {
                 menuCursorIdx--;
-                if (menuCursorIdx < 0) menuCursorIdx = MENU_ITEM_COUNT - 1;
+                if (menuCursorIdx < 0) menuCursorIdx = maxItems - 1;
             }
             if (dn.risingEdge) {
                 menuCursorIdx++;
-                if (menuCursorIdx >= MENU_ITEM_COUNT) menuCursorIdx = 0;
+                if (menuCursorIdx >= maxItems) menuCursorIdx = 0;
             }
             if (sel.risingEdge) {
-                switch (menuCursorIdx) {
+                int actionIdx = menuCursorIdx;
+                if (feedEng.isActive()) {
+                    if (actionIdx == 0) {
+                        telMgr.queueEvent(TelemetryMsgType::TRAY_CHECKIN);
+                        lcd.showMessage("Tray Check-in", "Sent to Cloud!", 2000);
+                        currentMenu = MenuState::RUNNING;
+                        break;
+                    } else if (actionIdx == 1) {
+                        feedEng.stopFeed();
+                        telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
+                        currentMenu = MenuState::MAIN_STATUS;
+                        Serial.println("[!] FEED STOPPED via menu!");
+                        break;
+                    } else {
+                        actionIdx -= 2;
+                    }
+                }
+                
+                switch (actionIdx) {
                     case 0: editVal = (int)(config.feedQuantity * 10);
                             currentMenu = MenuState::EDIT_QTY; break;
                     case 1: editVal = config.feedPerEvent;
@@ -336,6 +367,7 @@ void handleButtonNavigation() {
                     case 8: currentMenu = MenuState::INFO_POWER; break;
                 }
             }
+            } // Close curly brace for case MenuState::MENU_LIST:
             break;
 
         case MenuState::EDIT_QTY:
@@ -452,10 +484,8 @@ void handleButtonNavigation() {
 
         case MenuState::RUNNING:
             if (sel.risingEdge) {
-                feedEng.stopFeed();
-                currentMenu = MenuState::MAIN_STATUS;
-                telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);  // Log stop event
-                Serial.println("[!] EMERGENCY STOP via button!");
+                currentMenu = MenuState::MENU_LIST;
+                menuCursorIdx = 0; // Highlight the first option (Check Tray)
             }
             break;
 
@@ -791,12 +821,29 @@ void setup() {
 
     // ── Feed Engine ──
     Serial.println("[INIT] Feed Engine...");
+    
+    // Load persisted run state to recover from power failure
+    cfgMgr.loadRunState(sysStatus);
+    
     feedEng.begin(&sysStatus, &config);
     feedEng.setRelayCallback(cbSetRelay);
     feedEng.setMotorsOffCallback(cbMotorsOff);
     feedEng.setTelemetryCallback(cbTelemetryEvent);
     feedEng.setCurrentReadCallback(cbReadCurrent);
-    feedEng.calcSchedule();
+    feedEng.setSaveStateCallback(cbOnSaveRunState);
+    
+    if (sysStatus.feedActive) {
+        Serial.println("[MAIN] Recovering from power failure!");
+        uint32_t nowEpoch = sysStatus.rtcOK ? rtcMgr.getEpoch() : 0;
+        feedEng.resumeFromPowerFailure(nowEpoch);
+        if (sysStatus.feedActive) {
+            currentMenu = MenuState::RUNNING;
+        } else {
+            cfgMgr.clearRunState();
+        }
+    } else {
+        feedEng.calcSchedule();
+    }
 
     // ── Telemetry Manager ──
     Serial.println("[INIT] Telemetry Manager...");
@@ -846,8 +893,10 @@ void setup() {
         0                // Core 0 (Main loop runs on Core 1)
     );
 
-    // Start on status screen or AP config if first boot
-    currentMenu = firstBoot ? MenuState::MAIN_STATUS : MenuState::MAIN_STATUS;
+    // Start on appropriate screen
+    if (currentMenu != MenuState::RUNNING) {
+        currentMenu = firstBoot ? MenuState::MAIN_STATUS : MenuState::MAIN_STATUS;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -880,12 +929,21 @@ void loop() {
                     techAuthenticated = true;
                     authExpiryMs = nowMs + (15 * 60 * 1000UL); // 15 min session
                     Serial.println("\n[SUCCESS] Technician authenticated! Session active for 15 mins.");
-                    Serial.println("Commands unlocked: DIAG, TEST MOTOR 1|2, TEST LORA, TEST GSM, SET ID <serial>");
+                    Serial.println("Commands unlocked: DIAG, TEST MOTOR 1|2, TEST LORA, TEST GSM, SET ID <serial>, ERASE LORA");
                 } else {
                     Serial.println("\n[REJECTED] Invalid Technician PIN.");
                 }
             } else if (upper == "DIAG" || upper == "D") {
                 runHardwareDiagnostics();
+            } else if (upper == "ERASE LORA") {
+                if (!techAuthenticated) {
+                    Serial.println("[REJECTED] Locked! Enter 'AUTH <PIN>' first.");
+                } else {
+                    loraMgr.clearNonces();
+                    memset(config.loraDevEUI, 0, 8); // Clear EUI so it regenerates to the clean default
+                    cfgMgr.saveConfig(config);
+                    Serial.println("[SUCCESS] LoRaWAN Nonces and EUI erased. Please Reboot (Command: REBOOT).");
+                }
             } else if (upper == "REBOOT" || upper == "R") {
                 Serial.println("[SYS] Rebooting controller...");
                 delay(200);

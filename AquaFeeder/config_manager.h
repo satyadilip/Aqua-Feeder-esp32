@@ -12,6 +12,11 @@ public:
     void resetToDefaults(DeviceConfig& cfg);
     bool isFirstBoot();
     void markInitialized();
+    
+    // Dynamic Run State Persistence
+    void saveRunState(const SystemStatus& status);
+    void loadRunState(SystemStatus& status);
+    void clearRunState();
 };
 
 extern ConfigManager configManager;

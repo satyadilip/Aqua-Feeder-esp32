@@ -1,5 +1,8 @@
 #include "lora_manager.h"
 #include <SPI.h>
+#include <Preferences.h>
+
+Preferences loraPrefs;
 
 static SX1262* radio = nullptr;
 static LoRaWANNode* node = nullptr;
@@ -7,6 +10,13 @@ static uint32_t currentDevAddr = 0;
 static uint8_t currentAppKey[16];
 
 LoRaManager::LoRaManager() : _available(false), _status(ConnStatus::NOT_AVAILABLE), _lastRSSI(0), _lastSNR(0), _node(nullptr), _downlinkCb(nullptr) {}
+
+void LoRaManager::clearNonces() {
+    loraPrefs.begin("lorawan", false);
+    loraPrefs.clear();
+    loraPrefs.end();
+    Serial.println("[LORA] LoRaWAN Nonces CLEARED from NVS.");
+}
 
 bool LoRaManager::begin() {
     Serial.println("[LORA] Initializing SX1262 for LoRaWAN Public Network (IN865 Band)...");
@@ -36,7 +46,11 @@ bool LoRaManager::begin() {
         state = radio->begin(865.0625f, 125.0f, 7, 5, 0x34, 14, 8, 0.0f, false);
     }
 
-    radio->setDio2AsRfSwitch(true);
+    // The AG_V1 board defines PIN_LORA_DIO2 (14) as the RF Switch. 
+    // We configure RadioLib to automatically toggle this pin during RX/TX.
+    radio->setRfSwitchPins(PIN_LORA_DIO2, RADIOLIB_NC);
+    radio->setDio2AsRfSwitch(true); // Keep internal DIO2 switch enabled just in case
+    
     if (node == nullptr) {
         node = new LoRaWANNode(radio, &IN865);
     }
@@ -73,12 +87,36 @@ bool LoRaManager::join(const uint8_t* devEUI, const uint8_t* appEUI, const uint8
     for(int i=0; i<8; i++) { devEUI_u64 = (devEUI_u64 << 8) | devEUI[i]; }
 
     _node->beginOTAA(joinEUI_u64, devEUI_u64, (uint8_t*)appKey, (uint8_t*)appKey);
+
+    loraPrefs.begin("lorawan", false);
+    
+    // Restore nonces (DevNonce, JoinNonce)
+    size_t noncesLen = loraPrefs.getBytesLength("nonces");
+    if (noncesLen == 14) {
+        uint8_t bufferNonces[14];
+        loraPrefs.getBytes("nonces", bufferNonces, 14);
+        _node->setBufferNonces(bufferNonces);
+        Serial.println("[LORA] Restored LoRaWAN Nonces from NVS.");
+    }
+
+    // Restore session if available
+    bool sessionRestored = false;
+    size_t sessionLen = loraPrefs.getBytesLength("session");
+    if (sessionLen == 258) { // RADIOLIB_LORAWAN_SESSION_BUF_SIZE is 258 or similar, actually let's not hardcode session size if we don't know it for sure.
+        // Actually, if we just use Nonces, we fix the Join issue! Let's just stick to Nonces.
+    }
+
     _node->setDutyCycle(false);
     
     Serial.println("[LORA] Joining OTAA network...");
     int16_t state = _node->activateOTAA();
+
+    // ALWAYS save nonces after activateOTAA (since DevNonce increments even on failure)
+    uint8_t* currentNonces = _node->getBufferNonces();
+    loraPrefs.putBytes("nonces", currentNonces, 14);
+    loraPrefs.end();
     
-    if (state == RADIOLIB_ERR_NONE || state >= 0) {
+    if (state == RADIOLIB_ERR_NONE || state == -1118 || state == -1117 || state >= 0) {
         Serial.println("[LORA] LoRaWAN OTAA Session active! Joined successfully.");
         _status = ConnStatus::CONNECTED;
         return true;

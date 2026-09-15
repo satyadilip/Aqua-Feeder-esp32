@@ -1,11 +1,7 @@
 import boto3
 import zipfile
 
-session = boto3.Session(
-    aws_access_key_id='YOUR_AWS_ACCESS_KEY_ID',
-    aws_secret_access_key='YOUR_AWS_SECRET_ACCESS_KEY',
-    region_name='us-east-1'
-)
+session = boto3.Session(region_name='us-east-1')
 lambda_client = session.client('lambda')
 
 lambda_code = """

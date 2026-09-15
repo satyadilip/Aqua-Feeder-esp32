@@ -8,6 +8,7 @@ class LoRaManager {
 public:
     LoRaManager();
 
+    void clearNonces();
     bool begin();
     bool isAvailable();
     ConnStatus getStatus();
