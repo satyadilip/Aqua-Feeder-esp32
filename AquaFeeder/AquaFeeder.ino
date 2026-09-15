@@ -496,7 +496,6 @@ void handleButtonNavigation() {
                     hal.setHooter(false); // Stop hooter when resumed
                     feedEng.resumeFeed();
                     currentMenu = MenuState::RUNNING;
-                    telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
                 } else {
                     // Flash red LED to indicate still blocked
                     hal.setLedRed(true);

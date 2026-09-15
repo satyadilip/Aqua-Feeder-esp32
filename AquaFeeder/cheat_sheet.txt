@@ -1,0 +1,67 @@
+======================================================================
+         AQUA FEEDER - FIRMWARE CHEAT SHEET & COMMAND REFERENCE
+======================================================================
+
+1. HOW TO COMPILE AND FLASH FIRMWARE
+----------------------------------------------------------------------
+To Flash Node 1 (Using the interactive flashing utility):
+    1. Ensure the ESP32 is connected via USB.
+    2. Open Command Prompt / PowerShell in the "build" folder.
+    3. Run: python flash_node.py
+    4. Type "1" when prompted for which node to flash.
+    5. Follow on-screen instructions to select the COM port.
+
+----------------------------------------------------------------------
+2. SERIAL TERMINAL COMMANDS (115200 baud)
+----------------------------------------------------------------------
+To use these commands, connect via USB and open a Serial Monitor (e.g. Arduino IDE, PuTTY) at 115200 baud.
+Type the command and press ENTER.
+
+[Authentication]
+    AUTH <PIN>       : Unlock secure commands (Default PIN: 123456)
+                       Example: AUTH 123456
+                       Must be done before using DIAG or TEST MOTOR.
+
+[Diagnostic & Tests] - Requires AUTH first
+    DIAG             : Run full hardware diagnostic scan (I2C, LoRa, SD, GSM, Sensors).
+    TEST MOTOR 1     : Pulse Relay 1 (Loader) ON for 2 seconds, then OFF.
+    TEST MOTOR 2     : Pulse Relay 2 (Dispenser) ON for 2 seconds, then OFF.
+    R1               : Same as TEST MOTOR 1.
+    R2               : Same as TEST MOTOR 2.
+    HORN or HOOTER   : Pulse Hooter ON for 1 second.
+    TEST LORA        : Force an immediate LoRaWAN test transmission.
+    TEST GSM         : Check SIM800L signal strength and registration.
+    EUI              : Displays the unique LoRaWAN DevEUI and AppKey generated from the ESP32 MAC address. Use this to register the device on AWS IoT.
+
+[Operations]
+    START or 1       : Force start an immediate manual feeding cycle.
+    STOP or 0        : Emergency stop the active feeding cycle.
+    REBOOT           : Reboot the ESP32 controller.
+
+----------------------------------------------------------------------
+3. WEB PORTAL (WIFI CONFIGURATION)
+----------------------------------------------------------------------
+    1. Press the CONFIG button (SW4) on the board. The LCD will show AP Mode.
+    2. Connect your phone/laptop to Wi-Fi: "AquaFeeder_Config" (No password).
+    3. A captive portal will pop up automatically. If not, open browser to: http://192.168.4.1
+    4. In the Web UI, you can:
+         - Change Wi-Fi credentials.
+         - Configure Feeding settings (Feed per event, Discharge rate, Interval).
+         - Test Hardware Relays and Hooter (Via the "Diagnostics" tab).
+         - Reboot the system.
+
+----------------------------------------------------------------------
+4. LCD & BUTTON NAVIGATION
+----------------------------------------------------------------------
+    - SW1 (UP)     : Move cursor up or increase value.
+    - SW2 (DOWN)   : Move cursor down or decrease value.
+    - SW3 (SELECT) : Enter menu or confirm value.
+    - SW4 (CONFIG) : Hold to enter AP Wi-Fi Mode. Press briefly to go Back/Cancel.
+
+----------------------------------------------------------------------
+5. INDICATOR LEDS
+----------------------------------------------------------------------
+    - GREEN LED (Heartbeat) : Blinks rapidly on boot. Blinks slowly during normal operation.
+    - RED LED (Fault)       : Lights up if RTC fails, Overcurrent triggers, or Proximity is blocked.
+
+======================================================================

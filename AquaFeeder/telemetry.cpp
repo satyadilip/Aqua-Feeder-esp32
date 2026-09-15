@@ -102,7 +102,14 @@ void TelemetryManager::update(unsigned long nowMs) {
     if (!_cfg) return;
     
     unsigned long intervalMs = _cfg->telemetryIntervalS * 1000UL;
-    if (intervalMs == 0) intervalMs = TELEMETRY_INTERVAL_DEFAULT_S * 1000UL;
+    
+    // Ignore old 5s default from NVS and treat anything under 60s as "disabled"
+    if (intervalMs > 0 && intervalMs < 60000) {
+        intervalMs = 0; 
+    }
+    
+    // If 0, periodic heartbeat is completely disabled (purely event-driven)
+    if (intervalMs == 0) return;
     
     if (nowMs - _lastPeriodicMs >= intervalMs) {
         _lastPeriodicMs = nowMs;
