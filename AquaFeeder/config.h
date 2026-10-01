@@ -218,6 +218,15 @@ enum class ConnStatus : uint8_t {
     NOT_AVAILABLE    // Hardware not detected
 };
 
+enum class ErrorCode : uint8_t {
+    NONE = 0,
+    RTC_FAULT = 1,
+    FEED_EMPTY = 2,
+    LORA_FAULT = 3,
+    SD_FAULT = 4,
+    SCHED_FAULT = 5
+};
+
 // Menu navigation states (LCD UI)
 enum class MenuState : uint8_t {
     MAIN_STATUS = 0,

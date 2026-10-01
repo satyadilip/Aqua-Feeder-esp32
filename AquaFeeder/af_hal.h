@@ -19,6 +19,7 @@ public:
     ButtonState& btnConfig();
     bool isProximityTriggered();
     void updateStatusLed(SystemState state, bool hasError);
+    void updateErrorLed(ErrorCode err);
 
 private:
     ButtonState m_btnUp;

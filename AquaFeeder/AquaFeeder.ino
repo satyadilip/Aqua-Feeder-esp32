@@ -1103,10 +1103,23 @@ void loop() {
     lcd.update(sysStatus, config, currentMenu, menuCursorIdx, editVal, editFld);
 
     // ── 18. Status LED Indicators ──
-    bool hasError = !sysStatus.rtcOK || !sysStatus.scheduleValid;
+    ErrorCode currentError = ErrorCode::NONE;
+    if (!sysStatus.rtcOK) {
+        currentError = ErrorCode::RTC_FAULT;
+    } else if (sysStatus.proximityTriggered) {
+        currentError = ErrorCode::FEED_EMPTY;
+    } else if (sysStatus.loraStatus == ConnStatus::ERROR) {
+        currentError = ErrorCode::LORA_FAULT;
+    } else if (!sysStatus.sdCardOK) {
+        currentError = ErrorCode::SD_FAULT;
+    } else if (!sysStatus.scheduleValid) {
+        currentError = ErrorCode::SCHED_FAULT;
+    }
+
+    bool hasError = (currentError != ErrorCode::NONE);
     
-    // Red LED is ON if there is an error, otherwise OFF
-    hal.setLedRed(hasError);
+    // Red LED state machine handles error blinking patterns
+    hal.updateErrorLed(currentError);
     
     // Green LED state machine handles blinking based on SystemState
     hal.updateStatusLed(sysStatus.state, hasError);

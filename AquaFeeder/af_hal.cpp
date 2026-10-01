@@ -202,3 +202,45 @@ void HardwareLayer::updateStatusLed(SystemState state, bool hasError) {
         setLedGreen(blinkPhase % 2 == 0);
     }
 }
+
+void HardwareLayer::updateErrorLed(ErrorCode err) {
+    if (err == ErrorCode::NONE) {
+        setLedRed(false);
+        return;
+    }
+
+    if (err == ErrorCode::SCHED_FAULT) {
+        setLedRed(true);
+        return;
+    }
+
+    static ErrorCode lastErr = ErrorCode::NONE;
+    static unsigned long lastUpdate = 0;
+    static int phase = 0;
+    unsigned long now = millis();
+
+    if (err != lastErr) {
+        lastErr = err;
+        phase = 0;
+        lastUpdate = now;
+    }
+
+    int blinks = static_cast<int>(err);
+    int totalPhases = blinks * 2;
+
+    if (phase >= totalPhases) {
+        // Gap time (1000ms)
+        if (now - lastUpdate >= 1000) {
+            lastUpdate = now;
+            phase = 0;
+        }
+        setLedRed(false);
+    } else {
+        // Fast blink (150ms ON / 150ms OFF)
+        if (now - lastUpdate >= 150) {
+            lastUpdate = now;
+            phase++;
+        }
+        setLedRed(phase % 2 == 0 && phase < totalPhases);
+    }
+}
