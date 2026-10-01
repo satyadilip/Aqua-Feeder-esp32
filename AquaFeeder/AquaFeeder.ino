@@ -1036,7 +1036,15 @@ void loop() {
 
     // ── 6. Feed Engine State Machine ──
     uint32_t epoch = sysStatus.rtcOK ? rtcMgr.getEpoch() : 0;
+    bool wasFeedActive = sysStatus.feedActive;
     feedEng.update(nowMs, epoch);
+
+    // Trigger minor warnings when feed starts
+    if (!wasFeedActive && sysStatus.feedActive) {
+        if (!sysStatus.sdCardOK) {
+            hal.triggerMinorWarning(MinorWarning::SD_FAULT);
+        }
+    }
 
     // Check if feed engine transitioned to finished
     if (!sysStatus.feedActive && currentMenu == MenuState::RUNNING) {
@@ -1108,10 +1116,10 @@ void loop() {
         currentError = ErrorCode::RTC_FAULT;
     } else if (sysStatus.proximityTriggered) {
         currentError = ErrorCode::FEED_EMPTY;
-    } else if (sysStatus.loraStatus == ConnStatus::ERROR) {
-        currentError = ErrorCode::LORA_FAULT;
-    } else if (!sysStatus.sdCardOK) {
-        currentError = ErrorCode::SD_FAULT;
+    } else if (sysStatus.loraStatus == ConnStatus::NOT_AVAILABLE) {
+        currentError = ErrorCode::LORA_HW_FAULT;
+    } else if (sysStatus.loraStatus == ConnStatus::ERROR || sysStatus.loraStatus == ConnStatus::DISCONNECTED) {
+        currentError = ErrorCode::LORA_NET_FAULT;
     } else if (!sysStatus.scheduleValid) {
         currentError = ErrorCode::SCHED_FAULT;
     }

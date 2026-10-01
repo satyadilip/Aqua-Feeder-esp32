@@ -203,21 +203,67 @@ void HardwareLayer::updateStatusLed(SystemState state, bool hasError) {
     }
 }
 
+static MinorWarning currentMinorWarning = MinorWarning::NONE;
+static int minorWarningCycles = 0;
+
+void HardwareLayer::triggerMinorWarning(MinorWarning warning) {
+    currentMinorWarning = warning;
+    minorWarningCycles = 3; // flash pattern 3 times
+}
+
 void HardwareLayer::updateErrorLed(ErrorCode err) {
+    static ErrorCode lastErr = ErrorCode::NONE;
+    static MinorWarning lastMinor = MinorWarning::NONE;
+    static unsigned long lastUpdate = 0;
+    static int phase = 0;
+    unsigned long now = millis();
+
+    // If there is no major error, but a minor warning is active, play it
+    if (err == ErrorCode::NONE && minorWarningCycles > 0) {
+        if (currentMinorWarning != lastMinor) {
+            lastMinor = currentMinorWarning;
+            phase = 0;
+            lastUpdate = now;
+        }
+        
+        int blinks = static_cast<int>(currentMinorWarning);
+        int totalPhases = blinks * 2;
+        
+        if (phase >= totalPhases) {
+            if (now - lastUpdate >= 1000) {
+                lastUpdate = now;
+                phase = 0;
+                minorWarningCycles--;
+                if (minorWarningCycles <= 0) {
+                    setLedRed(false);
+                    currentMinorWarning = MinorWarning::NONE;
+                    lastMinor = MinorWarning::NONE;
+                }
+            } else {
+                setLedRed(false);
+            }
+        } else {
+            if (now - lastUpdate >= 100) {
+                lastUpdate = now;
+                phase++;
+            }
+            setLedRed(phase % 2 == 0 && phase < totalPhases);
+        }
+        return;
+    }
+
+    // Normal major error handling
     if (err == ErrorCode::NONE) {
         setLedRed(false);
+        lastErr = ErrorCode::NONE;
         return;
     }
 
     if (err == ErrorCode::SCHED_FAULT) {
         setLedRed(true);
+        lastErr = err;
         return;
     }
-
-    static ErrorCode lastErr = ErrorCode::NONE;
-    static unsigned long lastUpdate = 0;
-    static int phase = 0;
-    unsigned long now = millis();
 
     if (err != lastErr) {
         lastErr = err;
@@ -229,14 +275,12 @@ void HardwareLayer::updateErrorLed(ErrorCode err) {
     int totalPhases = blinks * 2;
 
     if (phase >= totalPhases) {
-        // Gap time (1000ms)
         if (now - lastUpdate >= 1000) {
             lastUpdate = now;
             phase = 0;
         }
         setLedRed(false);
     } else {
-        // Fast blink (150ms ON / 150ms OFF)
         if (now - lastUpdate >= 150) {
             lastUpdate = now;
             phase++;

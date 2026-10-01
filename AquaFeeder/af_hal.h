@@ -20,6 +20,7 @@ public:
     bool isProximityTriggered();
     void updateStatusLed(SystemState state, bool hasError);
     void updateErrorLed(ErrorCode err);
+    void triggerMinorWarning(MinorWarning warning);
 
 private:
     ButtonState m_btnUp;

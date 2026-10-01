@@ -222,9 +222,14 @@ enum class ErrorCode : uint8_t {
     NONE = 0,
     RTC_FAULT = 1,
     FEED_EMPTY = 2,
-    LORA_FAULT = 3,
-    SD_FAULT = 4,
+    LORA_HW_FAULT = 3,
+    LORA_NET_FAULT = 4,
     SCHED_FAULT = 5
+};
+
+enum class MinorWarning : uint8_t {
+    NONE = 0,
+    SD_FAULT = 5
 };
 
 // Menu navigation states (LCD UI)
