@@ -18,7 +18,7 @@ public:
     ButtonState& btnSelect();
     ButtonState& btnConfig();
     bool isProximityTriggered();
-    void heartbeatTick();
+    void updateStatusLed(SystemState state, bool hasError);
 
 private:
     ButtonState m_btnUp;

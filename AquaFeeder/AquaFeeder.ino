@@ -1108,10 +1108,6 @@ void loop() {
     // Red LED is ON if there is an error, otherwise OFF
     hal.setLedRed(hasError);
     
-    // Green LED acts as a heartbeat if healthy, or stays OFF if there is an error
-    if (hasError) {
-        hal.setLedGreen(false);
-    } else {
-        hal.heartbeatTick();
-    }
+    // Green LED state machine handles blinking based on SystemState
+    hal.updateStatusLed(sysStatus.state, hasError);
 }

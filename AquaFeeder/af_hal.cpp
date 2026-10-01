@@ -138,12 +138,67 @@ bool HardwareLayer::isProximityTriggered() {
     return digitalRead(PIN_PROXIMITY) == LOW;
 }
 
-void HardwareLayer::heartbeatTick() {
-    static unsigned long lastTick = 0;
-    static bool ledState = false;
-    if (millis() - lastTick >= 1000) {
-        lastTick = millis();
-        ledState = !ledState;
-        setLedGreen(ledState);
+void HardwareLayer::updateStatusLed(SystemState state, bool hasError) {
+    if (hasError || state == SystemState::ERROR_FATAL) {
+        setLedGreen(false);
+        return;
+    }
+
+    static unsigned long lastUpdate = 0;
+    static int blinkPhase = 0;
+    unsigned long now = millis();
+
+    // Determine intervals based on state
+    int timeOn = 0;
+    int timeOff = 0;
+    bool isDoubleBlip = false;
+
+    switch (state) {
+        case SystemState::INIT:
+        case SystemState::AP_CONFIG:
+            timeOn = 100; timeOff = 100;
+            break;
+            
+        case SystemState::IDLE:
+        case SystemState::FEED_PAUSED:
+            timeOn = 500; timeOff = 500;
+            break;
+            
+        case SystemState::FEED_PRE_WARMUP:
+        case SystemState::FEED_DISPENSING:
+        case SystemState::FEED_POST_CLEAR:
+            setLedGreen(true);
+            return; // Solid ON
+            
+        case SystemState::FEED_WAIT_NEXT:
+            timeOn = 1500; timeOff = 1500;
+            break;
+            
+        case SystemState::FEED_FINISHED:
+            isDoubleBlip = true;
+            break;
+            
+        default:
+            timeOn = 500; timeOff = 500;
+            break;
+    }
+
+    if (isDoubleBlip) {
+        // Phase 0: ON (100ms), Phase 1: OFF (100ms), Phase 2: ON (100ms), Phase 3: OFF (2000ms)
+        unsigned long phaseTimes[] = {100, 100, 100, 2000};
+        if (now - lastUpdate >= phaseTimes[blinkPhase % 4]) {
+            lastUpdate = now;
+            blinkPhase++;
+        }
+        setLedGreen((blinkPhase % 4) == 0 || (blinkPhase % 4) == 2);
+    } else {
+        // Standard blinking
+        // Phase 0: ON, Phase 1: OFF
+        unsigned long currentInterval = (blinkPhase % 2 == 0) ? timeOn : timeOff;
+        if (now - lastUpdate >= currentInterval) {
+            lastUpdate = now;
+            blinkPhase++;
+        }
+        setLedGreen(blinkPhase % 2 == 0);
     }
 }
