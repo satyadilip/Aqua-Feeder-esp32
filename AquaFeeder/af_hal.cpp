@@ -13,11 +13,9 @@ void HardwareLayer::begin() {
     digitalWrite(PIN_RELAY_DISPENSER, HIGH);
     
     // LEDs & Hooter
-    gpio_reset_pin(GPIO_NUM_40);
     pinMode(PIN_LED_RED, OUTPUT);
     digitalWrite(PIN_LED_RED, LOW); // Assuming LEDs are active HIGH based on normal design, if not we will invert later
     
-    gpio_reset_pin(GPIO_NUM_42);
     pinMode(PIN_LED_GREEN, OUTPUT);
     digitalWrite(PIN_LED_GREEN, LOW);
     pinMode(PIN_HOOTER, OUTPUT);

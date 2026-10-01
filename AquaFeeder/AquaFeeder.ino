@@ -1102,13 +1102,16 @@ void loop() {
     // ── 15. LCD Render ──
     lcd.update(sysStatus, config, currentMenu, menuCursorIdx, editVal, editFld);
 
-    // ── 16. Heartbeat LED ──
-    hal.heartbeatTick();
-
     // ── 18. Status LED Indicators ──
-    // Red LED: ON if any error condition
-    if (!sysStatus.feedActive) {
-        bool hasError = !sysStatus.rtcOK || !sysStatus.scheduleValid;
-        hal.setLedRed(hasError);
+    bool hasError = !sysStatus.rtcOK || !sysStatus.scheduleValid || sysStatus.proximityTriggered;
+    
+    // Red LED is ON if there is an error, otherwise OFF
+    hal.setLedRed(hasError);
+    
+    // Green LED acts as a heartbeat if healthy, or stays OFF if there is an error
+    if (hasError) {
+        hal.setLedGreen(false);
+    } else {
+        hal.heartbeatTick();
     }
 }

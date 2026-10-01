@@ -18,13 +18,13 @@
 // ── GPIO PIN DEFINITIONS (AG_V1 Schematic) ──────────────────────────────────
 
 // Relay Outputs (Active HIGH)
-#define PIN_RELAY_LOADER    41    // RLY1 — Loader Motor
+#define PIN_RELAY_LOADER    40    // RLY1 — Loader Motor
 #define PIN_RELAY_DISPENSER 39    // RLY2 — Dispenser Motor
 #define PIN_HOOTER          38    // Alarm Horn / Buzzer
 
 // Status LEDs (Active HIGH)
-#define PIN_LED_RED         40    // STAT1 — Red  (Error / Fault)
-#define PIN_LED_GREEN       42    // STAT2 — Green (Heartbeat / OK)
+#define PIN_LED_RED         1     // STAT1 — Red  (Error / Fault)
+#define PIN_LED_GREEN       2     // STAT2 — Green (Heartbeat / OK)
 
 // Button Inputs (Active LOW, external pull-up 1kΩ)
 #define PIN_BTN_UP          4     // SW1 — Navigation UP
