@@ -351,7 +351,7 @@ void handleButtonNavigation() {
                     case 5: if (sysStatus.rtcOK) {
                                 int h, m, s;
                                 rtcMgr.getTime(h, m, s);
-                                editVal = h;
+                                editVal = h * 100 + m;
                                 editFld = 0;
                             }
                             currentMenu = MenuState::EDIT_CLOCK; break;
@@ -453,31 +453,29 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_CLOCK:
-            if (editFld == 0) {  // Hour
-                if (up.risingEdge)   editVal = (editVal + 1) % 24;
-                if (dn.risingEdge)   editVal = (editVal + 23) % 24;
-                if (sel.risingEdge) {
-                    int savedHour = editVal;
-                    int h, m, s;
-                    rtcMgr.getTime(h, m, s);
-                    editVal = m;
-                    editFld = 1;
-                    // Temporarily store hour
-                    config.startHour = savedHour;  // Reuse temporarily
-                }
-            } else {  // Minute
-                if (up.risingEdge)   editVal = (editVal + 1) % 60;
-                if (dn.risingEdge)   editVal = (editVal + 59) % 60;
-                if (sel.risingEdge) {
-                    int setHour = config.startHour;  // Retrieve temp
-                    int setMin = editVal;
-                    // Restore startHour from config
-                    cfgMgr.loadConfig(config);
-                    rtcMgr.setTime(setHour, setMin, 0);
-                    feedEng.calcSchedule();
-                    currentMenu = MenuState::MENU_LIST;
-                    editFld = 0;
-                    Serial.println("[RTC] Clock set!");
+            {
+                int h = editVal / 100;
+                int m = editVal % 100;
+                if (editFld == 0) {  // Hour
+                    if (up.risingEdge)   h = (h + 1) % 24;
+                    if (dn.risingEdge)   h = (h + 23) % 24;
+                    if (sel.risingEdge) {
+                        editFld = 1;
+                    }
+                    editVal = h * 100 + m;
+                } else {  // Minute
+                    if (up.risingEdge)   m = (m + 1) % 60;
+                    if (dn.risingEdge)   m = (m + 59) % 60;
+                    if (sel.risingEdge) {
+                        rtcMgr.setTime(h, m, 0);
+                        feedEng.calcSchedule();
+                        currentMenu = MenuState::MENU_LIST;
+                        editFld = 0;
+                        Serial.println("[RTC] Clock set!");
+                    }
+                    if (currentMenu == MenuState::EDIT_CLOCK) {
+                        editVal = h * 100 + m;
+                    }
                 }
             }
             break;

@@ -384,7 +384,11 @@ void LCDDisplay::drawEditClock(const SystemStatus& status, int editValue, int ed
     lcd->print("                    ");
     
     lcd->setCursor(0, 3);
-    lcd->print("\x7E\x7F:Adj  [SEL]:Next  ");
+    if (editField == 0) {
+        lcd->print("\x7E\x7F:Adj  [SEL]:Next  ");
+    } else {
+        lcd->print("\x7E\x7F:Adj  [SEL]:Save  ");
+    }
 }
 
 void LCDDisplay::drawRunning(const SystemStatus& status) {

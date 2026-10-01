@@ -148,7 +148,7 @@ bool LoRaManager::send(const uint8_t* data, uint8_t len, uint8_t port) {
     Serial.printf("[LORA] Transmitting %d bytes over LoRaWAN (Port %d)... ", len, port);
     
     uint8_t downData[256];
-    size_t downLen = sizeof(downData);
+    size_t downLen = 0;
     
     int16_t state = _node->sendReceive((uint8_t*)data, len, port, downData, &downLen, false);
     
