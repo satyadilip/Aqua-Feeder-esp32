@@ -447,7 +447,7 @@ void LCDDisplay::drawPaused(const SystemStatus& status) {
     
     lcd->setCursor(0, 1);
     if (status.proximityTriggered) {
-        lcd->print("Error: CHUTE BLOCKED");
+        lcd->print("Error: FEED EMPTY   ");
     } else if (status.currentMA > OVERCURRENT_LIMIT_MA) {
         lcd->print("Error: OVERCURRENT  ");
     } else {

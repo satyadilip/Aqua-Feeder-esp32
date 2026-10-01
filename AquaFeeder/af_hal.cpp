@@ -1,17 +1,23 @@
 #include "af_hal.h"
-
+#include <driver/gpio.h>
 // Global instance defined in AquaFeeder.ino via af_hal.h extern declaration
 
 void HardwareLayer::begin() {
     // Relays (Active LOW)
+    gpio_reset_pin(GPIO_NUM_41);
     pinMode(PIN_RELAY_LOADER, OUTPUT);
     digitalWrite(PIN_RELAY_LOADER, HIGH);
+    
+    gpio_reset_pin(GPIO_NUM_39);
     pinMode(PIN_RELAY_DISPENSER, OUTPUT);
     digitalWrite(PIN_RELAY_DISPENSER, HIGH);
     
     // LEDs & Hooter
+    gpio_reset_pin(GPIO_NUM_40);
     pinMode(PIN_LED_RED, OUTPUT);
     digitalWrite(PIN_LED_RED, LOW); // Assuming LEDs are active HIGH based on normal design, if not we will invert later
+    
+    gpio_reset_pin(GPIO_NUM_42);
     pinMode(PIN_LED_GREEN, OUTPUT);
     digitalWrite(PIN_LED_GREEN, LOW);
     pinMode(PIN_HOOTER, OUTPUT);

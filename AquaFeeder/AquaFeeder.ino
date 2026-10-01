@@ -630,7 +630,7 @@ void runHardwareDiagnostics() {
 
     // 9. Proximity Sensor Check
     sysStatus.diag.prox_sensor_clear = !hal.isProximityTriggered();
-    Serial.printf("║ Proximity Optocoupler : [ %s ] (Chute Clear)\n", sysStatus.diag.prox_sensor_clear ? "PASS" : "BLOCKED");
+    Serial.printf("║ Proximity Optocoupler : [ %s ] (Feed Present)\n", sysStatus.diag.prox_sensor_clear ? "PASS" : "EMPTY");
 
     Serial.printf("║ I2C Bus Active Devices: %d found (", count);
     for (int i = 0; i < count && i < 16; i++) {
