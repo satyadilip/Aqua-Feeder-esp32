@@ -1103,7 +1103,7 @@ void loop() {
     lcd.update(sysStatus, config, currentMenu, menuCursorIdx, editVal, editFld);
 
     // ── 18. Status LED Indicators ──
-    bool hasError = !sysStatus.rtcOK || !sysStatus.scheduleValid || sysStatus.proximityTriggered;
+    bool hasError = !sysStatus.rtcOK || !sysStatus.scheduleValid;
     
     // Red LED is ON if there is an error, otherwise OFF
     hal.setLedRed(hasError);
