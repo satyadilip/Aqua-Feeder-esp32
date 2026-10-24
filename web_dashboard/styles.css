@@ -1778,21 +1778,35 @@ svg {
   display: flex;
   flex-direction: column;
   opacity: 1;
-  transform: translateY(0);
-  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .main-shell.fade-out {
   opacity: 0;
-  transform: translateY(8px);
   pointer-events: none;
 }
 .main-shell.fade-in {
-  animation: tabScreenEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: mainShellFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes mainShellFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tab-screen {
   display: none;
   opacity: 0;
+  padding-bottom: 96px !important;
 }
 .tab-screen.active {
   display: block !important;
