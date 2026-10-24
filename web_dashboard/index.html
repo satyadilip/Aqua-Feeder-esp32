@@ -509,7 +509,15 @@
                TAB 4: HARDWARE TROUBLESHOOT & DIAGNOSTICS
                ====================================================================== -->
           <section id="screen-troubleshoot" class="tab-screen">
-            
+
+            <!-- Segmented Sub-Tabs for Troubleshoot & Support -->
+            <div class="diag-segmented-tabs">
+              <button type="button" class="diag-seg-btn active" id="btn-subtab-diag" onclick="switchTroubleshootSubTab('diag')">🛠 Hardware Tests & Scan</button>
+              <button type="button" class="diag-seg-btn" id="btn-subtab-support" onclick="switchTroubleshootSubTab('support')">📞 Support & Contacts</button>
+            </div>
+
+            <!-- SUBTAB 1: DIAGNOSTICS & FIELD TESTS -->
+            <div id="subtab-diag-content">
             <!-- Troubleshoot Hero / Overview Card -->
             <div class="card troubleshoot-hero-card">
               <div class="card-header-clean">
@@ -720,6 +728,59 @@
               </div>
               <div class="calib-result-note" id="calib-result-note" style="margin-top:8px; font-size:12px; color:var(--text-muted);">Current calibration: 100 g/s (100g = 1.0s motor spin)</div>
             </div>
+            </div><!-- /subtab-diag-content -->
+
+            <!-- SUBTAB 2: CUSTOMER SUPPORT & CONTACTS -->
+            <div id="subtab-support-content" style="display:none;">
+              <!-- Customer Service Card (Charan 9154696777) -->
+              <div class="card support-card">
+                <div class="support-card-header">
+                  <span class="support-label">Customer Service & Technical Support</span>
+                  <div class="support-person-row">
+                    <h3 class="support-name">Charan</h3>
+                    <span class="support-badge-247">24/7 Priority</span>
+                  </div>
+                  <span class="support-number">+91 91546 96777</span>
+                </div>
+                <a href="tel:9154696777" class="support-hotline-btn">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  <span>Call Charan (+91 91546 96777)</span>
+                </a>
+              </div>
+
+              <!-- Farm Profile -->
+              <div class="card profile-card">
+                <h2 class="section-title">Farm Profile</h2>
+                <div class="profile-info-row">
+                  <div class="profile-avatar"><span class="avatar-initials">VK</span></div>
+                  <div class="profile-details">
+                    <span class="profile-name">aquaCON Supervisor</span>
+                    <span class="profile-phone">+91 90004 20999</span>
+                    <span class="profile-farm">Pioneer Aqua Farm</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Emergency Alert Contacts -->
+              <div class="card contacts-card">
+                <div class="card-header-row">
+                  <div>
+                    <h3 class="section-title">Alert Contacts</h3>
+                    <p class="section-desc" style="margin-bottom:0;">Phone numbers notified for feeder alerts:</p>
+                  </div>
+                  <button type="button" class="btn-action-sm" onclick="openAddContactModal()">+ Add Contact</button>
+                </div>
+                <div class="contacts-list" id="contacts-list-container-diag">
+                  <!-- Dynamically rendered contacts -->
+                </div>
+              </div>
+
+              <div style="padding: 0 16px 20px;">
+                <button type="button" class="btn-danger btn-block" onclick="handleLogout()">
+                  <span>Sign Out</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+              </div>
+            </div><!-- /subtab-support-content -->
 
           </section>
 
@@ -860,18 +921,18 @@
             <span class="nav-tab-label">Settings</span>
           </button>
 
+          <button type="button" class="nav-tab" id="tab-btn-map" onclick="navigateToTab('tab-map')">
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            </span>
+            <span class="nav-tab-label">Ponds</span>
+          </button>
+
           <button type="button" class="nav-tab" id="tab-btn-troubleshoot" onclick="navigateToTab('tab-troubleshoot')">
             <span class="nav-tab-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </span>
             <span class="nav-tab-label">Troubleshoot</span>
-          </button>
-
-          <button type="button" class="nav-tab" id="tab-btn-system" onclick="navigateToTab('tab-system')">
-            <span class="nav-tab-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </span>
-            <span class="nav-tab-label">Support</span>
           </button>
         </nav>
 

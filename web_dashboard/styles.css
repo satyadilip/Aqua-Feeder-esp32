@@ -1545,21 +1545,26 @@ svg {
 .notif-drawer {
   position: fixed;
   top: 0;
-  right: -100%;
+  right: 0;
   width: 100%;
   max-width: 360px;
   height: 100vh;
   background: var(--card-bg);
   box-shadow: -8px 0 30px rgba(18, 22, 31, 0.1);
   z-index: 150;
-  transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(100%);
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
 }
 
 .notif-drawer.open {
-  right: 0;
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .drawer-header {
@@ -2809,4 +2814,123 @@ svg {
   font-size: 10px !important;
   font-weight: 800 !important;
   flex-shrink: 0 !important;
+}
+
+/* ==========================================================================
+   ALIGNMENT & BOUNDARY OVERFLOW SAFETY GUARANTEES
+   ========================================================================== */
+html, body {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  position: relative !important;
+}
+
+.viewport-wrapper {
+  width: 100% !important;
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  justify-content: center !important;
+  background-color: #EAECEF !important;
+}
+
+.app-container {
+  width: 100% !important;
+  max-width: 440px !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+
+.main-shell, .tab-screen {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+.card {
+  box-sizing: border-box !important;
+  width: calc(100% - 32px) !important;
+  max-width: 100% !important;
+  margin: 0 16px 14px !important;
+}
+
+/* Floating Navigation Dock - Perfectly Symmetrical & Zero-Overflow */
+.bottom-nav {
+  position: fixed !important;
+  bottom: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: calc(100% - 24px) !important;
+  max-width: 412px !important;
+  background: #181C24 !important;
+  border-radius: 36px !important;
+  padding: 6px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  box-shadow: 0 16px 36px rgba(18, 22, 31, 0.3) !important;
+  z-index: 100 !important;
+  box-sizing: border-box !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.nav-tab {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  padding: 6px 2px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  color: #8E99A8 !important;
+  border-radius: 20px !important;
+  text-align: center !important;
+}
+
+.nav-tab.active {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #FFFFFF !important;
+}
+
+.nav-tab-label {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  letter-spacing: -0.2px !important;
+}
+
+/* Troubleshoot / Diagnostics Tab Sub-Segment Tabs */
+.diag-segmented-tabs {
+  display: flex !important;
+  background: var(--cell-bg, #F1F5F9) !important;
+  border-radius: 14px !important;
+  padding: 4px !important;
+  margin: 0 16px 14px !important;
+  box-sizing: border-box !important;
+}
+
+.diag-seg-btn {
+  flex: 1 !important;
+  padding: 8px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  color: var(--text-secondary, #5A6578) !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+  background: none !important;
+}
+
+.diag-seg-btn.active {
+  background: #FFFFFF !important;
+  color: var(--brand-sage, #169868) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
 }

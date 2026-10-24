@@ -1614,3 +1614,19 @@ function showToast(message) {
 }
 
 
+
+function switchTroubleshootSubTab(subtab) {
+  const diagBtn = document.getElementById('btn-subtab-diag');
+  const supportBtn = document.getElementById('btn-subtab-support');
+  const diagContent = document.getElementById('subtab-diag-content');
+  const supportContent = document.getElementById('subtab-support-content');
+
+  if (diagBtn) diagBtn.classList.toggle('active', subtab === 'diag');
+  if (supportBtn) supportBtn.classList.toggle('active', subtab === 'support');
+
+  if (diagContent) diagContent.style.display = subtab === 'diag' ? 'block' : 'none';
+  if (supportContent) {
+    supportContent.style.display = subtab === 'support' ? 'block' : 'none';
+    if (subtab === 'support') renderAlertContacts();
+  }
+}
