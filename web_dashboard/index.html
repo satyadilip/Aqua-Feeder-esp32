@@ -223,19 +223,20 @@
                 </div>
               </div>
 
-              <!-- Secondary Metric Capsules Under Gauge -->
+              <!-- Secondary Metric Capsules Under Gauge (Balanced & Centered) -->
               <div class="gauge-secondary-metrics">
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Dispensed Today</span>
-                  <span class="metric-sub-val"><strong id="dispensed-val-text">0.40</strong> Kg</span>
+                  <span class="metric-sub-val"><strong id="dispensed-val-text">0.40</strong> kg</span>
                 </div>
+                <div class="metric-sub-divider"></div>
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Daily Target</span>
-                  <span class="metric-sub-val"><span id="target-val-text">15.0</span> Kg</span>
+                  <span class="metric-sub-val"><span id="target-val-text">15.0</span> kg</span>
                 </div>
               </div>
 
-              <!-- Customer Key Metrics Grid -->
+              <!-- Customer Key Metrics Grid (Single-Line & Centered Elegance) -->
               <div class="metrics-grid">
                 <div class="metric-cell">
                   <span class="cell-label">FEED EVENT</span>
@@ -244,26 +245,23 @@
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">NEXT FEED INTERVAL</span>
-                  <span id="next-feed-interval" class="cell-value accent-cyan">4.7 mins</span>
-                  <span class="cell-sub" id="next-feed-time">Next at 11:30 AM</span>
+                  <span class="cell-label">NEXT INTERVAL</span>
+                  <span id="next-feed-interval" class="cell-value text-emerald">4.7 min</span>
+                  <span class="cell-sub" id="next-feed-time">At 11:30 AM</span>
                 </div>
 
                 <!-- Interactive Feed Level Toggle Cell -->
                 <div class="metric-cell metric-interactive" onclick="toggleFeedStockState()" title="Tap to toggle Feed Available / Empty">
-                  <div class="metric-cell-header">
-                    <span class="cell-label">FEED LEVEL</span>
-                    <span class="tap-hint">Tap to toggle</span>
-                  </div>
+                  <span class="cell-label">HOPPER STOCK</span>
                   <div class="feed-indicator">
                     <span id="feed-status-dot" class="feed-dot dot-available"></span>
                     <span id="feed-status-text" class="cell-value text-emerald">Available</span>
                   </div>
-                  <span class="cell-sub" id="feed-stock-sub">Hopper ready</span>
+                  <span class="cell-sub" id="feed-stock-sub">Tap to toggle</span>
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">FEEDER STATUS</span>
+                  <span class="cell-label">CONNECTION</span>
                   <span class="cell-value text-emerald"><span class="dot-live-pulse"></span> Connected</span>
                   <span class="cell-sub">Signal Strong</span>
                 </div>
@@ -333,29 +331,29 @@
                 <span class="badge-pill" id="history-feeder-pond">Pond P-01</span>
               </div>
 
-              <!-- High-level Stats Overview Grid -->
+              <!-- High-level Stats Overview Grid (Balanced 2x2) -->
               <div class="history-stats-grid">
                 <div class="metric-cell">
-                  <span class="cell-label">FEED THIS WEEK</span>
-                  <span id="stat-week-total" class="cell-value accent-cyan">105.4 Kg</span>
-                  <span class="cell-sub">Past 7 Days</span>
+                  <span class="cell-label">THIS WEEK</span>
+                  <span id="stat-week-total" class="cell-value">77.5 kg</span>
+                  <span class="cell-sub">Past 7 days</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">DAILY AVERAGE</span>
-                  <span id="stat-daily-avg" class="cell-value text-emerald">17.6 Kg</span>
-                  <span class="cell-sub">Per day rate</span>
+                  <span id="stat-daily-avg" class="cell-value text-emerald">11.1 kg</span>
+                  <span class="cell-sub">Per day average</span>
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">SCHEDULE ADHERENCE</span>
-                  <span id="stat-adherence" class="cell-value text-emerald">99.1%</span>
-                  <span class="cell-sub">Completion rate</span>
+                  <span class="cell-label">ADHERENCE</span>
+                  <span id="stat-adherence" class="cell-value text-emerald">98.7%</span>
+                  <span class="cell-sub">On-time feeds</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">SEASON TOTAL</span>
-                  <span id="stat-season-total" class="cell-value">485.0 Kg</span>
+                  <span id="stat-season-total" class="cell-value">485.0 kg</span>
                   <span class="cell-sub">Cycle to date</span>
                 </div>
               </div>
@@ -564,17 +562,19 @@
               </div>
             </div>
 
-            <!-- Customer Service Card (Charan 9154696777) -->
+            <!-- Customer Service Card (Charan 9154696777) - Clean Spacing -->
             <div class="card support-card">
-              <h3 class="section-title">Need Assistance?</h3>
-              <p class="section-desc">Direct line to customer service & technical support:</p>
-              <a href="tel:9154696777" class="support-hotline-btn" id="cust-support-link">
-                <span class="support-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
-                <div class="support-text-wrap">
-                  <span class="support-label">Customer Service</span>
-                  <span class="support-number">Charan: <strong>+91 91546 96777</strong></span>
+              <div class="support-card-header">
+                <span class="support-label">Customer Service & Technical Support</span>
+                <div class="support-person-row">
+                  <h3 class="support-name">Charan</h3>
+                  <span class="support-badge-247">24/7 Priority</span>
                 </div>
-                <span class="call-badge">TAP TO CALL</span>
+                <span class="support-number">+91 91546 96777</span>
+              </div>
+              <a href="tel:9154696777" class="support-hotline-btn" id="cust-support-link">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                <span>Call Charan (+91 91546 96777)</span>
               </a>
             </div>
 

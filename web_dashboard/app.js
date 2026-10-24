@@ -417,7 +417,8 @@ function updatePondContextBar() {
     pondDevices.forEach(d => {
       const isActive = d.id === appState.selectedDeviceId;
       const isLive = d.status === 'FEEDING';
-      const cleanName = (d.name || d.id).replace('aquaCON Feeder ', 'Feeder ').replace('Live AF_', 'AF_');
+            const match = (d.name || '').match(/Feeder\s*\d+/i);
+      const cleanName = match ? match[0] : (d.name || d.id).slice(0, 9);
       html += `
         <button type="button" class="story-item ${isActive ? 'active-story' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id}">
           <div class="story-ring ${isLive ? 'live-feeding' : ''} ${isActive ? 'ring-active' : ''}">
@@ -477,8 +478,13 @@ function loadSelectedDeviceToUI() {
   const feedStatusText = document.getElementById('feed-status-text');
   const fillBar = document.getElementById('feed-progress-fill');
 
-  if (devTag) devTag.textContent = dev.id;
-  if (devName) devName.textContent = dev.name;
+  const heroMatch = (dev.name || '').match(/Feeder\s*\d+/i);
+  const heroTitle = heroMatch ? heroMatch[0] : (dev.name || 'Feeder 01');
+  if (devName) devName.textContent = heroTitle;
+  if (devTag) {
+    const shortId = dev.id.startsWith('e072') ? dev.id.slice(-8) : dev.id;
+    devTag.textContent = `ID: ${shortId} • Live LoRaWAN`;
+  }
 
   if (stateBadge) {
     stateBadge.textContent = dev.status || 'IDLE';
@@ -541,7 +547,8 @@ function loadSelectedDeviceToUI() {
 
   // Tab 3 Param Editor Inputs
   const paramDevName = document.getElementById('param-device-name');
-  if (paramDevName) paramDevName.textContent = dev.name;
+  const cleanParamName = (dev.name || '').match(/Feeder\s*\d+/i) ? dev.name.match(/Feeder\s*\d+/i)[0] : 'Feeder 01';
+  if (paramDevName) paramDevName.textContent = cleanParamName;
 
   const inputQty = document.getElementById('input-qty');
   const sliderQty = document.getElementById('slider-qty');
@@ -703,8 +710,9 @@ async function renderHistoryView() {
   const pondEl = document.getElementById('history-feeder-pond');
   const targetLbl = document.getElementById('chart-target-lbl');
 
-  if (titleEl) titleEl.textContent = `${dev.name} Trends`;
-  if (pondEl) pondEl.textContent = pond ? pond.name : dev.pondId;
+  const cleanFeeder = (dev.name || '').match(/Feeder\s*\d+/i) ? dev.name.match(/Feeder\s*\d+/i)[0] : 'Feeder 01';
+  if (titleEl) titleEl.textContent = `${cleanFeeder} Trends`;
+  if (pondEl) pondEl.textContent = pond ? pond.name : 'Pond P-01';
   if (targetLbl) targetLbl.textContent = `${(dev.targetKg || 15.0).toFixed(1)} Kg`;
 
   // Fetch or generate 7-day metric data
@@ -856,8 +864,8 @@ function renderPondsDirectory() {
           ${pondDevices.length === 0 ? '<span class="device-chip-badge">No Feeders Assigned</span>' : ''}
         </div>
         <div class="pond-item-actions">
-          <button type="button" class="btn-view-pond" onclick="switchActivePond('${pond.id}'); navigateToTab('tab-status');">View Feeder Console →</button>
-          <button type="button" class="btn-gmaps" onclick="openPondInGoogleMaps('${pond.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Google Maps</button>
+          <button type="button" class="btn-view-pond" onclick="switchActivePond('${pond.id}'); navigateToTab('tab-status');">Select Pond →</button>
+          <button type="button" class="btn-gmaps" onclick="openPondInGoogleMaps('${pond.id}')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Google Maps</button>
         </div>
       </div>
     `;
