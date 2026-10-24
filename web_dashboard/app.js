@@ -21,9 +21,9 @@ const defaultDevices = [
     pondId: 'P-01',
     status: 'FEEDING',
     feedAvailable: true,
-    dispensedKg: 3.70,
+    dispensedKg: 23.50,
     targetKg: 25.0,
-    currentEvent: 37,
+    currentEvent: 235,
     totalEvents: 250,
     fpeGrams: 100,
     dischargeRateGs: 100,
@@ -31,7 +31,7 @@ const defaultDevices = [
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 4.7,
+    intervalMin: 2.9,
     motorTimeSec: 1.0,
     scheduleValid: true
   },
@@ -492,10 +492,15 @@ function loadSelectedDeviceToUI() {
   }
 
   
-  // Update Dribbble Radial Arc Gauge
-  const currentEvents = dev.currentEvent !== undefined ? dev.currentEvent : (dev.eventsToday || 4);
-  const totalEvents = dev.totalEvents || 150;
-  const gaugePct = Math.min(100, Math.max(0, (currentEvents / totalEvents) * 100));
+  // Update Dribbble Radial Arc Gauge with strict mathematical clamping
+  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
+
+  // Logical Invariant: Numerator / Upper value can NEVER exceed Denominator / Lower value
+  const displayCurrent = Math.min(rawCurrent, totalEvents);
+  const isTargetCompleted = rawCurrent >= totalEvents;
+  const gaugePct = isTargetCompleted ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
+
   const gaugeCircle = document.getElementById('gauge-progress-circle');
   const gaugeHeroNum = document.getElementById('gauge-hero-num');
   const gaugeHeroSub = document.getElementById('gauge-hero-sub');
@@ -505,15 +510,25 @@ function loadSelectedDeviceToUI() {
     const offset = circumference - (gaugePct / 100) * circumference;
     gaugeCircle.style.strokeDashoffset = offset;
   }
-  if (gaugeHeroNum) gaugeHeroNum.textContent = currentEvents;
-  if (gaugeHeroSub) gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
-  if (gaugePctBadge) gaugePctBadge.textContent = `${gaugePct.toFixed(1)}%`;
+  if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
+  if (gaugeHeroSub) {
+    gaugeHeroSub.textContent = isTargetCompleted ? `/ ${totalEvents} Events • Completed` : `/ ${totalEvents} Events Today`;
+  }
+  if (gaugePctBadge) {
+    gaugePctBadge.textContent = isTargetCompleted ? '100% Target Met' : `${gaugePct.toFixed(1)}%`;
+  }
 
-  if (dispensedText) dispensedText.textContent = (dev.dispensedKg || 0).toFixed(2);
-  if (targetText) targetText.textContent = (dev.targetKg || 15.0).toFixed(1);
-  if (burstCountText) burstCountText.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
-  if (nextIntervalText) nextIntervalText.textContent = `${dev.intervalMin || 4.7} mins`;
-  if (nextFeedTimeText) nextFeedTimeText.textContent = `Next at 11:30 AM`;
+  const rawDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 25.0;
+  if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
+  if (targetText) targetText.textContent = targetKg.toFixed(1);
+  if (burstCountText) {
+    burstCountText.textContent = isTargetCompleted ? `${totalEvents} / ${totalEvents}` : `${displayCurrent} / ${totalEvents}`;
+  }
+  if (nextIntervalText) nextIntervalText.textContent = `${dev.intervalMin || 2.9} mins`;
+  if (nextFeedTimeText) {
+    nextFeedTimeText.textContent = isTargetCompleted ? 'Daily schedule done' : (dev.status === 'FEEDING' ? 'Dispensing now' : 'Next in 3 mins');
+  }
 
   // Feed Available / Empty Status
   if (feedDot && feedStatusText) {
@@ -797,14 +812,28 @@ function renderEventsLog(dev) {
   const container = document.getElementById('events-log-container');
   if (!container) return;
 
-  const eventsCount = dev.currentEvent || 4;
+  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 4);
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
+  const eventsCount = Math.min(rawCurrent, totalEvents);
   const fpe = dev.fpeGrams || 100;
 
   const eventTimes = ['07:00 AM', '08:15 AM', '09:30 AM', '10:45 AM', '12:00 PM', '01:15 PM', '02:30 PM'];
 
+  // Display up to 20 latest events for responsive rendering
+  const maxToDisplay = 20;
+  const startEvent = eventsCount;
+  const endEvent = Math.max(1, eventsCount - maxToDisplay + 1);
+
+  const logLabel = document.getElementById('log-date-label');
+  if (logLabel) {
+    logLabel.textContent = eventsCount > maxToDisplay 
+      ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events` 
+      : `Showing ${eventsCount} completed feed events`;
+  }
+
   let html = '';
-  for (let i = eventsCount; i >= 1; i--) {
-    const t = eventTimes[(i - 1) % eventTimes.length] || `${06 + i}:00 AM`;
+  for (let i = startEvent; i >= endEvent; i--) {
+    const t = eventTimes[(i - 1) % eventTimes.length] || `${String(6 + Math.floor(i / 15)).padStart(2, '0')}:${String((i * 4) % 60).padStart(2, '0')} AM`;
     html += `
       <div class="event-log-item">
         <div>
@@ -1274,10 +1303,15 @@ function startTelemetryLoop() {
         data.devices.forEach(cloudDev => {
           const localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
           if (localDev) {
-            if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = cloudDev.DispensedFeed_kg;
+            if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
             else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
-            if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = cloudDev.CurrentEvent;
-            if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = cloudDev.TotalEvents;
+            if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
+            if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
+            if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = Number(cloudDev.TotalEvents);
+            if (cloudDev.FeedPerEvent_g !== undefined) localDev.fpeGrams = Number(cloudDev.FeedPerEvent_g);
+            if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
+            if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);
+            if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
             if (cloudDev.Status) localDev.status = cloudDev.Status;
             else if (cloudDev.CurrentEvent > 0) localDev.status = 'FEEDING';
           }
