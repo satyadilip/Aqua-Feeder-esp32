@@ -2973,3 +2973,59 @@ html, body {
   border-color: #CBD5E1 !important;
   opacity: 0.65 !important;
 }
+
+/* ==========================================================================
+   CONCEPT 1 LOGO STYLES (THE PRECISION DROP & FEED ARC)
+   ========================================================================== */
+.brand-app-tile {
+  width: 72px !important;
+  height: 72px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, #0F766E 0%, #064E3B 100%) !important;
+  border: 1.5px solid rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 12px 28px rgba(6, 78, 59, 0.35) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 16px !important;
+}
+
+.brand-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--cell-bg, #F1F5F9) !important;
+  padding: 4px 12px 4px 6px !important;
+  border-radius: 20px !important;
+  border: 1px solid var(--card-border, rgba(0, 0, 0, 0.06)) !important;
+  transition: all 0.2s ease !important;
+}
+
+.brand-logo-mark {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+}
+
+.brand-logo-mark svg {
+  width: 22px !important;
+  height: 22px !important;
+  display: block !important;
+}
+
+.brand-text {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: var(--text-main, #0F172A) !important;
+  letter-spacing: -0.4px !important;
+  line-height: 1 !important;
+}
+
+.brand-text .accent {
+  color: var(--brand-sage, #059669) !important;
+  font-weight: 900 !important;
+}

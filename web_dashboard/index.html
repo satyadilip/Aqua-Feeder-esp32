@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Concept 1 SVG Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 4C24 4 11 19 11 28.5C11 35.4 16.8 41 24 41C31.2 41 37 35.4 37 28.5C37 19 24 4 24 4Z' fill='%23059669'/%3E%3Cpath d='M17 19H31L28 27H20L17 19Z' fill='%23FFFFFF'/%3E%3Crect x='22' y='27' width='4' height='3' rx='1' fill='%23FFFFFF'/%3E%3Ccircle cx='16' cy='33' r='1.8' fill='%23F59E0B'/%3E%3Ccircle cx='24' cy='35' r='2.2' fill='%23FBBF24'/%3E%3Ccircle cx='32' cy='33' r='1.8' fill='%23F59E0B'/%3E%3C/svg%3E">
   <title>aquaCON™ — Smart Feeder Manager</title>
   
   <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
@@ -29,10 +31,23 @@
       <section id="screen-auth" class="auth-viewport">
         <div class="auth-card">
           <div class="auth-brand">
-            <div class="brand-glow-ring">
-              <span class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 12c3-4 8-4 11 0 3-4 8-4 9-2-1 3-3 6-7 7-4 1-7-1-9-3l-4-2z"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/></svg></span>
+            <div class="brand-app-tile">
+              <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
+                <path d="M24 4C24 4 11 19 11 28.5C11 35.4 16.8 41 24 41C31.2 41 37 35.4 37 28.5C37 19 24 4 24 4Z" fill="url(#auth-drop-grad)"/>
+                <path d="M17 19H31L28 27H20L17 19Z" fill="#FFFFFF"/>
+                <rect x="22" y="27" width="4" height="3" rx="1" fill="#FFFFFF"/>
+                <circle cx="16" cy="33" r="1.8" fill="#F59E0B"/>
+                <circle cx="24" cy="35" r="2.2" fill="#FBBF24"/>
+                <circle cx="32" cy="33" r="1.8" fill="#F59E0B"/>
+                <defs>
+                  <linearGradient id="auth-drop-grad" x1="24" y1="4" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+                    <stop stop-color="#34D399"/>
+                    <stop offset="1" stop-color="#059669"/>
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
-            <h1 class="brand-title">aqua<span class="accent-text">CON</span>™</h1>
+            <h1 class="brand-title">aqua<span class="accent-text">CON</span></h1>
             <p class="brand-subtitle">Smart Automated Aquaculture Feeder System</p>
           </div>
 
@@ -118,7 +133,22 @@
         <header class="app-header">
           <div class="header-left">
             <div class="brand-pill">
-              <span class="live-dot pulse"></span>
+              <div class="brand-logo-mark">
+                <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+                  <path d="M24 4C24 4 11 19 11 28.5C11 35.4 16.8 41 24 41C31.2 41 37 35.4 37 28.5C37 19 24 4 24 4Z" fill="url(#hdr-drop-grad)"/>
+                  <path d="M17 19H31L28 27H20L17 19Z" fill="#FFFFFF"/>
+                  <rect x="22" y="27" width="4" height="3" rx="1" fill="#FFFFFF"/>
+                  <circle cx="16" cy="33" r="1.8" fill="#F59E0B"/>
+                  <circle cx="24" cy="35" r="2.2" fill="#FBBF24"/>
+                  <circle cx="32" cy="33" r="1.8" fill="#F59E0B"/>
+                  <defs>
+                    <linearGradient id="hdr-drop-grad" x1="24" y1="4" x2="24" y2="41" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#10B981"/>
+                      <stop offset="1" stop-color="#047857"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
               <span class="brand-text">aqua<span class="accent">CON</span></span>
             </div>
 
