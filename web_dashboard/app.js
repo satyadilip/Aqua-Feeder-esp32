@@ -566,10 +566,10 @@ function loadSelectedDeviceToUI() {
   }
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = isScheduleDone ? `/ ${totalEvents} Events • Completed` : `/ ${totalEvents} Events Today`;
+    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
   }
   if (gaugePctBadge) {
-    gaugePctBadge.textContent = isScheduleDone ? '100% Target Met' : `${gaugePct.toFixed(1)}%`;
+    gaugePctBadge.textContent = isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`;
   }
 
   const rawDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
