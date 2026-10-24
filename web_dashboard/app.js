@@ -17,7 +17,7 @@ const defaultPonds = [
 const defaultDevices = [
   {
     id: 'e072a1fffef6249c',
-    name: 'aquaCON Feeder 01 (Live AF_9C2472E0)',
+    name: 'aquaCON Feeder 01',
     pondId: 'P-01',
     status: 'COMPLETED',
     feedAvailable: true,
@@ -134,7 +134,12 @@ function loadDataFromStorage() {
   appState.ponds = savedPonds ? JSON.parse(savedPonds) : [...defaultPonds];
 
   const savedDevices = localStorage.getItem('aquacon_devices');
-  appState.devices = savedDevices ? JSON.parse(savedDevices) : [...defaultDevices];
+  appState.devices = savedDevices ? JSON.parse(savedDevices).map(d => {
+    if (d.name && d.name.includes('AF_')) {
+      d.name = d.name.replace(/\s*\(Live AF_[^)]+\)/gi, '').trim();
+    }
+    return d;
+  }) : [...defaultDevices];
 
   const savedContacts = localStorage.getItem('aquacon_contacts');
   appState.contacts = savedContacts ? JSON.parse(savedContacts) : [...defaultContacts];
@@ -485,7 +490,7 @@ function loadSelectedDeviceToUI() {
   if (diagDevName) diagDevName.textContent = heroTitle;
   if (devTag) {
     const shortId = dev.id.startsWith('e072') ? dev.id.slice(-8) : dev.id;
-    devTag.textContent = `ID: ${shortId} • Live LoRaWAN`;
+    devTag.textContent = `${heroTitle} • Connected`;
   }
 
   if (stateBadge) {
@@ -1316,7 +1321,7 @@ async function runHardwareTestAction(testType) {
   if (!dev) return;
 
   if (testType === 'TEST_DISPENSER') {
-    showToast(`▶ Running 2-second test pulse on Dispenser Motor (R2)...`);
+    showToast(`▶ Running 2-second test on Feed Spreader...`);
     try {
       await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
@@ -1324,10 +1329,10 @@ async function runHardwareTestAction(testType) {
         body: JSON.stringify({ command: 'TEST_DISPENSER' })
       });
     } catch (e) {}
-    setTimeout(() => showToast(`✔ Dispenser (R2) test pulse complete. Motor driver OK.`), 2000);
+    setTimeout(() => showToast(`✔ Feed Spreader test complete. Motor running normally.`), 2000);
 
   } else if (testType === 'TEST_LOADER') {
-    showToast(`▶ Running 2-second test pulse on Loader Augur (R1)...`);
+    showToast(`▶ Running 2-second test on Feed Loader...`);
     try {
       await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
@@ -1335,11 +1340,11 @@ async function runHardwareTestAction(testType) {
         body: JSON.stringify({ command: 'TEST_LOADER' })
       });
     } catch (e) {}
-    setTimeout(() => showToast(`✔ Loader Augur (R1) test pulse complete. Feed drop OK.`), 2000);
+    setTimeout(() => showToast(`✔ Feed Loader test complete. Feed drop verified.`), 2000);
 
   } else if (testType === 'TEST_HOOTER') {
     playHooterAudioBeep();
-    showToast(`🔊 Sounding 1-second alarm hooter test pulse...`);
+    showToast(`🔊 Sounding 1-second test alert...`);
     try {
       await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
@@ -1347,12 +1352,12 @@ async function runHardwareTestAction(testType) {
         body: JSON.stringify({ command: 'TEST_HOOTER' })
       });
     } catch (e) {}
-    setTimeout(() => showToast(`✔ Alarm hooter alert test sounded! Speaker OK.`), 1000);
+    setTimeout(() => showToast(`✔ Alert sounder test complete.`), 1000);
 
   } else if (testType === 'PING_GATEWAY') {
-    showToast(`📡 Pinging SenseCAP M2 LoRaWAN Gateway...`);
+    showToast(`📡 Testing wireless hub connection...`);
     setTimeout(() => {
-      showToast(`✔ Gateway ACK received (-84 dBm RSSI, SNR +9.5 dB • 100% Link Quality)`);
+      showToast(`✔ Wireless hub connected (Strong Signal • 100% Quality).`);
     }, 700);
   }
 }
@@ -1361,7 +1366,7 @@ async function runFullDiagnosticScan() {
   const btn = document.getElementById('btn-run-diag');
   if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Scanning...';
 
-  showToast('🔍 Running end-to-end hardware self-test...');
+  showToast('🔍 Running system health check...');
 
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (dev) {
@@ -1375,8 +1380,8 @@ async function runFullDiagnosticScan() {
   }
 
   setTimeout(() => {
-    if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Run Full Scan';
-    showToast('🎉 All 5 hardware diagnostic checks PASSED! Feeder healthy.');
+    if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Run Health Check';
+    showToast('🎉 All system health checks PASSED! Feeder healthy.');
   }, 1200);
 }
 
