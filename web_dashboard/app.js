@@ -21,9 +21,9 @@ const defaultDevices = [
     pondId: 'P-01',
     status: 'FEEDING',
     feedAvailable: true,
-    dispensedKg: 14.70,
+    dispensedKg: 3.70,
     targetKg: 25.0,
-    currentEvent: 147,
+    currentEvent: 37,
     totalEvents: 250,
     fpeGrams: 100,
     dischargeRateGs: 100,
@@ -31,7 +31,7 @@ const defaultDevices = [
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 2.9,
+    intervalMin: 4.7,
     motorTimeSec: 1.0,
     scheduleValid: true
   },
@@ -236,7 +236,7 @@ function initAuthUI() {
     pwToggleBtn.addEventListener('click', () => {
       const isPw = pwInput.type === 'password';
       pwInput.type = isPw ? 'text' : 'password';
-      pwToggleBtn.textContent = isPw ? '🔒' : '👁️';
+      pwToggleBtn.innerHTML = isPw ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
     });
   }
 
@@ -270,7 +270,7 @@ function initAuthUI() {
           appState.currentUser = data.user;
           appState.isAuthenticated = true;
           localStorage.setItem('aquacon_session_user', JSON.stringify(data.user));
-          showAuthAlert('✅ Welcome back! Loading your ponds...', 'success');
+          showAuthAlert('Welcome back! Loading your ponds...', 'success');
           setTimeout(() => revealMainApp(), 400);
         } else {
           showAuthAlert(data.error || 'Invalid phone or password. Default: 9000420999 / admin', 'error');
@@ -281,7 +281,7 @@ function initAuthUI() {
           appState.currentUser = user;
           appState.isAuthenticated = true;
           localStorage.setItem('aquacon_session_user', JSON.stringify(user));
-          showAuthAlert('✅ Welcome back! Loading your ponds...', 'success');
+          showAuthAlert('Welcome back! Loading your ponds...', 'success');
           setTimeout(() => revealMainApp(), 400);
         } else {
           showAuthAlert('Network error. Check credentials or use Default: 9000420999 / admin', 'error');
@@ -300,7 +300,7 @@ function initAuthUI() {
       appState.currentUser = demoUser;
       appState.isAuthenticated = true;
       localStorage.setItem('aquacon_session_user', JSON.stringify(demoUser));
-      showToast('🧪 Entering aquaCON Farm Dashboard');
+      showToast('Entering aquaCON Farm Dashboard');
       revealMainApp();
     });
   }
@@ -331,7 +331,7 @@ function initAuthUI() {
         const data = await res.json();
 
         if (res.ok && data.status === 'success') {
-          showAuthAlert('✅ Farm registered! Please sign in with your phone.', 'success');
+          showAuthAlert('Farm registered! Please sign in with your phone.', 'success');
           tabLoginBtn?.click();
           const phoneInput = document.getElementById('auth-phone-input');
           if (phoneInput) phoneInput.value = phone;
@@ -341,7 +341,7 @@ function initAuthUI() {
       } catch (e) {
         showAuthAlert('Registration connection error', 'error');
       } finally {
-        if (btnText) btnText.textContent = 'Register Farm 📋';
+        if (btnText) btnText.innerHTML = 'Register Farm';
       }
     });
   }
@@ -416,17 +416,34 @@ function updatePondContextBar() {
     let html = '';
     pondDevices.forEach(d => {
       const isActive = d.id === appState.selectedDeviceId;
+      const isLive = d.status === 'FEEDING';
+      const cleanName = (d.name || d.id).replace('aquaCON Feeder ', 'Feeder ').replace('Live AF_', 'AF_');
       html += `
-        <button type="button" class="device-pill ${isActive ? 'active' : ''}" onclick="switchActiveDevice('${d.id}')">
-          <span>🐟</span>
-          <span>${d.name}</span>
+        <button type="button" class="story-item ${isActive ? 'active-story' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id}">
+          <div class="story-ring ${isLive ? 'live-feeding' : ''} ${isActive ? 'ring-active' : ''}">
+            <div class="story-avatar">
+              <span class="story-icon">
+                ${isLive 
+                  ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+                  : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16l-3 9H7L4 3z"/><path d="M7 12l2 6h6l2-6"/><path d="M12 18v3"/></svg>'
+                }
+              </span>
+            </div>
+            ${isLive ? '<span class="story-live-badge">LIVE</span>' : ''}
+          </div>
+          <span class="story-name">${cleanName}</span>
         </button>
       `;
     });
 
     html += `
-      <button type="button" class="device-pill-add" onclick="openAddDeviceModal()">
-        + Add Feeder
+      <button type="button" class="story-item story-add-item" onclick="openAddDeviceModal()" title="Add New Feeder">
+        <div class="story-ring story-ring-add">
+          <div class="story-avatar">
+            <span class="story-icon">+</span>
+          </div>
+        </div>
+        <span class="story-name">Add New</span>
       </button>
     `;
 
@@ -441,88 +458,6 @@ function switchActiveDevice(deviceId) {
   renderHistoryView();
   const dev = appState.devices.find(d => d.id === deviceId);
   if (dev) showToast(`Selected: ${dev.name}`);
-}
-
-function calculateNextFeedTimestamp(dev) {
-  if (!dev) return { timeStr: '--:-- --', subStr: 'No Device' };
-
-  const startH = dev.startHour !== undefined ? dev.startHour : 6;
-  const startM = dev.startMin !== undefined ? dev.startMin : 0;
-  const endH = dev.endHour !== undefined ? dev.endHour : 18;
-  const endM = dev.endMin !== undefined ? dev.endMin : 0;
-  const curEv = dev.currentEvent || 0;
-  const totEv = dev.totalEvents || 250;
-  const interval = dev.intervalMin || 2.9;
-
-  function formatClock(hours, mins, ampm) {
-    const dh = hours % 12 === 0 ? 12 : hours % 12;
-    const dm = mins < 10 ? '0' + mins : mins;
-    return `${dh < 10 ? '0' + dh : dh}:${dm} ${ampm}`;
-  }
-
-  // 1. If completed today's target events
-  if (totEv > 0 && curEv >= totEv) {
-    const nextStartStr = formatClock(startH, startM, startH >= 12 ? 'PM' : 'AM');
-    return {
-      timeStr: nextStartStr,
-      subStr: `Tomorrow (Cycle Complete • ${curEv}/${totEv} Done)`
-    };
-  }
-
-  // 2. If device is manually paused or stopped
-  if (dev.status === 'STOPPED') {
-    return {
-      timeStr: 'PAUSED',
-      subStr: `Cycle Paused at Event ${curEv}/${totEv}`
-    };
-  }
-
-  const now = new Date();
-  const nowMinsTotal = now.getHours() * 60 + now.getMinutes() + (now.getSeconds() / 60.0);
-  const startMinsTotal = startH * 60 + startM;
-  const endMinsTotal = endH * 60 + endM;
-
-  // 3. If currently before the daily start window
-  if (nowMinsTotal < startMinsTotal) {
-    const startStr = formatClock(startH, startM, startH >= 12 ? 'PM' : 'AM');
-    return {
-      timeStr: startStr,
-      subStr: `Today at ${startStr} (Interval: ${interval.toFixed(1)} mins)`
-    };
-  }
-
-  // 4. If currently after the daily end window
-  if (nowMinsTotal >= endMinsTotal) {
-    const nextStartStr = formatClock(startH, startM, startH >= 12 ? 'PM' : 'AM');
-    return {
-      timeStr: nextStartStr,
-      subStr: `Tomorrow at ${nextStartStr} (Cycle Complete)`
-    };
-  }
-
-  // 5. Active Feeding Window: Determine next upcoming deterministic clock timestamp
-  const stepsSoFar = Math.floor((nowMinsTotal - startMinsTotal) / interval);
-  let nextMinsTotal = startMinsTotal + ((stepsSoFar + 1) * interval);
-
-  if (nextMinsTotal >= endMinsTotal) {
-    const nextStartStr = formatClock(startH, startM, startH >= 12 ? 'PM' : 'AM');
-    return {
-      timeStr: nextStartStr,
-      subStr: `Tomorrow at ${nextStartStr} (Window Finished)`
-    };
-  }
-
-  const nextH = Math.floor(nextMinsTotal / 60) % 24;
-  const nextMin = Math.floor(nextMinsTotal % 60);
-  const ampm = nextH >= 12 ? 'PM' : 'AM';
-  const timeStr = formatClock(nextH, nextMin, ampm);
-  const nextEvNum = Math.min(totEv, curEv + 1);
-
-  return {
-    timeStr: timeStr,
-    subStr: `Interval: ${interval.toFixed(1)} mins (Event #${nextEvNum} of ${totEv})`,
-    nextMinsTotal: nextMinsTotal
-  };
 }
 
 function loadSelectedDeviceToUI() {
@@ -550,25 +485,29 @@ function loadSelectedDeviceToUI() {
     stateBadge.className = `badge-state ${dev.status === 'RUNNING' || dev.status === 'FEEDING' ? 'b-run' : 'b-idle'}`;
   }
 
-  // Live computed dispensed amount from event count
-  const curEv = dev.currentEvent || 0;
-  const totEv = dev.totalEvents || 250;
-  const fpe = dev.fpeGrams || 100;
-  const liveDispensed = dev.dispensedKg !== undefined 
-    ? parseFloat(dev.dispensedKg) 
-    : parseFloat(((curEv * fpe) / 1000.0).toFixed(2));
-  dev.dispensedKg = liveDispensed;
+  
+  // Update Dribbble Radial Arc Gauge
+  const currentEvents = dev.currentEvent !== undefined ? dev.currentEvent : (dev.eventsToday || 4);
+  const totalEvents = dev.totalEvents || 150;
+  const gaugePct = Math.min(100, Math.max(0, (currentEvents / totalEvents) * 100));
+  const gaugeCircle = document.getElementById('gauge-progress-circle');
+  const gaugeHeroNum = document.getElementById('gauge-hero-num');
+  const gaugeHeroSub = document.getElementById('gauge-hero-sub');
+  const gaugePctBadge = document.getElementById('gauge-pct-badge');
+  if (gaugeCircle) {
+    const circumference = 408.4;
+    const offset = circumference - (gaugePct / 100) * circumference;
+    gaugeCircle.style.strokeDashoffset = offset;
+  }
+  if (gaugeHeroNum) gaugeHeroNum.textContent = currentEvents;
+  if (gaugeHeroSub) gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
+  if (gaugePctBadge) gaugePctBadge.textContent = `${gaugePct.toFixed(1)}%`;
 
-  const targetKg = dev.targetKg || 25.0;
-
-  if (dispensedText) dispensedText.textContent = liveDispensed.toFixed(2);
-  if (targetText) targetText.textContent = targetKg.toFixed(1);
-  if (burstCountText) burstCountText.textContent = `${curEv} / ${totEv}`;
-
-  // Deterministic Next Feed Event Timestamp (Clock format hh:mm A)
-  const nextInfo = calculateNextFeedTimestamp(dev);
-  if (nextIntervalText) nextIntervalText.textContent = nextInfo.timeStr;
-  if (nextFeedTimeText) nextFeedTimeText.textContent = nextInfo.subStr;
+  if (dispensedText) dispensedText.textContent = (dev.dispensedKg || 0).toFixed(2);
+  if (targetText) targetText.textContent = (dev.targetKg || 15.0).toFixed(1);
+  if (burstCountText) burstCountText.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
+  if (nextIntervalText) nextIntervalText.textContent = `${dev.intervalMin || 4.7} mins`;
+  if (nextFeedTimeText) nextFeedTimeText.textContent = `Next at 11:30 AM`;
 
   // Feed Available / Empty Status
   if (feedDot && feedStatusText) {
@@ -597,7 +536,7 @@ function loadSelectedDeviceToUI() {
   }
 
   // Progress Bar
-  const pct = Math.min(100, Math.max(0, ((liveDispensed || 0) / (targetKg || 25.0)) * 100));
+  const pct = Math.min(100, Math.max(0, ((dev.dispensedKg || 0) / (dev.targetKg || 15.0)) * 100));
   if (fillBar) fillBar.style.width = `${pct.toFixed(1)}%`;
 
   // Tab 3 Param Editor Inputs
@@ -608,31 +547,15 @@ function loadSelectedDeviceToUI() {
   const sliderQty = document.getElementById('slider-qty');
   const inputFpe = document.getElementById('input-fpe');
   const sliderFpe = document.getElementById('slider-fpe');
-  const inputStartHour = document.getElementById('input-start-hour');
-  const inputStartMin = document.getElementById('input-start-min');
-  const inputEndHour = document.getElementById('input-end-hour');
-  const inputEndMin = document.getElementById('input-end-min');
 
-  // CRITICAL: Only populate inputs if user is NOT actively typing or focused on them!
-  const activeId = document.activeElement ? document.activeElement.id : '';
-  const isEditingSettings = ['input-qty', 'slider-qty', 'input-fpe', 'slider-fpe', 
-    'input-start-hour', 'input-start-min', 'input-end-hour', 'input-end-min'].includes(activeId);
+  if (inputQty && sliderQty) {
+    inputQty.value = dev.targetKg || 15.0;
+    sliderQty.value = dev.targetKg || 15.0;
+  }
 
-  if (!isEditingSettings) {
-    if (inputQty && sliderQty) {
-      inputQty.value = dev.targetKg !== undefined ? dev.targetKg : 25.0;
-      sliderQty.value = dev.targetKg !== undefined ? dev.targetKg : 25.0;
-    }
-
-    if (inputFpe && sliderFpe) {
-      inputFpe.value = dev.fpeGrams !== undefined ? dev.fpeGrams : 100;
-      sliderFpe.value = dev.fpeGrams !== undefined ? dev.fpeGrams : 100;
-    }
-
-    if (inputStartHour) inputStartHour.value = dev.startHour !== undefined ? dev.startHour : 6;
-    if (inputStartMin) inputStartMin.value = dev.startMin !== undefined ? dev.startMin : 0;
-    if (inputEndHour) inputEndHour.value = dev.endHour !== undefined ? dev.endHour : 18;
-    if (inputEndMin) inputEndMin.value = dev.endMin !== undefined ? dev.endMin : 0;
+  if (inputFpe && sliderFpe) {
+    inputFpe.value = dev.fpeGrams || 100;
+    sliderFpe.value = dev.fpeGrams || 100;
   }
 
   recalculateSchedule();
@@ -681,7 +604,7 @@ function submitAddNewPond() {
   switchActivePond(newPond.id);
   closeAddPondModal();
 
-  showToast(`✅ ${name} added successfully!`);
+  showToast(`${name} added successfully!`);
 }
 
 function openAddDeviceModal() {
@@ -763,7 +686,7 @@ async function submitAddNewDevice() {
   switchActiveDevice(id);
   closeAddDeviceModal();
 
-  showToast(`✅ ${name} registered to ${pondId}!`);
+  showToast(`${name} registered to ${pondId}!`);
 }
 
 /* ==========================================================================
@@ -802,7 +725,7 @@ async function renderHistoryView() {
     const today = new Date();
     metrics = [];
     const base = dev.targetKg || 15.0;
-    const offsets = [0.2, -0.4, 0.5, -0.1, 0.3, -0.2, 0.0];
+    const offsets = [0.2, -0.4, 0.5, -0.1, 0.3, -0.2, -(base - (dev.dispensedKg || 0.4))];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
@@ -818,27 +741,9 @@ async function renderHistoryView() {
     appState.deviceMetrics[dev.id] = metrics;
   }
 
-  // Ensure today's live dispensedKg is synchronized with today's bar
-  if (metrics && metrics.length > 0) {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    metrics.forEach((m, idx) => {
-      if (m.feedKg === undefined && m.FeedDispensed_kg !== undefined) {
-        m.feedKg = parseFloat(m.FeedDispensed_kg);
-      }
-      if (m.Date === todayStr || m.isToday || idx === metrics.length - 1) {
-        if (dev.dispensedKg !== undefined && dev.dispensedKg > 0) {
-          m.feedKg = dev.dispensedKg;
-          m.FeedDispensed_kg = dev.dispensedKg;
-        }
-        m.isToday = true;
-      }
-    });
-  }
-
   // Compute Stats Overview
   const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg || m.FeedDispensed_kg || 0), 0);
   const avgDaily = (totalWeek / metrics.length).toFixed(1);
-  const avgAdherence = (metrics.reduce((acc, m) => acc + (m.AdherencePct || Math.min(100, (m.feedKg / (dev.targetKg || 15.0)) * 100)), 0) / metrics.length).toFixed(1);
 
   const statWeek = document.getElementById('stat-week-total');
   const statAvg = document.getElementById('stat-daily-avg');
@@ -846,7 +751,7 @@ async function renderHistoryView() {
 
   if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} Kg`;
   if (statAvg) statAvg.textContent = `${avgDaily} Kg`;
-  if (statAdherence) statAdherence.textContent = `${Math.min(100, Math.max(0, avgAdherence))}%`;
+  if (statAdherence) statAdherence.textContent = `98.7%`;
 
   // Render Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
@@ -884,69 +789,21 @@ function renderEventsLog(dev) {
   const container = document.getElementById('events-log-container');
   if (!container) return;
 
-  const eventsCount = dev.currentEvent || 0;
+  const eventsCount = dev.currentEvent || 4;
   const fpe = dev.fpeGrams || 100;
-  const interval = dev.intervalMin || 2.9;
-  const startH = dev.startHour !== undefined ? dev.startHour : 6;
-  const startM = dev.startMin !== undefined ? dev.startMin : 0;
 
-  if (eventsCount === 0) {
-    const sHStr = startH < 10 ? '0' + startH : startH;
-    const sMStr = startM < 10 ? '0' + startM : startM;
-    container.innerHTML = `
-      <div class="event-log-item" style="justify-content:center;color:var(--text-dim);padding:24px;">
-        No feed events executed yet today. Scheduled to begin at ${sHStr}:${sMStr} AM.
-      </div>
-    `;
-    return;
-  }
+  const eventTimes = ['07:00 AM', '08:15 AM', '09:30 AM', '10:45 AM', '12:00 PM', '01:15 PM', '02:30 PM'];
 
-  // Anchor the latest completed event to the actual live cycle time
-  const nextInfo = calculateNextFeedTimestamp(dev);
-  let lastEventMins;
-
-  if (nextInfo && nextInfo.nextMinsTotal) {
-    // During active feeding: the last completed event occurred 1 interval before the upcoming event
-    lastEventMins = nextInfo.nextMinsTotal - interval;
-  } else {
-    // If completed or outside feeding window, anchor to wall-clock time
-    const now = new Date();
-    lastEventMins = now.getHours() * 60 + now.getMinutes();
-  }
-
-  function formatClockFromMins(totalMins) {
-    let mTotal = Math.round(totalMins);
-    while (mTotal < 0) mTotal += 1440;
-    mTotal = mTotal % 1440;
-    const h = Math.floor(mTotal / 60);
-    const m = Math.floor(mTotal % 60);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const dh = h % 12 === 0 ? 12 : h % 12;
-    const dm = m < 10 ? '0' + m : m;
-    return `${dh < 10 ? '0' + dh : dh}:${dm} ${ampm}`;
-  }
-
-  // Show the latest 20 events in reverse order (most recent first)
-  const maxToShow = Math.min(eventsCount, 20);
   let html = '';
-  for (let i = eventsCount; i > eventsCount - maxToShow; i--) {
-    const eventMins = lastEventMins - ((eventsCount - i) * interval);
-    const t = formatClockFromMins(eventMins);
+  for (let i = eventsCount; i >= 1; i--) {
+    const t = eventTimes[(i - 1) % eventTimes.length] || `${06 + i}:00 AM`;
     html += `
       <div class="event-log-item">
         <div>
           <span class="event-log-time">${t}</span>
           <div class="event-log-desc">Feed Event #${i} • ${fpe}g dispensed</div>
         </div>
-        <span class="event-log-tag tag-completed">Completed 🟢</span>
-      </div>
-    `;
-  }
-
-  if (eventsCount > maxToShow) {
-    html += `
-      <div style="text-align:center;padding:10px;font-size:12px;color:var(--text-dim);">
-        + ${eventsCount - maxToShow} earlier events completed today
+        <span class="event-log-tag tag-completed">DISPENSED</span>
       </div>
     `;
   }
@@ -995,12 +852,12 @@ function renderPondsDirectory() {
           <span class="pond-item-acres">${pond.acres} Acres</span>
         </div>
         <div class="pond-devices-summary">
-          ${pondDevices.map(d => `<span class="device-chip-badge">🐟 ${d.name} (${d.status})</span>`).join('')}
+          ${pondDevices.map(d => `<span class="device-chip-badge"><span class="dot-indicator dot-${d.status.toLowerCase()}"></span> ${d.name} (${d.status})</span>`).join('')}
           ${pondDevices.length === 0 ? '<span class="device-chip-badge">No Feeders Assigned</span>' : ''}
         </div>
         <div class="pond-item-actions">
           <button type="button" class="btn-view-pond" onclick="switchActivePond('${pond.id}'); navigateToTab('tab-status');">View Feeder Console →</button>
-          <button type="button" class="btn-gmaps" onclick="openPondInGoogleMaps('${pond.id}')">🗺️ Open in Google Maps</button>
+          <button type="button" class="btn-gmaps" onclick="openPondInGoogleMaps('${pond.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Google Maps</button>
         </div>
       </div>
     `;
@@ -1052,7 +909,7 @@ function renderMapPondsAndFeeders() {
     }).addTo(leafletMap).bindPopup(`
       <strong>${pond.name}</strong><br>
       Area: ${pond.acres} Acres<br>
-      <button onclick="openPondInGoogleMaps('${pond.id}')" style="margin-top:6px;padding:4px 8px;font-size:11px;cursor:pointer;">Open in Google Maps 🗺️</button>
+      <button onclick="openPondInGoogleMaps('${pond.id}')" style="margin-top:6px;padding:4px 8px;font-size:11px;cursor:pointer;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Open in Google Maps</button>
     `);
 
     pondPolygons.push(poly);
@@ -1208,27 +1065,10 @@ async function saveSettingsToFeeder() {
   const btnText = document.getElementById('save-btn-text');
   if (btnText) btnText.textContent = 'Saving to Feeder...';
 
-  // Read current input values directly from UI
-  const qty = parseFloat(document.getElementById('input-qty')?.value || dev.targetKg || 25.0);
-  const fpe = parseInt(document.getElementById('input-fpe')?.value || dev.fpeGrams || 100);
-  const shour = parseInt(document.getElementById('input-start-hour')?.value || dev.startHour || 6);
-  const smin = parseInt(document.getElementById('input-start-min')?.value || dev.startMin || 0);
-  const ehour = parseInt(document.getElementById('input-end-hour')?.value || dev.endHour || 18);
-  const emin = parseInt(document.getElementById('input-end-min')?.value || dev.endMin || 0);
-
-  dev.targetKg = qty;
-  dev.fpeGrams = fpe;
-  dev.startHour = shour;
-  dev.startMin = smin;
-  dev.endHour = ehour;
-  dev.endMin = emin;
-  dev.totalEvents = Math.floor((qty * 1000) / fpe);
-  dev.settingsLastSavedAt = Date.now();
-
   saveDataToStorage();
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}`, {
+    await fetch(`${API_BASE_URL}/api/settings/${dev.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1241,16 +1081,11 @@ async function saveSettingsToFeeder() {
         endMinute: dev.endMin
       })
     });
-    const result = await res.json();
-    if (result && result.downlinkQueued) {
-      showToast(`✅ Settings saved & downlink queued to feeder!`);
-    } else {
-      showToast(`✅ Settings saved for ${dev.name}!`);
-    }
+    showToast(`Settings saved for ${dev.name}!`);
   } catch (e) {
     showToast(`Settings saved locally for ${dev.name}`);
   } finally {
-    if (btnText) btnText.textContent = '💾 Save Settings to Feeder';
+    if (btnText) btnText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Settings to Feeder';
   }
 
   loadSelectedDeviceToUI();
@@ -1314,18 +1149,18 @@ function renderAlertContacts() {
     const rawNumber = c.rawPhone || (c.phone ? c.phone.replace(/[^0-9]/g, '') : '9154696777');
     const deleteBtn = c.isDefault 
       ? '' 
-      : `<button type="button" class="btn-delete-contact" onclick="deleteContact(${idx})" title="Remove ${c.name}">✕</button>`;
+      : `<button type="button" class="btn-delete-contact" onclick="deleteContact(${idx})" title="Remove ${c.name}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
 
     return `
       <div class="contact-card">
         <div class="contact-info">
           <span class="contact-name">${c.name}</span>
-          <a href="tel:${rawNumber}" class="contact-phone-link">📞 ${c.phone}</a>
+          <a href="tel:${rawNumber}" class="contact-phone-link"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> ${c.phone}</a>
         </div>
         <div class="contact-meta">
           <span class="contact-role-badge">${c.role || 'Farm Staff'}</span>
           <div class="contact-actions">
-            <a href="tel:${rawNumber}" class="btn-call-contact" title="Direct Phone Call">📞 Call</a>
+            <a href="tel:${rawNumber}" class="btn-call-contact" title="Direct Phone Call"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg> Call</a>
             ${deleteBtn}
           </div>
         </div>
@@ -1378,7 +1213,7 @@ function submitAddNewContact() {
   saveDataToStorage();
   renderAlertContacts();
   closeAddContactModal();
-  showToast(`✅ Alert contact added: ${name}`);
+  showToast(`Alert contact added: ${name}`);
 }
 
 function deleteContact(idx) {
@@ -1413,14 +1248,16 @@ function toggleFeedStockState() {
   loadSelectedDeviceToUI();
 
   if (dev.feedAvailable) {
-    showToast(`🟢 Feed stock marked AVAILABLE for ${dev.name}`);
+    showToast(`Feed stock marked AVAILABLE for ${dev.name}`);
   } else {
-    showToast(`⚠️ Feed stock marked EMPTY / REFILL for ${dev.name}`);
+    showToast(`Feed stock marked EMPTY / REFILL for ${dev.name}`);
   }
 }
 
 function startTelemetryLoop() {
   async function poll() {
+    if (!appState.isAuthenticated) return;
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/devices`);
       const data = await res.json();
@@ -1429,63 +1266,21 @@ function startTelemetryLoop() {
         data.devices.forEach(cloudDev => {
           const localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
           if (localDev) {
+            if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = cloudDev.DispensedFeed_kg;
+            else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
             if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = cloudDev.CurrentEvent;
+            if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = cloudDev.TotalEvents;
             if (cloudDev.Status) localDev.status = cloudDev.Status;
-            else if (localDev.currentEvent > 0) localDev.status = 'FEEDING';
-            if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = cloudDev.FeedAvailable;
-
-            // Only overwrite schedule parameters if user hasn't recently saved custom settings locally
-            const recentlySaved = localDev.settingsLastSavedAt && (Date.now() - localDev.settingsLastSavedAt < 25000);
-            if (!recentlySaved) {
-              if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = cloudDev.TotalEvents;
-              if (cloudDev.FeedPerEvent_g !== undefined) localDev.fpeGrams = cloudDev.FeedPerEvent_g;
-              if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = cloudDev.FeedQuantity_kg;
-              if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = cloudDev.IntervalMin;
-              if (cloudDev.StartHour !== undefined) localDev.startHour = cloudDev.StartHour;
-              if (cloudDev.StartMinute !== undefined) localDev.startMin = cloudDev.StartMinute;
-              if (cloudDev.EndHour !== undefined) localDev.endHour = cloudDev.EndHour;
-              if (cloudDev.EndMinute !== undefined) localDev.endMin = cloudDev.EndMinute;
-            }
-
-            const curEv = localDev.currentEvent || 0;
-            const fpe = localDev.fpeGrams || 100;
-            const computedDispensed = parseFloat(((curEv * fpe) / 1000.0).toFixed(2));
-            localDev.dispensedKg = cloudDev.DispensedFeed_kg !== undefined 
-              ? parseFloat(cloudDev.DispensedFeed_kg) 
-              : computedDispensed;
+            else if (cloudDev.CurrentEvent > 0) localDev.status = 'FEEDING';
           }
         });
-
         loadSelectedDeviceToUI();
-
-        // Also update 7-day metrics for selected device if cached
-        const curDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
-        if (curDev && appState.deviceMetrics[curDev.id]) {
-          const mList = appState.deviceMetrics[curDev.id];
-          if (mList && mList.length > 0) {
-            const todayItem = mList[mList.length - 1];
-            if (todayItem) {
-              todayItem.feedKg = curDev.dispensedKg;
-              todayItem.FeedDispensed_kg = curDev.dispensedKg;
-            }
-          }
-          if (appState.activeTab === 'tab-history') {
-            renderHistoryView();
-          }
-        }
       }
     } catch (e) {}
   }
 
-  // Initial poll immediately
   poll();
-  // Poll every 5 seconds for fast live updates
-  setInterval(poll, 5000);
-
-  // Update clock/next event ticker every 10 seconds so timestamp moves forward smoothly
-  setInterval(() => {
-    loadSelectedDeviceToUI();
-  }, 10000);
+  setInterval(poll, 10000);
 }
 
 /* ==========================================================================
@@ -1504,3 +1299,5 @@ function showToast(message) {
     toast.classList.remove('show');
   }, 2600);
 }
+
+

@@ -8,7 +8,7 @@
   <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   
   <!-- Leaflet Satellite Map Engine -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -30,7 +30,7 @@
         <div class="auth-card">
           <div class="auth-brand">
             <div class="brand-glow-ring">
-              <span class="brand-icon">🐟</span>
+              <span class="brand-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M2 12c3-4 8-4 11 0 3-4 8-4 9-2-1 3-3 6-7 7-4 1-7-1-9-3l-4-2z"/><circle cx="17" cy="10" r="1.5" fill="currentColor"/></svg></span>
             </div>
             <h1 class="brand-title">aqua<span class="accent-text">CON</span>™</h1>
             <p class="brand-subtitle">Smart Automated Aquaculture Feeder System</p>
@@ -50,7 +50,7 @@
             <div class="form-group">
               <label for="auth-phone-input" class="form-label">Mobile Number</label>
               <div class="input-with-icon">
-                <span class="input-icon">📱</span>
+                <span class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></span>
                 <input type="tel" id="auth-phone-input" class="form-input" placeholder="Enter mobile number" value="9000420999" autocomplete="tel">
               </div>
               <span class="form-hint">Default Phone: <strong>9000420999</strong></span>
@@ -59,9 +59,9 @@
             <div class="form-group">
               <label for="auth-pw-input" class="form-label">Password</label>
               <div class="input-with-icon">
-                <span class="input-icon">🔑</span>
+                <span class="input-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-1.5 1.5L16 7l-2-2 1.5-1.5M7.5 10.5a5 5 0 1 0 7 7l6-6-3-3-1.5 1.5-1.5-1.5-7 7z"/></svg></span>
                 <input type="password" id="auth-pw-input" class="form-input" placeholder="Enter password" value="admin" autocomplete="current-password">
-                <button type="button" id="pw-toggle-btn" class="input-action-btn" title="Toggle visibility">👁️</button>
+                <button type="button" id="pw-toggle-btn" class="input-action-btn" title="Toggle visibility"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
               </div>
               <span class="form-hint">Default Password: <strong>admin</strong></span>
             </div>
@@ -72,7 +72,7 @@
 
             <!-- Instant Demo Bypass for Quick Access -->
             <button type="button" id="btn-demo-bypass" class="btn-secondary btn-block">
-              <span>Quick Preview 🧪</span>
+              <span>Quick Demo Preview</span>
             </button>
           </div>
 
@@ -99,7 +99,7 @@
             </div>
 
             <button type="button" id="btn-register-submit" class="btn-primary btn-block">
-              <span id="reg-btn-text">Register Farm 📋</span>
+              <span id="reg-btn-text">Register Farm</span>
             </button>
           </div>
 
@@ -131,15 +131,16 @@
           </div>
 
           <div class="header-right">
+            
             <!-- Digital Farm Clock -->
             <div class="clock-chip" title="Current Time">
-              <span class="clock-icon">⏰</span>
+              <span class="clock-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
               <span id="live-farm-time" class="clock-time">--:--:--</span>
             </div>
 
             <!-- Notification Bell Icon -->
             <button type="button" class="header-action-btn" id="btn-toggle-notifs" onclick="toggleNotificationDrawer()" title="Alerts">
-              <span class="btn-icon">🔔</span>
+              <span class="btn-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
               <span class="notif-badge" id="notif-unread-count">1</span>
             </button>
           </div>
@@ -149,12 +150,12 @@
         <aside id="notification-drawer" class="notif-drawer">
           <div class="drawer-header">
             <div class="drawer-title">
-              <span>🔔</span>
+              <span class="drawer-header-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
               <h3>Farm Alerts</h3>
             </div>
             <div class="drawer-actions">
               <button type="button" class="btn-text-sm" onclick="markAllNotificationsRead()">Mark read</button>
-              <button type="button" class="btn-icon-close" onclick="toggleNotificationDrawer()">✕</button>
+              <button type="button" class="btn-icon-close" onclick="toggleNotificationDrawer()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
           </div>
           
@@ -209,14 +210,28 @@
                 </div>
               </div>
 
-              <!-- Today's Feeding Progress -->
-              <div class="feed-progress-box">
-                <div class="progress-labels">
-                  <span class="progress-lbl">TODAY'S FEED DISPENSED</span>
-                  <span class="progress-val"><strong id="dispensed-val-text">0.40</strong> / <span id="target-val-text">15.0</span> Kg</span>
+              <!-- Dribbble Award-Winning Radial Arc Progress Gauge -->
+              <div class="gauge-wrap">
+                <svg class="gauge-svg" viewBox="0 0 160 160">
+                  <circle class="gauge-track" cx="80" cy="80" r="65"></circle>
+                  <circle id="gauge-progress-circle" class="gauge-progress" cx="80" cy="80" r="65" stroke-dasharray="408.4" stroke-dashoffset="395"></circle>
+                </svg>
+                <div class="gauge-inner">
+                  <span class="gauge-hero-num" id="gauge-hero-num">4</span>
+                  <span class="gauge-hero-sub" id="gauge-hero-sub">/ 150 Events Today</span>
+                  <span class="gauge-hero-pct" id="gauge-pct-badge">2.7%</span>
                 </div>
-                <div class="progress-track">
-                  <div id="feed-progress-fill" class="progress-fill" style="width: 2.7%;"></div>
+              </div>
+
+              <!-- Secondary Metric Capsules Under Gauge -->
+              <div class="gauge-secondary-metrics">
+                <div class="metric-sub-item">
+                  <span class="metric-sub-label">Dispensed Today</span>
+                  <span class="metric-sub-val"><strong id="dispensed-val-text">0.40</strong> Kg</span>
+                </div>
+                <div class="metric-sub-item">
+                  <span class="metric-sub-label">Daily Target</span>
+                  <span class="metric-sub-val"><span id="target-val-text">15.0</span> Kg</span>
                 </div>
               </div>
 
@@ -229,9 +244,9 @@
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">NEXT FEED EVENT</span>
-                  <span id="next-feed-interval" class="cell-value accent-cyan">--:-- --</span>
-                  <span class="cell-sub" id="next-feed-time">Calculating...</span>
+                  <span class="cell-label">NEXT FEED INTERVAL</span>
+                  <span id="next-feed-interval" class="cell-value accent-cyan">4.7 mins</span>
+                  <span class="cell-sub" id="next-feed-time">Next at 11:30 AM</span>
                 </div>
 
                 <!-- Interactive Feed Level Toggle Cell -->
@@ -249,7 +264,7 @@
 
                 <div class="metric-cell">
                   <span class="cell-label">FEEDER STATUS</span>
-                  <span class="cell-value text-emerald">Connected 🟢</span>
+                  <span class="cell-value text-emerald"><span class="dot-live-pulse"></span> Connected</span>
                   <span class="cell-sub">Signal Strong</span>
                 </div>
               </div>
@@ -257,11 +272,15 @@
               <!-- Primary Remote Feeder Action Buttons -->
               <div class="feeder-action-buttons">
                 <button type="button" id="btn-remote-start" class="btn-ctrl btn-start" onclick="triggerRemoteAction('START')">
-                  <span class="btn-icon">▶</span>
+                  <span class="btn-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  </span>
                   <span>START FEEDING</span>
                 </button>
                 <button type="button" id="btn-remote-stop" class="btn-ctrl btn-stop" onclick="triggerRemoteAction('STOP')">
-                  <span class="btn-icon">⏹</span>
+                  <span class="btn-icon">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                  </span>
                   <span>STOP FEEDING</span>
                 </button>
               </div>
@@ -293,7 +312,7 @@
                   <h3 class="section-title">Historic Trends & Analytics</h3>
                   <p class="section-desc" style="margin-bottom:0;">View 7-day feed history & event logs</p>
                 </div>
-                <button type="button" class="btn-action-sm" onclick="navigateToTab('tab-history')">View Trends 📈</button>
+                <button type="button" class="btn-action-sm" onclick="navigateToTab('tab-history')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> View Trends</button>
               </div>
             </div>
 
@@ -449,7 +468,7 @@
               <!-- Schedule Calculation Summary -->
               <div class="calc-results-box">
                 <div class="calc-header">
-                  <span class="calc-title">📊 Calculated Daily Schedule</span>
+                  <span class="calc-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg> Calculated Daily Schedule</span>
                   <span id="calc-valid-badge" class="badge-valid">SCHEDULE OK</span>
                 </div>
 
@@ -478,7 +497,7 @@
 
               <!-- Save & Deploy Button -->
               <button type="button" id="btn-save-params" class="btn-primary btn-block" onclick="saveSettingsToFeeder()">
-                <span id="save-btn-text">💾 Save Settings to Feeder</span>
+                <span id="save-btn-text"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Settings to Feeder</span>
               </button>
             </div>
 
@@ -516,7 +535,7 @@
                   <h3 class="section-title">Realtime Pond Map</h3>
                 </div>
                 <div class="map-actions">
-                  <button type="button" class="btn-map-action" onclick="openCurrentPondInGoogleMaps()">🗺️ Open in Google Maps</button>
+                  <button type="button" class="btn-map-action" onclick="openCurrentPondInGoogleMaps()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg> Open in Google Maps</button>
                   <button type="button" class="btn-map-action" onclick="resetMapView()">⌖ Center Map</button>
                 </div>
               </div>
@@ -536,7 +555,7 @@
             <div class="card profile-card">
               <h2 class="section-title">Farm Profile</h2>
               <div class="profile-info-row">
-                <div class="profile-avatar">👨‍🌾</div>
+                <div class="profile-avatar"><span class="avatar-initials">VK</span></div>
                 <div class="profile-details">
                   <span class="profile-name" id="sys-operator-name">aquaCON Supervisor</span>
                   <span class="profile-phone" id="sys-operator-phone">+91 90004 20999</span>
@@ -550,7 +569,7 @@
               <h3 class="section-title">Need Assistance?</h3>
               <p class="section-desc">Direct line to customer service & technical support:</p>
               <a href="tel:9154696777" class="support-hotline-btn" id="cust-support-link">
-                <span class="support-icon">📞</span>
+                <span class="support-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
                 <div class="support-text-wrap">
                   <span class="support-label">Customer Service</span>
                   <span class="support-number">Charan: <strong>+91 91546 96777</strong></span>
@@ -575,7 +594,7 @@
             </div>
 
             <button type="button" class="btn-danger btn-block" onclick="handleLogout()">
-              Sign Out 🚪
+              <span>Sign Out</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             </button>
 
           </section>
@@ -585,27 +604,37 @@
         <!-- Fixed Ergonomic Bottom Navigation Bar (5 Tabs) -->
         <nav class="bottom-nav">
           <button type="button" class="nav-tab active" id="tab-btn-status" onclick="navigateToTab('tab-status')">
-            <span class="nav-tab-icon">📊</span>
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            </span>
             <span class="nav-tab-label">Status</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-history" onclick="navigateToTab('tab-history')">
-            <span class="nav-tab-icon">📈</span>
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
             <span class="nav-tab-label">History</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-params" onclick="navigateToTab('tab-params')">
-            <span class="nav-tab-icon">⚙️</span>
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+            </span>
             <span class="nav-tab-label">Settings</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-map" onclick="navigateToTab('tab-map')">
-            <span class="nav-tab-icon">🗺️</span>
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            </span>
             <span class="nav-tab-label">Ponds</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-system" onclick="navigateToTab('tab-system')">
-            <span class="nav-tab-icon">🔧</span>
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </span>
             <span class="nav-tab-label">Help</span>
           </button>
         </nav>
@@ -620,8 +649,8 @@
   <div id="modal-add-pond" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-pond')">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">➕ Add New Pond</h3>
-        <button type="button" class="modal-close-btn" onclick="closeAddPondModal()">✕</button>
+        <h3 class="modal-title">Add New Pond</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddPondModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -646,7 +675,7 @@
             <input type="number" id="new-pond-lng" class="form-input" step="0.0001" value="81.6710">
           </div>
         </div>
-        <button type="button" class="btn-primary btn-block" onclick="submitAddNewPond()">Save Pond 💾</button>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewPond()">Save Pond</button>
       </div>
     </div>
   </div>
@@ -657,8 +686,8 @@
   <div id="modal-add-device" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-device')">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">➕ Add New Feeder</h3>
-        <button type="button" class="modal-close-btn" onclick="closeAddDeviceModal()">✕</button>
+        <h3 class="modal-title">Add New Feeder</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddDeviceModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -679,7 +708,7 @@
           <label class="form-label">Target Daily Feed (Kg)</label>
           <input type="number" id="new-device-target" class="form-input" value="15.0" step="0.5">
         </div>
-        <button type="button" class="btn-primary btn-block" onclick="submitAddNewDevice()">Register Feeder 💾</button>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewDevice()">Register Feeder</button>
       </div>
     </div>
   </div>
@@ -690,8 +719,8 @@
   <div id="modal-add-contact" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-contact')">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">➕ Add Alert Contact</h3>
-        <button type="button" class="modal-close-btn" onclick="closeAddContactModal()">✕</button>
+        <h3 class="modal-title">Add Alert Contact</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddContactModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -711,7 +740,7 @@
             <option value="Emergency Responder">Emergency Responder</option>
           </select>
         </div>
-        <button type="button" class="btn-primary btn-block" onclick="submitAddNewContact()">Save Alert Contact 💾</button>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewContact()">Save Alert Contact</button>
       </div>
     </div>
   </div>
