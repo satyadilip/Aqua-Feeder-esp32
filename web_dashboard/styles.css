@@ -1540,12 +1540,16 @@ svg {
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.modal-backdrop.active {
-  display: flex;
-  opacity: 1;
+.modal-backdrop.active,
+.modal-backdrop[style*="display: flex"] {
+  display: flex !important;
+  opacity: 1 !important;
 }
 
-.modal-backdrop.active .modal-body {
+.modal-backdrop.active .modal-card,
+.modal-backdrop[style*="display: flex"] .modal-card,
+.modal-backdrop.active .modal-body,
+.modal-backdrop[style*="display: flex"] .modal-body {
   animation: modalEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -1560,6 +1564,7 @@ svg {
   }
 }
 
+.modal-card,
 .modal-body {
   background: var(--card-bg);
   border-radius: var(--radius-xl);

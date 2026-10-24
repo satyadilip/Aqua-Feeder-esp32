@@ -88,17 +88,17 @@
           <div id="panel-register" class="auth-panel">
             <div class="form-group">
               <label for="reg-name-input" class="form-label">Farmer Name</label>
-              <input type="text" id="reg-name-input" class="form-input" placeholder="e.g. Ramesh Varma">
+              <input type="text" id="reg-name-input" class="form-input" placeholder="Enter farmer name">
             </div>
 
             <div class="form-group">
               <label for="reg-phone-input" class="form-label">Mobile Number (Login ID)</label>
-              <input type="tel" id="reg-phone-input" class="form-input" placeholder="10-digit mobile number">
+              <input type="tel" id="reg-phone-input" class="form-input" placeholder="Enter 10-digit mobile number">
             </div>
 
             <div class="form-group">
               <label for="reg-farm-input" class="form-label">Farm Name</label>
-              <input type="text" id="reg-farm-input" class="form-input" placeholder="e.g. Delta Shrimp Farm">
+              <input type="text" id="reg-farm-input" class="form-input" placeholder="Enter farm name">
             </div>
 
             <div class="form-group">
@@ -745,7 +745,7 @@
               <div class="calib-input-row" style="margin-top:14px; display:flex; gap:10px; align-items:center;">
                 <button type="button" class="btn-primary" style="flex:1;" onclick="runCalibrationSample(5)">▶ Run 5s Sample</button>
                 <div style="flex:1;">
-                  <input type="number" id="calib-weighed-grams" class="form-input" placeholder="e.g. 500 grams">
+                  <input type="number" id="calib-weighed-grams" class="form-input" placeholder="Enter weighed grams">
                 </div>
                 <button type="button" class="btn-secondary" onclick="saveCalibratedRate()">Save & Apply</button>
               </div>
@@ -975,15 +975,15 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Pond Name / ID</label>
-          <input type="text" id="new-pond-id" class="form-input" placeholder="e.g. Pond P-04">
+          <input type="text" id="new-pond-id" class="form-input" placeholder="Enter pond name or ID">
         </div>
         <div class="form-group">
           <label class="form-label">Size in Acres</label>
-          <input type="number" id="new-pond-acres" class="form-input" placeholder="e.g. 2.0" step="0.1" value="2.0">
+          <input type="number" id="new-pond-acres" class="form-input" placeholder="Enter pond area (acres)" step="0.1">
         </div>
         <div class="form-group">
           <label class="form-label">Culture / Stock</label>
-          <input type="text" id="new-pond-stock" class="form-input" placeholder="e.g. Vannamei Shrimp" value="Vannamei Shrimp">
+          <input type="text" id="new-pond-stock" class="form-input" placeholder="Enter culture stock">
         </div>
         <div class="form-row-times">
           <div class="form-group">
@@ -1012,11 +1012,11 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Feeder Serial ID</label>
-          <input type="text" id="new-device-id" class="form-input" placeholder="e.g. aquaCON-02">
+          <input type="text" id="new-device-id" class="form-input" placeholder="Enter feeder serial ID">
         </div>
         <div class="form-group">
           <label class="form-label">Feeder Name</label>
-          <input type="text" id="new-device-name" class="form-input" placeholder="e.g. Feeder South Corner">
+          <input type="text" id="new-device-name" class="form-input" placeholder="Enter feeder name">
         </div>
         <div class="form-group">
           <label class="form-label">Assign to Pond</label>
@@ -1026,7 +1026,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Target Daily Feed (Kg)</label>
-          <input type="number" id="new-device-target" class="form-input" value="15.0" step="0.5">
+          <input type="number" id="new-device-target" class="form-input" placeholder="Enter daily feed (kg)" step="0.5">
         </div>
         <button type="button" class="btn-primary btn-block" onclick="submitAddNewDevice()">Register Feeder</button>
       </div>
@@ -1045,11 +1045,11 @@
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label">Contact Name</label>
-          <input type="text" id="new-contact-name" class="form-input" placeholder="e.g. Charan, Ravi Kumar">
+          <input type="text" id="new-contact-name" class="form-input" placeholder="Enter contact name">
         </div>
         <div class="form-group">
           <label class="form-label">Mobile Number</label>
-          <input type="tel" id="new-contact-phone" class="form-input" placeholder="e.g. 9154696777">
+          <input type="tel" id="new-contact-phone" class="form-input" placeholder="Enter mobile number">
         </div>
         <div class="form-group">
           <label class="form-label">Role / Shift</label>
