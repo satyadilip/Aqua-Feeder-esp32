@@ -252,18 +252,18 @@
 
                 <!-- Interactive Feed Level Toggle Cell -->
                 <div class="metric-cell metric-interactive" onclick="toggleFeedStockState()" title="Tap to toggle Feed Available / Empty">
-                  <span class="cell-label">HOPPER STOCK</span>
+                  <span class="cell-label">FEED AVAILABLE</span>
                   <div class="feed-indicator">
                     <span id="feed-status-dot" class="feed-dot dot-available"></span>
                     <span id="feed-status-text" class="cell-value text-emerald">Available</span>
                   </div>
-                  <span class="cell-sub" id="feed-stock-sub">Tap to toggle</span>
+                  <span class="cell-sub" id="feed-stock-sub">Feed in Hopper</span>
                 </div>
 
-                <div class="metric-cell">
+                <div class="metric-cell" id="metric-cell-connection">
                   <span class="cell-label">CONNECTION</span>
-                  <span class="cell-value text-emerald"><span class="dot-live-pulse"></span> Connected</span>
-                  <span class="cell-sub">Signal Strong</span>
+                  <span id="connection-status-val" class="cell-value text-emerald"><span id="connection-status-dot" class="dot-live-pulse"></span> <span id="connection-status-text">Connected</span></span>
+                  <span class="cell-sub" id="connection-status-sub">Signal Strong</span>
                 </div>
               </div>
 
@@ -294,7 +294,7 @@
                 </div>
                 <div class="health-pill">
                   <span class="pill-dot dot-available" id="pill-feed-dot"></span>
-                  <span class="pill-label">Hopper Stock: <strong id="pill-feed-status">Feed Available</strong></span>
+                  <span class="pill-label">Feed Status: <strong id="pill-feed-status">Feed Available</strong></span>
                 </div>
                 <div class="health-pill">
                   <span class="pill-dot dot-available"></span>
@@ -531,37 +531,37 @@
                 <div class="metric-cell">
                   <span class="cell-label">FEED SPREADER</span>
                   <div class="cell-dot-row">
-                    <span class="feed-dot dot-available"></span>
-                    <span class="cell-value text-emerald">Healthy</span>
+                    <span id="diag-spreader-dot" class="feed-dot dot-available"></span>
+                    <span id="diag-spreader-val" class="cell-value text-emerald">Healthy</span>
                   </div>
-                  <span class="cell-sub">Normal • Ready</span>
+                  <span id="diag-spreader-sub" class="cell-sub">Normal • Ready</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">FEED LOADER</span>
                   <div class="cell-dot-row">
-                    <span class="feed-dot dot-available"></span>
-                    <span class="cell-value text-emerald">Healthy</span>
+                    <span id="diag-loader-dot" class="feed-dot dot-available"></span>
+                    <span id="diag-loader-val" class="cell-value text-emerald">Healthy</span>
                   </div>
-                  <span class="cell-sub">Normal • Ready</span>
+                  <span id="diag-loader-sub" class="cell-sub">Normal • Ready</span>
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">HOPPER LEVEL</span>
+                  <span class="cell-label">FEED AVAILABLE</span>
                   <div class="cell-dot-row">
-                    <span class="feed-dot dot-available"></span>
-                    <span class="cell-value text-emerald" id="diag-hopper-status">Feed Stock OK</span>
+                    <span id="diag-feed-dot" class="feed-dot dot-available"></span>
+                    <span id="diag-feed-val" class="cell-value text-emerald">Available</span>
                   </div>
-                  <span class="cell-sub">Pellets Detected</span>
+                  <span id="diag-feed-sub" class="cell-sub">Feed in Hopper</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">WIRELESS LINK</span>
                   <div class="cell-dot-row">
-                    <span class="feed-dot dot-available"></span>
-                    <span class="cell-value text-emerald">Connected</span>
+                    <span id="diag-wireless-dot" class="feed-dot dot-available"></span>
+                    <span id="diag-wireless-val" class="cell-value text-emerald">Connected</span>
                   </div>
-                  <span class="cell-sub">Connected • Strong Signal</span>
+                  <span id="diag-wireless-sub" class="cell-sub">Connected • Strong Signal</span>
                 </div>
               </div>
             </div>
@@ -665,8 +665,8 @@
                   <div class="diag-item-left">
                     <span class="diag-check-icon icon-pass">✔</span>
                     <div>
-                      <strong class="diag-name">Hopper Feed Level Sensor</strong>
-                      <div class="diag-desc">Passed • Feed pellets detected and available</div>
+                      <strong class="diag-name">Feed Availability Sensor</strong>
+                      <div class="diag-desc">Passed • Feed available for scheduled events</div>
                     </div>
                   </div>
                   <span class="badge-state b-done">PASSED</span>

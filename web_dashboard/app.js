@@ -13,13 +13,14 @@ const defaultPonds = [
   { id: 'P-03', name: 'Pond P-03', acres: 1.5, stock: 'Vannamei Shrimp', lat: 16.5030, lng: 81.6695 }
 ];
 
-// Default Feeders Registry
+// Default Feeders Registry (Only Feeder 01 has live hardware telemetry)
 const defaultDevices = [
   {
     id: 'e072a1fffef6249c',
     name: 'aquaCON Feeder 01',
     pondId: 'P-01',
     status: 'COMPLETED',
+    connected: true,
     feedAvailable: true,
     dispensedKg: 23.50,
     targetKg: 23.5,
@@ -37,43 +38,45 @@ const defaultDevices = [
   },
   {
     id: 'aquaCON-Feeder-02',
-    name: 'aquaCON Feeder 02 (North)',
+    name: 'aquaCON Feeder 02',
     pondId: 'P-01',
-    status: 'IDLE',
-    feedAvailable: true,
+    status: 'NOT CONNECTED',
+    connected: false,
+    feedAvailable: false,
     dispensedKg: 0.0,
-    targetKg: 18.0,
+    targetKg: 0.0,
     currentEvent: 0,
-    totalEvents: 180,
+    totalEvents: 0,
     fpeGrams: 100,
     dischargeRateGs: 100,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 3.9,
-    motorTimeSec: 1.0,
-    scheduleValid: true
+    intervalMin: 0,
+    motorTimeSec: 0,
+    scheduleValid: false
   },
   {
     id: 'aquaCON-Feeder-03',
     name: 'aquaCON Feeder 03',
     pondId: 'P-02',
-    status: 'IDLE',
-    feedAvailable: true,
-    dispensedKg: 1.20,
-    targetKg: 20.0,
-    currentEvent: 12,
-    totalEvents: 200,
+    status: 'NOT CONNECTED',
+    connected: false,
+    feedAvailable: false,
+    dispensedKg: 0.0,
+    targetKg: 0.0,
+    currentEvent: 0,
+    totalEvents: 0,
     fpeGrams: 100,
     dischargeRateGs: 100,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 3.5,
-    motorTimeSec: 1.0,
-    scheduleValid: true
+    intervalMin: 0,
+    motorTimeSec: 0,
+    scheduleValid: false
   }
 ];
 
@@ -137,6 +140,19 @@ function loadDataFromStorage() {
   appState.devices = savedDevices ? JSON.parse(savedDevices).map(d => {
     if (d.name && d.name.includes('AF_')) {
       d.name = d.name.replace(/\s*\(Live AF_[^)]+\)/gi, '').trim();
+    }
+    // Only e072a1fffef6249c has live hardware connected
+    if (d.id !== 'e072a1fffef6249c') {
+      d.status = 'NOT CONNECTED';
+      d.connected = false;
+      d.feedAvailable = false;
+      d.dispensedKg = 0.0;
+      d.targetKg = 0.0;
+      d.currentEvent = 0;
+      d.totalEvents = 0;
+      d.intervalMin = 0;
+    } else {
+      d.connected = true;
     }
     return d;
   }) : [...defaultDevices];
@@ -421,11 +437,12 @@ function updatePondContextBar() {
     let html = '';
     pondDevices.forEach(d => {
       const isActive = d.id === appState.selectedDeviceId;
-      const isLive = d.status === 'FEEDING';
-            const match = (d.name || '').match(/Feeder\s*\d+/i);
+      const isConn = d.id === 'e072a1fffef6249c' && d.status !== 'NOT CONNECTED';
+      const isLive = isConn && d.status === 'FEEDING';
+      const match = (d.name || '').match(/Feeder\s*\d+/i);
       const cleanName = match ? match[0] : (d.name || d.id).slice(0, 9);
       html += `
-        <button type="button" class="story-item ${isActive ? 'active-story' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id}">
+        <button type="button" class="story-item ${isActive ? 'active-story' : ''} ${!isConn ? 'story-offline' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id} (${isConn ? 'Connected' : 'Not Connected'})">
           <div class="story-ring ${isLive ? 'live-feeding' : ''} ${isActive ? 'ring-active' : ''}">
             <div class="story-avatar">
               <span class="story-icon">
@@ -436,6 +453,7 @@ function updatePondContextBar() {
               </span>
             </div>
             ${isLive ? '<span class="story-live-badge">LIVE</span>' : ''}
+            ${!isConn ? '<span class="story-live-badge" style="background:#64748B;">OFF</span>' : ''}
           </div>
           <span class="story-name">${cleanName}</span>
         </button>
@@ -466,9 +484,66 @@ function switchActiveDevice(deviceId) {
   if (dev) showToast(`Selected: ${dev.name}`);
 }
 
+function updateDiagnosticsUI(isConnected, heroTitle) {
+  const diagDevName = document.getElementById('troubleshoot-dev-name');
+  if (diagDevName) diagDevName.textContent = heroTitle;
+
+  const spreaderVal = document.getElementById('diag-spreader-val');
+  const spreaderSub = document.getElementById('diag-spreader-sub');
+  const spreaderDot = document.getElementById('diag-spreader-dot');
+
+  const loaderVal = document.getElementById('diag-loader-val');
+  const loaderSub = document.getElementById('diag-loader-sub');
+  const loaderDot = document.getElementById('diag-loader-dot');
+
+  const feedVal = document.getElementById('diag-feed-val');
+  const feedSub = document.getElementById('diag-feed-sub');
+  const feedDot = document.getElementById('diag-feed-dot');
+
+  const wirelessVal = document.getElementById('diag-wireless-val');
+  const wirelessSub = document.getElementById('diag-wireless-sub');
+  const wirelessDot = document.getElementById('diag-wireless-dot');
+
+  if (isConnected) {
+    if (spreaderVal) { spreaderVal.textContent = 'Healthy'; spreaderVal.className = 'cell-value text-emerald'; }
+    if (spreaderSub) spreaderSub.textContent = 'Normal • Ready';
+    if (spreaderDot) spreaderDot.className = 'feed-dot dot-available';
+
+    if (loaderVal) { loaderVal.textContent = 'Healthy'; loaderVal.className = 'cell-value text-emerald'; }
+    if (loaderSub) loaderSub.textContent = 'Normal • Ready';
+    if (loaderDot) loaderDot.className = 'feed-dot dot-available';
+
+    if (feedVal) { feedVal.textContent = 'Available'; feedVal.className = 'cell-value text-emerald'; }
+    if (feedSub) feedSub.textContent = 'Feed in Hopper';
+    if (feedDot) feedDot.className = 'feed-dot dot-available';
+
+    if (wirelessVal) { wirelessVal.textContent = 'Connected'; wirelessVal.className = 'cell-value text-emerald'; }
+    if (wirelessSub) wirelessSub.textContent = 'Connected • Strong Signal';
+    if (wirelessDot) wirelessDot.className = 'feed-dot dot-available';
+  } else {
+    if (spreaderVal) { spreaderVal.textContent = 'Not Connected'; spreaderVal.className = 'cell-value text-muted'; }
+    if (spreaderSub) spreaderSub.textContent = 'No Signal';
+    if (spreaderDot) spreaderDot.className = 'feed-dot dot-offline';
+
+    if (loaderVal) { loaderVal.textContent = 'Not Connected'; loaderVal.className = 'cell-value text-muted'; }
+    if (loaderSub) loaderSub.textContent = 'No Signal';
+    if (loaderDot) loaderDot.className = 'feed-dot dot-offline';
+
+    if (feedVal) { feedVal.textContent = 'Not Connected'; feedVal.className = 'cell-value text-muted'; }
+    if (feedSub) feedSub.textContent = 'Feeder Offline';
+    if (feedDot) feedDot.className = 'feed-dot dot-offline';
+
+    if (wirelessVal) { wirelessVal.textContent = 'Not Connected'; wirelessVal.className = 'cell-value text-muted'; }
+    if (wirelessSub) wirelessSub.textContent = 'No Signal';
+    if (wirelessDot) wirelessDot.className = 'feed-dot dot-offline';
+  }
+}
+
 function loadSelectedDeviceToUI() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
+
+  const isConnected = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
 
   // Tab 1 Hero Card
   const devTag = document.getElementById('current-device-tag');
@@ -482,21 +557,90 @@ function loadSelectedDeviceToUI() {
   const feedDot = document.getElementById('feed-status-dot');
   const feedStatusText = document.getElementById('feed-status-text');
   const fillBar = document.getElementById('feed-progress-fill');
+  const gaugeCircle = document.getElementById('gauge-progress-circle');
+  const gaugeHeroNum = document.getElementById('gauge-hero-num');
+  const gaugeHeroSub = document.getElementById('gauge-hero-sub');
+  const gaugePctBadge = document.getElementById('gauge-pct-badge');
 
   const heroMatch = (dev.name || '').match(/Feeder\s*\d+/i);
   const heroTitle = heroMatch ? heroMatch[0] : (dev.name || 'Feeder 01');
   if (devName) devName.textContent = heroTitle;
-  const diagDevName = document.getElementById('troubleshoot-dev-name');
-  if (diagDevName) diagDevName.textContent = heroTitle;
-  if (devTag) {
-    const shortId = dev.id.startsWith('e072') ? dev.id.slice(-8) : dev.id;
-    devTag.textContent = `${heroTitle} • Connected`;
+
+  // Handle Unconnected Device (Feeder 02, Feeder 03)
+  if (!isConnected) {
+    if (devTag) devTag.textContent = `${heroTitle} • Not Connected`;
+    if (stateBadge) {
+      stateBadge.textContent = 'NOT CONNECTED';
+      stateBadge.className = 'badge-state b-offline';
+    }
+
+    // Connection Cell
+    const connCell = document.getElementById('connection-status-val');
+    const connDot = document.getElementById('connection-status-dot');
+    const connText = document.getElementById('connection-status-text');
+    const connSub = document.getElementById('connection-status-sub');
+    if (connCell) connCell.className = 'cell-value text-muted';
+    if (connDot) connDot.className = 'dot-offline';
+    if (connText) connText.textContent = 'Not Connected';
+    if (connSub) connSub.textContent = 'No Signal';
+
+    // Feed Available Cell
+    if (feedDot && feedStatusText) {
+      feedDot.className = 'feed-dot dot-offline';
+      feedStatusText.textContent = 'Not Connected';
+      feedStatusText.className = 'cell-value text-muted';
+    }
+    const feedStockSub = document.getElementById('feed-stock-sub');
+    if (feedStockSub) feedStockSub.textContent = 'Feeder Offline';
+
+    // Gauge
+    if (gaugeCircle) gaugeCircle.style.strokeDashoffset = '408.4';
+    if (gaugeHeroNum) gaugeHeroNum.textContent = '0';
+    if (gaugeHeroSub) gaugeHeroSub.textContent = '/ 0 Events Today';
+    if (gaugePctBadge) gaugePctBadge.textContent = 'Not Connected';
+    if (dispensedText) dispensedText.textContent = '0.00';
+    if (targetText) targetText.textContent = '--';
+    if (burstCountText) burstCountText.textContent = '0 / 0';
+    const burstCountSub = document.getElementById('burst-count-sub');
+    if (burstCountSub) burstCountSub.textContent = 'Feeder Offline';
+
+    // Next Feed
+    const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
+    const nextFeedSubEl = document.getElementById('next-feed-sub');
+    if (nextFeedTimestampEl) {
+      nextFeedTimestampEl.textContent = '--';
+      nextFeedTimestampEl.className = 'cell-value text-muted';
+    }
+    if (nextFeedSubEl) nextFeedSubEl.textContent = 'Feeder Offline';
+
+    // Operational Status Summary Pill
+    const pillFeedDot = document.getElementById('pill-feed-dot');
+    const pillFeedStatus = document.getElementById('pill-feed-status');
+    if (pillFeedDot) pillFeedDot.className = 'pill-dot dot-offline';
+    if (pillFeedStatus) pillFeedStatus.textContent = 'Not Connected';
+
+    // Tab 3 Param Editor Inputs
+    const paramDevName = document.getElementById('param-device-name');
+    if (paramDevName) paramDevName.textContent = heroTitle;
+
+    updateDiagnosticsUI(false, heroTitle);
+    return;
   }
 
-  if (stateBadge) {
-    stateBadge.textContent = dev.status || 'IDLE';
-    stateBadge.className = `badge-state ${dev.status === 'RUNNING' || dev.status === 'FEEDING' ? 'b-run' : 'b-idle'}`;
-  }
+  // CONNECTED LIVE FEEDER (Feeder 01)
+  if (devTag) devTag.textContent = `${heroTitle} • Connected`;
+
+  // Connection Cell
+  const connCell = document.getElementById('connection-status-val');
+  const connDot = document.getElementById('connection-status-dot');
+  const connText = document.getElementById('connection-status-text');
+  const connSub = document.getElementById('connection-status-sub');
+  if (connCell) connCell.className = 'cell-value text-emerald';
+  if (connDot) connDot.className = 'dot-live-pulse';
+  if (connText) connText.textContent = 'Connected';
+  if (connSub) connSub.textContent = 'Signal Strong';
+
+  updateDiagnosticsUI(true, heroTitle);
 
   
   // Operational Time & Schedule Completion Engine
@@ -562,10 +706,6 @@ function loadSelectedDeviceToUI() {
   }
 
   // Update Dribbble Radial Arc Gauge
-  const gaugeCircle = document.getElementById('gauge-progress-circle');
-  const gaugeHeroNum = document.getElementById('gauge-hero-num');
-  const gaugeHeroSub = document.getElementById('gauge-hero-sub');
-  const gaugePctBadge = document.getElementById('gauge-pct-badge');
   if (gaugeCircle) {
     const circumference = 408.4;
     const offset = circumference - (gaugePct / 100) * circumference;
@@ -842,17 +982,45 @@ async function renderHistoryView() {
     appState.deviceMetrics[dev.id] = metrics;
   }
 
-  // Compute Stats Overview
-  const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg || m.FeedDispensed_kg || 0), 0);
-  const avgDaily = (totalWeek / metrics.length).toFixed(1);
-
+  const isConn = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
   const statWeek = document.getElementById('stat-week-total');
   const statAvg = document.getElementById('stat-daily-avg');
   const statAdherence = document.getElementById('stat-adherence');
+  const statSeason = document.getElementById('stat-season-total');
+
+  if (!isConn) {
+    if (statWeek) statWeek.textContent = `0.0 Kg`;
+    if (statAvg) statAvg.textContent = `0.0 Kg`;
+    if (statAdherence) statAdherence.textContent = `--`;
+    if (statSeason) statSeason.textContent = `0.0 Kg`;
+    if (targetLbl) targetLbl.textContent = `-- Kg`;
+
+    // Render 7 empty zero-bars
+    const today = new Date();
+    const emptyMetrics = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      emptyMetrics.push({
+        dateLabel: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
+        feedKg: 0.0,
+        targetKg: 0.0,
+        isToday: i === 0
+      });
+    }
+    renderBarChart(emptyMetrics, 10.0);
+    renderEventsLog(dev);
+    return;
+  }
+
+  // Compute Stats Overview for live feeder
+  const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg || m.FeedDispensed_kg || 0), 0);
+  const avgDaily = (totalWeek / metrics.length).toFixed(1);
 
   if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} Kg`;
   if (statAvg) statAvg.textContent = `${avgDaily} Kg`;
-  if (statAdherence) statAdherence.textContent = `98.7%`;
+  if (statAdherence) statAdherence.textContent = `100%`;
+  if (statSeason) statSeason.textContent = `${totalWeek.toFixed(1)} Kg`;
 
   // Render Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
@@ -890,6 +1058,21 @@ function renderEventsLog(dev) {
   const container = document.getElementById('events-log-container');
   if (!container) return;
 
+  const isConn = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
+  const logLabel = document.getElementById('log-date-label');
+
+  if (!isConn) {
+    if (logLabel) logLabel.textContent = 'Feeder is not connected';
+    container.innerHTML = `
+      <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
+        <div style="font-size: 20px; margin-bottom: 6px;">📡</div>
+        <strong style="color:var(--text-main);">Feeder is Not Connected</strong>
+        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">No live telemetry or event logs recorded.</div>
+      </div>
+    `;
+    return;
+  }
+
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 4);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
   const eventsCount = Math.min(rawCurrent, totalEvents);
@@ -902,7 +1085,6 @@ function renderEventsLog(dev) {
   const startEvent = eventsCount;
   const endEvent = Math.max(1, eventsCount - maxToDisplay + 1);
 
-  const logLabel = document.getElementById('log-date-label');
   if (logLabel) {
     logLabel.textContent = eventsCount > maxToDisplay 
       ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events` 
@@ -967,7 +1149,12 @@ function renderPondsDirectory() {
           <span class="pond-item-acres">${pond.acres} Acres</span>
         </div>
         <div class="pond-devices-summary">
-          ${pondDevices.map(d => `<span class="device-chip-badge"><span class="dot-indicator dot-${d.status.toLowerCase()}"></span> ${d.name} (${d.status})</span>`).join('')}
+          ${pondDevices.map(d => {
+            const isConn = d.id === 'e072a1fffef6249c' && d.status !== 'NOT CONNECTED';
+            const dotClass = isConn ? `dot-${(d.status || 'completed').toLowerCase()}` : 'dot-offline';
+            const statusLabel = isConn ? (d.status || 'COMPLETED') : 'NOT CONNECTED';
+            return `<span class="device-chip-badge"><span class="dot-indicator ${dotClass}"></span> ${d.name} (${statusLabel})</span>`;
+          }).join('')}
           ${pondDevices.length === 0 ? '<span class="device-chip-badge">No Feeders Assigned</span>' : ''}
         </div>
         <div class="pond-item-actions">
@@ -1213,6 +1400,11 @@ async function triggerRemoteAction(action) {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
+  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+    showToast(`Cannot ${action.toLowerCase()}: ${dev.name} is not connected.`);
+    return;
+  }
+
   if (action === 'START') {
     const fpeGrams = dev.fpeGrams || 100;
     const confirmMsg = `Trigger feed burst for ${dev.name}?\n\n• ${fpeGrams}g feed will be dispensed immediately.\n• This will be counted as 1 completed feed event in today's cycle.`;
@@ -1319,6 +1511,11 @@ function playHooterAudioBeep() {
 async function runHardwareTestAction(testType) {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
+
+  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+    showToast(`Cannot run test: ${dev.name} is not connected.`);
+    return;
+  }
 
   if (testType === 'TEST_DISPENSER') {
     showToast(`▶ Running 2-second test on Feed Spreader...`);
@@ -1553,14 +1750,19 @@ function toggleFeedStockState() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
+  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+    showToast(`${dev.name} is not connected.`);
+    return;
+  }
+
   dev.feedAvailable = !(dev.feedAvailable !== false);
   saveDataToStorage();
   loadSelectedDeviceToUI();
 
   if (dev.feedAvailable) {
-    showToast(`Feed stock marked AVAILABLE for ${dev.name}`);
+    showToast(`Feed marked AVAILABLE for ${dev.name}`);
   } else {
-    showToast(`Feed stock marked EMPTY / REFILL for ${dev.name}`);
+    showToast(`Feed marked EMPTY / REFILL for ${dev.name}`);
   }
 }
 
@@ -1576,6 +1778,7 @@ function startTelemetryLoop() {
         data.devices.forEach(cloudDev => {
           const localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
           if (localDev) {
+            if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
             if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
             else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
             if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);

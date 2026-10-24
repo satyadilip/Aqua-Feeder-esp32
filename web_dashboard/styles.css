@@ -2934,3 +2934,30 @@ html, body {
   color: var(--brand-sage, #169868) !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
 }
+
+/* Offline & Disconnected State Indicators */
+.badge-state.b-offline {
+  background: #FEF2F2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA !important;
+  font-weight: 700 !important;
+}
+
+.dot-offline {
+  display: inline-block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #94A3B8 !important;
+  box-shadow: none !important;
+}
+
+.dot-indicator.dot-not_connected, .dot-indicator.dot-offline {
+  background: #94A3B8 !important;
+  box-shadow: none !important;
+}
+
+.story-item.story-offline .story-avatar {
+  border-color: #CBD5E1 !important;
+  opacity: 0.65 !important;
+}
