@@ -91,6 +91,26 @@ const defaultContacts = [
   }
 ];
 
+// Default In-App Notifications
+const defaultNotifications = [
+  {
+    id: 'notif-1',
+    type: 'FEEDER',
+    typeClass: 'notif-success',
+    time: 'Today',
+    message: 'Feed Available in Hopper. Feeder operational and ready for scheduled events.',
+    actionTab: 'tab-status'
+  },
+  {
+    id: 'notif-2',
+    type: 'SUPPORT',
+    typeClass: 'notif-info',
+    time: '24/7 Active',
+    message: 'Customer Service line available: Charan (9154696777).',
+    actionTab: 'tab-troubleshoot'
+  }
+];
+
 // Central Customer Application State
 const appState = {
   isAuthenticated: false,
@@ -109,7 +129,10 @@ const appState = {
   deviceMetrics: {},
   
   // Alert Contacts
-  contacts: [...defaultContacts]
+  contacts: [...defaultContacts],
+
+  // Alert Notifications
+  notifications: [...defaultNotifications]
 };
 
 // Global reference for diagnostics & testing
@@ -126,7 +149,9 @@ document.addEventListener('DOMContentLoaded', () => {
   initAuthUI();
   initFarmClock();
   initScheduleEngine();
+  renderNotifications();
   startTelemetryLoop();
+
 });
 
 /* ==========================================================================
@@ -1330,15 +1355,98 @@ function navigateToTab(tabId) {
   }
 }
 
-function toggleNotificationDrawer() {
+function renderNotifications() {
+  const container = document.getElementById('notif-list-container');
+  const badge = document.getElementById('notif-unread-count');
+  if (!container) return;
+
+  if (!appState.notifications || appState.notifications.length === 0) {
+    container.innerHTML = `
+      <div class="notif-empty-state">
+        <div class="notif-empty-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            <line x1="2" y1="2" x2="22" y2="22" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="notif-empty-title">No New Alerts</div>
+        <p class="notif-empty-desc">You are all caught up! All farm alerts have been cleared.</p>
+      </div>
+    `;
+    if (badge) {
+      badge.textContent = '0';
+      badge.classList.add('hidden');
+      badge.style.setProperty('display', 'none', 'important');
+    }
+    return;
+  }
+
+  container.innerHTML = appState.notifications.map(n => `
+    <div class="notif-card ${n.typeClass || 'notif-info'}" onclick="handleNotificationClick('${n.id}')">
+      <div class="notif-card-header">
+        <span class="notif-type-tag">${n.type}</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="notif-time">${n.time}</span>
+          <button type="button" class="notif-dismiss-btn" onclick="dismissNotification(event, '${n.id}')" title="Dismiss">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="notif-msg">${n.message}</div>
+    </div>
+  `).join('');
+
+  if (badge) {
+    badge.textContent = appState.notifications.length;
+    badge.classList.remove('hidden');
+    badge.style.setProperty('display', 'flex', 'important');
+  }
+}
+
+function toggleNotificationDrawer(forceState) {
   const drawer = document.getElementById('notification-drawer');
-  if (drawer) drawer.classList.toggle('open');
+  const backdrop = document.getElementById('notif-backdrop');
+  if (!drawer) return;
+
+  const isOpen = forceState !== undefined ? forceState : !drawer.classList.contains('open');
+
+  if (isOpen) {
+    renderNotifications();
+    drawer.classList.add('open');
+    if (backdrop) backdrop.classList.add('active');
+  } else {
+    drawer.classList.remove('open');
+    if (backdrop) backdrop.classList.remove('active');
+  }
+}
+
+function clearAllNotifications() {
+  appState.notifications = [];
+  renderNotifications();
+  showToast('All notifications cleared');
 }
 
 function markAllNotificationsRead() {
-  const badge = document.getElementById('notif-unread-count');
-  if (badge) badge.style.display = 'none';
-  showToast('Notifications marked read');
+  clearAllNotifications();
+}
+
+function dismissNotification(e, id) {
+  if (e) e.stopPropagation();
+  appState.notifications = (appState.notifications || []).filter(n => n.id !== id);
+  renderNotifications();
+  showToast('Notification dismissed');
+}
+
+function handleNotificationClick(id) {
+  const notif = (appState.notifications || []).find(n => n.id === id);
+  toggleNotificationDrawer(false);
+  if (notif && notif.actionTab) {
+    navigateToTab(notif.actionTab);
+    if (notif.actionTab === 'tab-troubleshoot') {
+      switchTroubleshootSubTab('support');
+    }
+  }
 }
 
 /* ==========================================================================

@@ -169,37 +169,6 @@
           </div>
         </header>
 
-        <!-- Slide-Over Notification Drawer -->
-        <aside id="notification-drawer" class="notif-drawer">
-          <div class="drawer-header">
-            <div class="drawer-title">
-              <span class="drawer-header-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
-              <h3>Farm Alerts</h3>
-            </div>
-            <div class="drawer-actions">
-              <button type="button" class="btn-text-sm" onclick="markAllNotificationsRead()">Mark read</button>
-              <button type="button" class="btn-icon-close" onclick="toggleNotificationDrawer()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-            </div>
-          </div>
-          
-          <div class="drawer-content" id="notif-list-container">
-            <div class="notif-card notif-success">
-              <div class="notif-card-header">
-                <span class="notif-type-tag">FEEDER</span>
-                <span class="notif-time">Just now</span>
-              </div>
-              <div class="notif-msg">Feed Available in Hopper. Feeder operational and ready for scheduled events.</div>
-            </div>
-            <div class="notif-card notif-info">
-              <div class="notif-card-header">
-                <span class="notif-type-tag">SUPPORT</span>
-                <span class="notif-time">24/7 Available</span>
-              </div>
-              <div class="notif-msg">Emergency Customer Service line active: Charan (9154696777).</div>
-            </div>
-          </div>
-        </aside>
-
         <!-- Pond & Device Context Switcher Banner -->
         <div class="pond-context-bar">
           <div class="context-pond-info">
@@ -1064,6 +1033,27 @@
       </div>
     </div>
   </div>
+
+  <!-- Notification Backdrop -->
+  <div id="notif-backdrop" class="notif-backdrop" onclick="toggleNotificationDrawer(false)"></div>
+
+  <!-- Slide-Over Notification Drawer -->
+  <aside id="notification-drawer" class="notif-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title">
+        <span class="drawer-header-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></span>
+        <h3>Farm Alerts</h3>
+      </div>
+      <div class="drawer-actions">
+        <button type="button" class="btn-text-sm" id="btn-clear-notifs" onclick="clearAllNotifications()">Clear All</button>
+        <button type="button" class="btn-icon-close" onclick="toggleNotificationDrawer(false)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+    </div>
+    
+    <div class="drawer-content" id="notif-list-container">
+      <!-- Populated dynamically via renderNotifications() -->
+    </div>
+  </aside>
 
   <!-- Global Toast Notification Banner -->
   <div id="app-toast" class="toast-banner"></div>

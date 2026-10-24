@@ -494,6 +494,11 @@ svg {
   line-height: 1 !important;
 }
 
+.notif-badge.hidden,
+.notif-badge[style*="display: none"] {
+  display: none !important;
+}
+
 /* ==========================================================================
    POND PICKER & FEEDER STORIES BAR
    ========================================================================== */
@@ -1600,6 +1605,24 @@ svg {
   color: var(--text-secondary);
 }
 
+.notif-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 22, 31, 0.45);
+  backdrop-filter: blur(3px);
+  z-index: 240;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0.25s;
+}
+
+.notif-backdrop.active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .notif-drawer {
   position: fixed;
   top: 0;
@@ -1607,22 +1630,77 @@ svg {
   width: 100%;
   max-width: 360px;
   height: 100vh;
-  background: var(--card-bg);
-  box-shadow: -8px 0 30px rgba(18, 22, 31, 0.1);
-  z-index: 150;
+  background: var(--card-bg, #FFFFFF);
+  box-shadow: -8px 0 32px rgba(18, 22, 31, 0.16);
+  z-index: 250;
   transform: translateX(100%);
   visibility: hidden;
   pointer-events: none;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.28s;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .notif-drawer.open {
   transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
+}
+
+.notif-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 16px;
+  color: var(--text-muted);
+}
+
+.notif-empty-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--cell-bg, #F1F5F9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+}
+
+.notif-empty-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.notif-empty-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.notif-dismiss-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.notif-dismiss-btn:hover {
+  color: var(--brand-danger);
+  background: var(--brand-danger-light);
 }
 
 .drawer-header {
@@ -3117,6 +3195,11 @@ html, body {
   color: var(--text-main, #0F172A) !important;
   letter-spacing: -0.4px !important;
   line-height: 1 !important;
+}
+
+.notif-badge.hidden,
+.notif-badge[style*="display: none"] {
+  display: none !important;
 }
 
 .brand-text .accent {
