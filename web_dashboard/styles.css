@@ -127,6 +127,27 @@ svg {
   justify-content: center;
   padding: 24px 20px;
   background-color: var(--canvas-bg);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.auth-viewport.fade-out {
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+.auth-viewport.fade-in {
+  animation: authFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes authFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .auth-card {
@@ -203,10 +224,12 @@ svg {
 
 .auth-panel {
   display: none;
+  opacity: 0;
 }
 
 .auth-panel.active {
   display: block;
+  animation: authFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .auth-alert {
@@ -1513,10 +1536,28 @@ svg {
   justify-content: center;
   z-index: 200;
   padding: 20px;
+  opacity: 0;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-backdrop.active {
   display: flex;
+  opacity: 1;
+}
+
+.modal-backdrop.active .modal-body {
+  animation: modalEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal-body {
@@ -1641,18 +1682,53 @@ svg {
    ========================================================================== */
 
 /* Main layout wrappers */
-.app-body, .main-shell {
+.app-body {
   flex: 1;
   width: 100%;
   display: flex;
   flex-direction: column;
 }
 
+.main-shell {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1), transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.main-shell.fade-out {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+.main-shell.fade-in {
+  animation: tabScreenEnter 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .tab-screen {
   display: none;
+  opacity: 0;
 }
 .tab-screen.active {
-  display: block;
+  display: block !important;
+  animation: tabScreenEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.subtab-animate {
+  animation: tabScreenEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes tabScreenEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Card primitives */
@@ -2900,11 +2976,24 @@ html, body {
   color: #8E99A8 !important;
   border-radius: 20px !important;
   text-align: center !important;
+  transition: color 0.18s ease, background 0.18s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.nav-tab:active {
+  transform: scale(0.92) !important;
 }
 
 .nav-tab.active {
   background: rgba(255, 255, 255, 0.12) !important;
   color: #FFFFFF !important;
+}
+
+.nav-tab .nav-tab-icon {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.nav-tab.active .nav-tab-icon {
+  transform: translateY(-2px);
 }
 
 .nav-tab-label {

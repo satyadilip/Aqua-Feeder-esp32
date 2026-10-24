@@ -179,50 +179,105 @@ function initAuthSession() {
     try {
       appState.currentUser = JSON.parse(storedUser);
       appState.isAuthenticated = true;
-      revealMainApp();
+      revealMainApp(true);
       return;
     } catch (e) {
       localStorage.removeItem('aquacon_session_user');
     }
   }
-  revealAuthGate();
+  revealAuthGate(true);
 }
 
-function revealAuthGate() {
+function revealAuthGate(instant = false) {
   appState.isAuthenticated = false;
   appState.currentUser = null;
   const authScreen = document.getElementById('screen-auth');
   const mainShell = document.getElementById('main-app-shell');
-  if (authScreen) authScreen.style.display = 'flex';
-  if (mainShell) mainShell.style.display = 'none';
-}
 
-function revealMainApp() {
-  const authScreen = document.getElementById('screen-auth');
-  const mainShell = document.getElementById('main-app-shell');
-  if (authScreen) authScreen.style.display = 'none';
-  if (mainShell) mainShell.style.display = 'flex';
-
-  if (appState.currentUser) {
-    const profName = document.getElementById('sys-operator-name');
-    const profPhone = document.getElementById('sys-operator-phone');
-    const profFarm = document.getElementById('sys-farm-name');
-    if (profName) profName.textContent = appState.currentUser.name || 'aquaCON Supervisor';
-    if (profPhone) profPhone.textContent = `+91 ${appState.currentUser.phone || '90004 20999'}`;
-    if (profFarm) profFarm.textContent = appState.currentUser.farmName || 'Pioneer Aqua Farm';
+  if (instant) {
+    if (authScreen) {
+      authScreen.style.display = 'flex';
+      authScreen.classList.remove('fade-out');
+    }
+    if (mainShell) {
+      mainShell.style.display = 'none';
+      mainShell.classList.remove('fade-in');
+    }
+    return;
   }
 
-  // Populate Ponds & Devices UI
-  refreshPondsDropdown();
-  updatePondContextBar();
-  renderPondsDirectory();
-  renderAlertContacts();
-  renderHistoryView();
+  if (mainShell) {
+    mainShell.classList.add('fade-out');
+    setTimeout(() => {
+      mainShell.style.display = 'none';
+      mainShell.classList.remove('fade-out');
+      if (authScreen) {
+        authScreen.style.display = 'flex';
+        authScreen.classList.add('fade-in');
+        setTimeout(() => authScreen.classList.remove('fade-in'), 280);
+      }
+    }, 200);
+  } else if (authScreen) {
+    authScreen.style.display = 'flex';
+  }
+}
 
-  // Initialize Map
-  setTimeout(() => {
-    initSatelliteMap();
-  }, 250);
+function revealMainApp(instant = false) {
+  const authScreen = document.getElementById('screen-auth');
+  const mainShell = document.getElementById('main-app-shell');
+
+  const populateUserData = () => {
+    if (appState.currentUser) {
+      const profName = document.getElementById('sys-operator-name');
+      const profPhone = document.getElementById('sys-operator-phone');
+      const profFarm = document.getElementById('sys-farm-name');
+      if (profName) profName.textContent = appState.currentUser.name || 'aquaCON Supervisor';
+      if (profPhone) profPhone.textContent = `+91 ${appState.currentUser.phone || '90004 20999'}`;
+      if (profFarm) profFarm.textContent = appState.currentUser.farmName || 'Pioneer Aqua Farm';
+    }
+
+    // Populate Ponds & Devices UI
+    refreshPondsDropdown();
+    updatePondContextBar();
+    renderPondsDirectory();
+    renderAlertContacts();
+    renderHistoryView();
+
+    // Initialize Map
+    setTimeout(() => {
+      initSatelliteMap();
+    }, 250);
+  };
+
+  if (instant) {
+    if (authScreen) {
+      authScreen.style.display = 'none';
+      authScreen.classList.remove('fade-in');
+    }
+    if (mainShell) {
+      mainShell.style.display = 'flex';
+      mainShell.classList.remove('fade-out');
+    }
+    populateUserData();
+    return;
+  }
+
+  if (authScreen) {
+    authScreen.classList.add('fade-out');
+    setTimeout(() => {
+      authScreen.style.display = 'none';
+      authScreen.classList.remove('fade-out');
+      if (mainShell) {
+        mainShell.style.display = 'flex';
+        mainShell.classList.add('fade-in');
+        populateUserData();
+        setTimeout(() => mainShell.classList.remove('fade-in'), 280);
+      }
+    }, 200);
+  } else if (mainShell) {
+    mainShell.style.display = 'flex';
+    populateUserData();
+  }
 }
 
 function initAuthUI() {
@@ -269,8 +324,8 @@ function initAuthUI() {
       const pwInput = document.getElementById('auth-pw-input');
       const btnText = document.getElementById('login-btn-text');
 
-      const phone = phoneInput ? phoneInput.value.trim() : '9000420999';
-      const password = pwInput ? pwInput.value.trim() : 'admin';
+      const phone = phoneInput ? phoneInput.value.trim() : '';
+      const password = pwInput ? pwInput.value.trim() : '';
 
       if (!phone || !password) {
         showAuthAlert('Please enter mobile number and password', 'error');
@@ -292,9 +347,9 @@ function initAuthUI() {
           appState.isAuthenticated = true;
           localStorage.setItem('aquacon_session_user', JSON.stringify(data.user));
           showAuthAlert('Welcome back! Loading your ponds...', 'success');
-          setTimeout(() => revealMainApp(), 400);
+          setTimeout(() => revealMainApp(false), 300);
         } else {
-          showAuthAlert(data.error || 'Invalid phone or password. Default: 9000420999 / admin', 'error');
+          showAuthAlert(data.error || 'Invalid mobile number or password', 'error');
         }
       } catch (err) {
         if (phone === '9000420999' && password === 'admin') {
@@ -303,26 +358,13 @@ function initAuthUI() {
           appState.isAuthenticated = true;
           localStorage.setItem('aquacon_session_user', JSON.stringify(user));
           showAuthAlert('Welcome back! Loading your ponds...', 'success');
-          setTimeout(() => revealMainApp(), 400);
+          setTimeout(() => revealMainApp(false), 300);
         } else {
-          showAuthAlert('Network error. Check credentials or use Default: 9000420999 / admin', 'error');
+          showAuthAlert('Unable to connect to server. Please check your network.', 'error');
         }
       } finally {
         if (btnText) btnText.textContent = 'Sign In to Farm →';
       }
-    });
-  }
-
-  // Instant Demo Bypass Button
-  const btnDemo = document.getElementById('btn-demo-bypass');
-  if (btnDemo) {
-    btnDemo.addEventListener('click', () => {
-      const demoUser = { phone: '9000420999', name: 'Pioneer Supervisor', farmName: 'Pioneer Aqua Farm', role: 'Supervisor' };
-      appState.currentUser = demoUser;
-      appState.isAuthenticated = true;
-      localStorage.setItem('aquacon_session_user', JSON.stringify(demoUser));
-      showToast('Entering aquaCON Farm Dashboard');
-      revealMainApp();
     });
   }
 
@@ -379,8 +421,17 @@ function showAuthAlert(msg, type) {
 function handleLogout() {
   if (confirm('Sign out from aquaCON?')) {
     localStorage.removeItem('aquacon_session_user');
-    showToast('Signed out');
-    revealAuthGate();
+    const phoneInput = document.getElementById('auth-phone-input');
+    const pwInput = document.getElementById('auth-pw-input');
+    if (phoneInput) phoneInput.value = '';
+    if (pwInput) pwInput.value = '';
+    const alertBox = document.getElementById('auth-alert-box');
+    if (alertBox) {
+      alertBox.textContent = '';
+      alertBox.style.display = 'none';
+    }
+    showToast('Signed out successfully');
+    revealAuthGate(false);
   }
 }
 
@@ -1248,18 +1299,23 @@ function resetMapView() {
    7. NAVIGATION CONTROLLER (5 TABS)
    ========================================================================== */
 function navigateToTab(tabId) {
+  const currentTab = appState.activeTab;
   appState.activeTab = tabId;
 
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.classList.toggle('active', btn.id === `tab-btn-${tabId.replace('tab-', '')}`);
   });
 
-  document.querySelectorAll('.tab-screen').forEach(screen => {
-    screen.classList.remove('active');
-  });
+  if (currentTab !== tabId) {
+    document.querySelectorAll('.tab-screen').forEach(screen => {
+      screen.classList.remove('active');
+    });
 
-  const screen = document.getElementById(`screen-${tabId.replace('tab-', '')}`);
-  if (screen) screen.classList.add('active');
+    const screen = document.getElementById(`screen-${tabId.replace('tab-', '')}`);
+    if (screen) {
+      screen.classList.add('active');
+    }
+  }
 
   if (tabId === 'tab-history') {
     renderHistoryView();
@@ -1832,9 +1888,21 @@ function switchTroubleshootSubTab(subtab) {
   if (diagBtn) diagBtn.classList.toggle('active', subtab === 'diag');
   if (supportBtn) supportBtn.classList.toggle('active', subtab === 'support');
 
-  if (diagContent) diagContent.style.display = subtab === 'diag' ? 'block' : 'none';
+  if (diagContent) {
+    diagContent.style.display = subtab === 'diag' ? 'block' : 'none';
+    if (subtab === 'diag') {
+      diagContent.classList.remove('subtab-animate');
+      void diagContent.offsetWidth;
+      diagContent.classList.add('subtab-animate');
+    }
+  }
   if (supportContent) {
     supportContent.style.display = subtab === 'support' ? 'block' : 'none';
-    if (subtab === 'support') renderAlertContacts();
+    if (subtab === 'support') {
+      supportContent.classList.remove('subtab-animate');
+      void supportContent.offsetWidth;
+      supportContent.classList.add('subtab-animate');
+      renderAlertContacts();
+    }
   }
 }
