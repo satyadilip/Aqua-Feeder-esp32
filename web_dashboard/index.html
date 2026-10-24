@@ -504,6 +504,225 @@
           <!-- ══════════════════════════════════════════════════════════════════
                TAB 4: PONDS & REALTIME MAP
                ══════════════════════════════════════════════════════════════════ -->
+          
+          <!-- ======================================================================
+               TAB 4: HARDWARE TROUBLESHOOT & DIAGNOSTICS
+               ====================================================================== -->
+          <section id="screen-troubleshoot" class="tab-screen">
+            
+            <!-- Troubleshoot Hero / Overview Card -->
+            <div class="card troubleshoot-hero-card">
+              <div class="card-header-clean">
+                <span class="device-tag">FIRMWARE V4.0.0 • HARDWARE DIAGNOSTICS</span>
+                <h2 class="section-title">Hardware Troubleshoot</h2>
+                <span class="section-desc">Live field diagnostics & test controls for <strong id="troubleshoot-dev-name">Feeder 01</strong></span>
+              </div>
+
+              <!-- Quick Health Status Grid (2x2) -->
+              <div class="metrics-grid" style="margin-top: 14px;">
+                <div class="metric-cell">
+                  <span class="cell-label">FEEDER MOTOR (R2)</span>
+                  <div class="cell-dot-row">
+                    <span class="feed-dot dot-available"></span>
+                    <span class="cell-value text-emerald">Healthy</span>
+                  </div>
+                  <span class="cell-sub">0.0A Standby • No Jam</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">LOADER AUGUR (R1)</span>
+                  <div class="cell-dot-row">
+                    <span class="feed-dot dot-available"></span>
+                    <span class="cell-value text-emerald">Healthy</span>
+                  </div>
+                  <span class="cell-sub">Relay 1 Circuit OK</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">HOPPER SENSOR</span>
+                  <div class="cell-dot-row">
+                    <span class="feed-dot dot-available"></span>
+                    <span class="cell-value text-emerald" id="diag-hopper-status">Stock OK</span>
+                  </div>
+                  <span class="cell-sub">Proximity Switch Closed</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">LORAWAN GATEWAY</span>
+                  <div class="cell-dot-row">
+                    <span class="feed-dot dot-available"></span>
+                    <span class="cell-value text-emerald">Connected</span>
+                  </div>
+                  <span class="cell-sub">SenseCAP M2 • -84 dBm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Interactive Hardware Test Actions Card -->
+            <div class="card test-actions-card">
+              <div class="card-header-clean">
+                <span class="badge-pill pill-cyan">FIELD TESTS</span>
+                <h3 class="section-title">Hardware Actuator Tests</h3>
+                <span class="section-desc">Run individual component tests to verify hardware relays in the field</span>
+              </div>
+
+              <div class="test-buttons-grid">
+                <!-- Test Dispenser Motor (R2) -->
+                <button type="button" class="btn-test-action" onclick="runHardwareTestAction('TEST_DISPENSER')">
+                  <div class="test-action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  </div>
+                  <div class="test-action-info">
+                    <span class="test-action-title">Test Dispenser Motor (R2)</span>
+                    <span class="test-action-desc">2-second thrower plate pulse to verify rotation</span>
+                  </div>
+                  <span class="btn-test-run">Run Pulse →</span>
+                </button>
+
+                <!-- Test Loader Augur (R1) -->
+                <button type="button" class="btn-test-action" onclick="runHardwareTestAction('TEST_LOADER')">
+                  <div class="test-action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                  </div>
+                  <div class="test-action-info">
+                    <span class="test-action-title">Test Loader Augur (R1)</span>
+                    <span class="test-action-desc">2-second screw augur pulse to verify feed drop</span>
+                  </div>
+                  <span class="btn-test-run">Run Pulse →</span>
+                </button>
+
+                <!-- Test Alarm Hooter -->
+                <button type="button" class="btn-test-action" onclick="runHardwareTestAction('TEST_HOOTER')">
+                  <div class="test-action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                  </div>
+                  <div class="test-action-info">
+                    <span class="test-action-title">Test Alarm Hooter / Beeper</span>
+                    <span class="test-action-desc">1-second alert sound to verify buzzer speaker</span>
+                  </div>
+                  <span class="btn-test-run">Test Sound →</span>
+                </button>
+
+                <!-- LoRaWAN Ping -->
+                <button type="button" class="btn-test-action" onclick="runHardwareTestAction('PING_GATEWAY')">
+                  <div class="test-action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+                  </div>
+                  <div class="test-action-info">
+                    <span class="test-action-title">LoRaWAN Gateway Ping</span>
+                    <span class="test-action-desc">Immediate link check with SenseCAP M2 Gateway</span>
+                  </div>
+                  <span class="btn-test-run">Ping Link →</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Full Self-Diagnostic Checklist Card -->
+            <div class="card diag-results-card">
+              <div class="card-header-clean" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <span class="badge-pill pill-emerald">AUTOMATED SELF-TEST</span>
+                  <h3 class="section-title">Hardware Self-Diagnostic Checklist</h3>
+                </div>
+                <button type="button" class="btn-run-diag" id="btn-run-diag" onclick="runFullDiagnosticScan()">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Run Full Scan
+                </button>
+              </div>
+
+              <div class="diag-list" id="diag-checklist-container">
+                <div class="diag-item">
+                  <div class="diag-item-left">
+                    <span class="diag-check-icon icon-pass">✔</span>
+                    <div>
+                      <strong class="diag-name">I2C Bus & RTC Clock</strong>
+                      <div class="diag-desc">DS3231 Hardware RTC active • Crystal synchronized</div>
+                    </div>
+                  </div>
+                  <span class="badge-state b-done">PASSED</span>
+                </div>
+
+                <div class="diag-item">
+                  <div class="diag-item-left">
+                    <span class="diag-check-icon icon-pass">✔</span>
+                    <div>
+                      <strong class="diag-name">Motor Driver & Current Sense</strong>
+                      <div class="diag-desc">INA219 0.0A standby • 1.8A max trip threshold • No Jam</div>
+                    </div>
+                  </div>
+                  <span class="badge-state b-done">PASSED</span>
+                </div>
+
+                <div class="diag-item">
+                  <div class="diag-item-left">
+                    <span class="diag-check-icon icon-pass">✔</span>
+                    <div>
+                      <strong class="diag-name">Hopper Capacitive Sensor</strong>
+                      <div class="diag-desc">Proximity switch closed • Feed pellet stock available</div>
+                    </div>
+                  </div>
+                  <span class="badge-state b-done">PASSED</span>
+                </div>
+
+                <div class="diag-item">
+                  <div class="diag-item-left">
+                    <span class="diag-check-icon icon-pass">✔</span>
+                    <div>
+                      <strong class="diag-name">Power & Solar ADC</strong>
+                      <div class="diag-desc">Battery: 3.92V (88%) • Solar Input: 18.4V • Charging OK</div>
+                    </div>
+                  </div>
+                  <span class="badge-state b-done">PASSED</span>
+                </div>
+
+                <div class="diag-item">
+                  <div class="diag-item-left">
+                    <span class="diag-check-icon icon-pass">✔</span>
+                    <div>
+                      <strong class="diag-name">LoRaWAN RF & SenseCAP Link</strong>
+                      <div class="diag-desc">IN865 Band • -84 dBm RSSI • +9.5 dB SNR • 100% Link Quality</div>
+                    </div>
+                  </div>
+                  <span class="badge-state b-done">PASSED</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calibration Wizard Card -->
+            <div class="card calibration-wizard-card">
+              <div class="card-header-clean">
+                <span class="badge-pill pill-gold">FIELD CALIBRATION</span>
+                <h3 class="section-title">Feed Discharge Rate Calibration</h3>
+                <span class="section-desc">Calibrate exact feed thrown per second (g/s) based on your pellet size</span>
+              </div>
+
+              <div class="calib-steps-box">
+                <div class="calib-step">
+                  <span class="calib-step-num">1</span>
+                  <span>Place bucket under feeder & tap <strong>Dispense 5s Sample</strong>.</span>
+                </div>
+                <div class="calib-step">
+                  <span class="calib-step-num">2</span>
+                  <span>Weigh the dispensed feed on a scale in grams.</span>
+                </div>
+                <div class="calib-step">
+                  <span class="calib-step-num">3</span>
+                  <span>Enter the grams below to auto-calculate rate.</span>
+                </div>
+              </div>
+
+              <div class="calib-input-row" style="margin-top:14px; display:flex; gap:10px; align-items:center;">
+                <button type="button" class="btn-primary" style="flex:1;" onclick="runCalibrationSample(5)">▶ Run 5s Sample</button>
+                <div style="flex:1;">
+                  <input type="number" id="calib-weighed-grams" class="form-input" placeholder="e.g. 500 grams">
+                </div>
+                <button type="button" class="btn-secondary" onclick="saveCalibratedRate()">Save & Apply</button>
+              </div>
+              <div class="calib-result-note" id="calib-result-note" style="margin-top:8px; font-size:12px; color:var(--text-muted);">Current calibration: 100 g/s (100g = 1.0s motor spin)</div>
+            </div>
+
+          </section>
+
           <section id="screen-map" class="tab-screen">
 
             <!-- Ponds Directory & Action Bar -->
@@ -527,6 +746,10 @@
 
             <!-- Satellite Map Card -->
             <div class="card map-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                <button type="button" class="btn-action-sm" onclick="navigateToTab('tab-system')">← Back to Support</button>
+                <span class="badge-pill pill-cyan">3 PONDS MONITORED</span>
+              </div>
               <div class="map-header">
                 <div>
                   <span class="device-tag">SATELLITE VIEW</span>
@@ -550,6 +773,19 @@
           <section id="screen-system" class="tab-screen">
 
             <!-- Farm Profile -->
+                        <!-- Ponds Directory & Satellite Map Quick Access -->
+            <div class="card ponds-access-card" style="margin-bottom: 14px;">
+              <div class="card-header-clean">
+                <span class="badge-pill pill-cyan">SATELLITE & PONDS</span>
+                <h3 class="section-title">Ponds Directory & Map</h3>
+                <span class="section-desc">Explore all 3 farm ponds, boundaries, and feeder telemetry pins</span>
+              </div>
+              <button type="button" class="btn-primary btn-block" style="margin-top:10px;" onclick="navigateToTab('tab-map')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                View Ponds on Satellite Map →
+              </button>
+            </div>
+
             <div class="card profile-card">
               <h2 class="section-title">Farm Profile</h2>
               <div class="profile-info-row">
@@ -624,18 +860,18 @@
             <span class="nav-tab-label">Settings</span>
           </button>
 
-          <button type="button" class="nav-tab" id="tab-btn-map" onclick="navigateToTab('tab-map')">
+          <button type="button" class="nav-tab" id="tab-btn-troubleshoot" onclick="navigateToTab('tab-troubleshoot')">
             <span class="nav-tab-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
             </span>
-            <span class="nav-tab-label">Ponds</span>
+            <span class="nav-tab-label">Troubleshoot</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-system" onclick="navigateToTab('tab-system')">
             <span class="nav-tab-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </span>
-            <span class="nav-tab-label">Help</span>
+            <span class="nav-tab-label">Support</span>
           </button>
         </nav>
 

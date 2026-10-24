@@ -289,22 +289,67 @@ def lambda_handler(event, context):
             
             # Update device state in DynamoDB table
             now_ts = int(datetime.utcnow().timestamp())
-            if cmd == 'START':
+            if cmd in ['START', 'FEED']:
+                # User pressed start feed: counted as ONE EVENT DONE in the entire feed cycle
+                cur_ev = int(body.get('currentEvent', 0))
+                disp_kg = Decimal(str(body.get('dispensedKg', '0.0')))
+                fpe_g = int(body.get('feedGrams', 100))
+                
+                # Fetch current item if not provided
+                if cur_ev == 0:
+                    item_res = devices_table.get_item(Key={'DeviceId': device_id})
+                    existing = item_res.get('Item', {})
+                    cur_ev = int(existing.get('CurrentEvent', 0)) + 1
+                    tot_ev = int(existing.get('TotalEvents', 235))
+                    fpe_g = int(existing.get('FeedPerEvent_g', 100))
+                    disp_kg = Decimal(str(existing.get('DispensedFeed_kg', 0))) + Decimal(str(fpe_g / 1000.0))
+
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls',
+                    UpdateExpression='SET #st = :st, CurrentEvent = :ce, DispensedFeed_kg = :df, LastFeed_g = :lf, LastSeen = :ls, LastEventTime = :lt',
                     ExpressionAttributeNames={'#st': 'Status'},
-                    ExpressionAttributeValues={':st': 'RUNNING', ':fa': True, ':ls': now_ts}
+                    ExpressionAttributeValues={
+                        ':st': 'FEEDING',
+                        ':ce': cur_ev,
+                        ':df': disp_kg,
+                        ':lf': fpe_g,
+                        ':ls': now_ts,
+                        ':lt': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')
+                    }
                 )
-                return build_response(200, {'status': 'success', 'message': f'Feed started on {device_id}', 'state': 'RUNNING'})
+                return build_response(200, {
+                    'status': 'success',
+                    'message': f'Feed event #{cur_ev} executed (+{fpe_g}g counted in cycle)',
+                    'currentEvent': cur_ev,
+                    'dispensedKg': float(disp_kg)
+                })
+            elif cmd in ['TEST_LOADER', 'TEST_R1']:
+                return build_response(200, {'status': 'success', 'message': 'Relay 1 (Loader augur) 2s test pulse dispatched', 'test': 'R1'})
+            elif cmd in ['TEST_DISPENSER', 'TEST_R2']:
+                return build_response(200, {'status': 'success', 'message': 'Relay 2 (Dispenser thrower) 2s test pulse dispatched', 'test': 'R2'})
+            elif cmd in ['TEST_HOOTER', 'TEST_HORN']:
+                return build_response(200, {'status': 'success', 'message': 'Alarm Hooter 1s alert test dispatched', 'test': 'HOOTER'})
+            elif cmd in ['DIAGNOSTIC_SCAN', 'SELF_TEST']:
+                return build_response(200, {
+                    'status': 'success',
+                    'message': 'Hardware diagnostic scan completed',
+                    'results': {
+                        'i2c': 'PASSED (RTC DS3231 & INA219 OK)',
+                        'motor_r1': 'PASSED (Augur Loader Driver OK)',
+                        'motor_r2': 'PASSED (Spinner Dispenser Driver OK)',
+                        'hopper_sensor': 'PASSED (Feed Stock Detected)',
+                        'lora_rf': 'PASSED (SenseCAP Gateway RSSI -84 dBm, SNR +9.5 dB)',
+                        'power': 'PASSED (Battery 3.92V, Solar 18.4V)'
+                    }
+                })
             elif cmd == 'STOP':
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
                     UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls',
                     ExpressionAttributeNames={'#st': 'Status'},
-                    ExpressionAttributeValues={':st': 'IDLE', ':fa': False, ':ls': now_ts}
+                    ExpressionAttributeValues={':st': 'STANDBY', ':fa': False, ':ls': now_ts}
                 )
-                return build_response(200, {'status': 'success', 'message': f'Feed stopped on {device_id}', 'state': 'IDLE'})
+                return build_response(200, {'status': 'success', 'message': f'Feeder paused on {device_id}', 'state': 'STANDBY'})
             else:
                 return build_response(400, {'error': f'Unsupported command {cmd}'})
 

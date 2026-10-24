@@ -2630,3 +2630,183 @@ svg {
   border: 1px solid #FECACA !important;
   font-weight: 700 !important;
 }
+
+/* ==========================================================================
+   TROUBLESHOOT & DIAGNOSTICS TAB STYLES
+   ========================================================================== */
+.troubleshoot-hero-card,
+.test-actions-card,
+.diag-results-card,
+.calibration-wizard-card,
+.ponds-access-card {
+  margin: 0 16px 14px !important;
+}
+
+.test-buttons-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  margin-top: 14px !important;
+}
+
+.btn-test-action {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  background: var(--clay-subtle, #F8FAFC) !important;
+  border: 1px solid var(--border-color, #E2E8F0) !important;
+  border-radius: var(--radius-md, 14px) !important;
+  padding: 12px 14px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+}
+
+.btn-test-action:hover {
+  background: #FFFFFF !important;
+  border-color: var(--brand-sage, #2D6A4F) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+.test-action-icon {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 10px !important;
+  background: rgba(45, 106, 79, 0.08) !important;
+  color: var(--brand-sage, #2D6A4F) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.test-action-info {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.test-action-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #1E293B) !important;
+}
+
+.test-action-desc {
+  font-size: 11px !important;
+  color: var(--text-muted, #64748B) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.btn-test-run {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--brand-sage, #2D6A4F) !important;
+  background: var(--brand-sage-light, #EAF7EE) !important;
+  padding: 5px 10px !important;
+  border-radius: 8px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+.btn-run-diag {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: var(--brand-sage, #2D6A4F) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 7px 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease !important;
+}
+
+.btn-run-diag:hover {
+  opacity: 0.9 !important;
+}
+
+.diag-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-top: 14px !important;
+}
+
+.diag-item {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  background: var(--clay-subtle, #F8FAFC) !important;
+  border: 1px solid var(--border-color, #E2E8F0) !important;
+}
+
+.diag-item-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.diag-check-icon {
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  flex-shrink: 0 !important;
+}
+
+.diag-check-icon.icon-pass {
+  background: #E8F5E9 !important;
+  color: #1B5E20 !important;
+}
+
+.diag-name {
+  font-size: 12px !important;
+  color: var(--text-primary, #1E293B) !important;
+}
+
+.diag-desc {
+  font-size: 10px !important;
+  color: var(--text-muted, #64748B) !important;
+}
+
+.calib-steps-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  margin-top: 10px !important;
+}
+
+.calib-step {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  color: var(--text-secondary, #334155) !important;
+}
+
+.calib-step-num {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  background: var(--brand-gold, #D97706) !important;
+  color: #FFFFFF !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  flex-shrink: 0 !important;
+}
