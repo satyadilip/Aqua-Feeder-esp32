@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>aquaCON™ — Smart Feeder Manager</title>
+  
+  <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Satellite Map Engine -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Modern Application Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="aquacon-theme">
+
+  <!-- Mobile-First Web Viewport Wrapper -->
+  <div class="viewport-wrapper">
+    <div id="aquacon-app" class="app-container">
+
+      <!-- ======================================================================
+           SCREEN 0: AUTHENTICATION GATE
+           ====================================================================== -->
+      <section id="screen-auth" class="auth-viewport">
+        <div class="auth-card">
+          <div class="auth-brand">
+            <div class="brand-glow-ring">
+              <span class="brand-icon">🐟</span>
+            </div>
+            <h1 class="brand-title">aqua<span class="accent-text">CON</span>™</h1>
+            <p class="brand-subtitle">Smart Automated Aquaculture Feeder System</p>
+          </div>
+
+          <!-- Auth Mode Segmented Tabs -->
+          <div class="auth-tabs">
+            <button type="button" class="auth-tab-btn active" id="tab-login-btn">Sign In</button>
+            <button type="button" class="auth-tab-btn" id="tab-register-btn">Register Farm</button>
+          </div>
+
+          <!-- Alert / Status Notice -->
+          <div id="auth-alert-box" class="auth-alert" style="display:none;"></div>
+
+          <!-- Tab Panel 1: Farmer Sign In -->
+          <div id="panel-signin" class="auth-panel active">
+            <div class="form-group">
+              <label for="auth-phone-input" class="form-label">Mobile Number</label>
+              <div class="input-with-icon">
+                <span class="input-icon">📱</span>
+                <input type="tel" id="auth-phone-input" class="form-input" placeholder="Enter mobile number" value="9000420999" autocomplete="tel">
+              </div>
+              <span class="form-hint">Default Phone: <strong>9000420999</strong></span>
+            </div>
+
+            <div class="form-group">
+              <label for="auth-pw-input" class="form-label">Password</label>
+              <div class="input-with-icon">
+                <span class="input-icon">🔑</span>
+                <input type="password" id="auth-pw-input" class="form-input" placeholder="Enter password" value="admin" autocomplete="current-password">
+                <button type="button" id="pw-toggle-btn" class="input-action-btn" title="Toggle visibility">👁️</button>
+              </div>
+              <span class="form-hint">Default Password: <strong>admin</strong></span>
+            </div>
+
+            <button type="button" id="btn-login-submit" class="btn-primary btn-block">
+              <span id="login-btn-text">Sign In to Farm →</span>
+            </button>
+
+            <!-- Instant Demo Bypass for Quick Access -->
+            <button type="button" id="btn-demo-bypass" class="btn-secondary btn-block">
+              <span>Quick Preview 🧪</span>
+            </button>
+          </div>
+
+          <!-- Tab Panel 2: Register New Farm -->
+          <div id="panel-register" class="auth-panel">
+            <div class="form-group">
+              <label for="reg-name-input" class="form-label">Farmer Name</label>
+              <input type="text" id="reg-name-input" class="form-input" placeholder="e.g. Ramesh Varma">
+            </div>
+
+            <div class="form-group">
+              <label for="reg-phone-input" class="form-label">Mobile Number (Login ID)</label>
+              <input type="tel" id="reg-phone-input" class="form-input" placeholder="10-digit mobile number">
+            </div>
+
+            <div class="form-group">
+              <label for="reg-farm-input" class="form-label">Farm Name</label>
+              <input type="text" id="reg-farm-input" class="form-input" placeholder="e.g. Delta Shrimp Farm">
+            </div>
+
+            <div class="form-group">
+              <label for="reg-pw-input" class="form-label">Password</label>
+              <input type="password" id="reg-pw-input" class="form-input" placeholder="Create password">
+            </div>
+
+            <button type="button" id="btn-register-submit" class="btn-primary btn-block">
+              <span id="reg-btn-text">Register Farm 📋</span>
+            </button>
+          </div>
+
+          <div class="auth-footer">
+            Athena Engineering Corp • aquaCON™ Feeder System
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================================
+           MAIN APPLICATION SHELL (AFTER SIGN IN)
+           ====================================================================== -->
+      <div id="main-app-shell" class="main-shell" style="display:none;">
+
+        <!-- Top Header Navigation Bar -->
+        <header class="app-header">
+          <div class="header-left">
+            <div class="brand-pill">
+              <span class="live-dot pulse"></span>
+              <span class="brand-text">aqua<span class="accent">CON</span></span>
+            </div>
+
+            <!-- Pond Selector Dropdown -->
+            <div class="pond-selector-wrap">
+              <select id="header-pond-select" class="pond-dropdown" onchange="switchActivePond(this.value)">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <!-- Digital Farm Clock -->
+            <div class="clock-chip" title="Current Time">
+              <span class="clock-icon">⏰</span>
+              <span id="live-farm-time" class="clock-time">--:--:--</span>
+            </div>
+
+            <!-- Notification Bell Icon -->
+            <button type="button" class="header-action-btn" id="btn-toggle-notifs" onclick="toggleNotificationDrawer()" title="Alerts">
+              <span class="btn-icon">🔔</span>
+              <span class="notif-badge" id="notif-unread-count">1</span>
+            </button>
+          </div>
+        </header>
+
+        <!-- Slide-Over Notification Drawer -->
+        <aside id="notification-drawer" class="notif-drawer">
+          <div class="drawer-header">
+            <div class="drawer-title">
+              <span>🔔</span>
+              <h3>Farm Alerts</h3>
+            </div>
+            <div class="drawer-actions">
+              <button type="button" class="btn-text-sm" onclick="markAllNotificationsRead()">Mark read</button>
+              <button type="button" class="btn-icon-close" onclick="toggleNotificationDrawer()">✕</button>
+            </div>
+          </div>
+          
+          <div class="drawer-content" id="notif-list-container">
+            <div class="notif-card notif-success">
+              <div class="notif-card-header">
+                <span class="notif-type-tag">FEEDER</span>
+                <span class="notif-time">Just now</span>
+              </div>
+              <div class="notif-msg">Feed Available in Hopper. Feeder operational and ready for scheduled events.</div>
+            </div>
+            <div class="notif-card notif-info">
+              <div class="notif-card-header">
+                <span class="notif-type-tag">SUPPORT</span>
+                <span class="notif-time">24/7 Available</span>
+              </div>
+              <div class="notif-msg">Emergency Customer Service line active: Charan (9154696777).</div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Pond & Device Context Switcher Banner -->
+        <div class="pond-context-bar">
+          <div class="context-pond-info">
+            <div class="context-title" id="context-pond-name">Pond P-01 (1.8 Acres)</div>
+            <div class="context-sub" id="context-pond-stock">Vannamei Shrimp • 2 Feeders Installed</div>
+          </div>
+          
+          <!-- Device Pills in Current Pond -->
+          <div class="device-pills-row" id="pond-devices-pills">
+            <!-- Populated dynamically: [Feeder 01] [Feeder 02] [+ Add Feeder] -->
+          </div>
+        </div>
+
+        <!-- Main Body Screens (5 Tabs) -->
+        <main class="app-body">
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB 1: LIVE STATUS & FEEDER CONTROL
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-status" class="tab-screen active">
+
+            <!-- Feeder Overview Hero Card -->
+            <div class="card feeder-hero-card">
+              <div class="card-header-row">
+                <div class="device-meta">
+                  <span class="device-tag" id="current-device-tag">ACTIVE FEEDER</span>
+                  <h2 class="device-name" id="current-device-name">aquaCON Feeder 01</h2>
+                </div>
+                <div class="status-badge-container">
+                  <span id="feeder-state-badge" class="badge-state b-idle">IDLE</span>
+                </div>
+              </div>
+
+              <!-- Today's Feeding Progress -->
+              <div class="feed-progress-box">
+                <div class="progress-labels">
+                  <span class="progress-lbl">TODAY'S FEED DISPENSED</span>
+                  <span class="progress-val"><strong id="dispensed-val-text">0.40</strong> / <span id="target-val-text">15.0</span> Kg</span>
+                </div>
+                <div class="progress-track">
+                  <div id="feed-progress-fill" class="progress-fill" style="width: 2.7%;"></div>
+                </div>
+              </div>
+
+              <!-- Customer Key Metrics Grid -->
+              <div class="metrics-grid">
+                <div class="metric-cell">
+                  <span class="cell-label">FEED EVENT</span>
+                  <span id="burst-count-text" class="cell-value">4 / 150</span>
+                  <span class="cell-sub">Events today</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">NEXT FEED EVENT</span>
+                  <span id="next-feed-interval" class="cell-value accent-cyan">--:-- --</span>
+                  <span class="cell-sub" id="next-feed-time">Calculating...</span>
+                </div>
+
+                <!-- Interactive Feed Level Toggle Cell -->
+                <div class="metric-cell metric-interactive" onclick="toggleFeedStockState()" title="Tap to toggle Feed Available / Empty">
+                  <div class="metric-cell-header">
+                    <span class="cell-label">FEED LEVEL</span>
+                    <span class="tap-hint">Tap to toggle</span>
+                  </div>
+                  <div class="feed-indicator">
+                    <span id="feed-status-dot" class="feed-dot dot-available"></span>
+                    <span id="feed-status-text" class="cell-value text-emerald">Available</span>
+                  </div>
+                  <span class="cell-sub" id="feed-stock-sub">Hopper ready</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">FEEDER STATUS</span>
+                  <span class="cell-value text-emerald">Connected 🟢</span>
+                  <span class="cell-sub">Signal Strong</span>
+                </div>
+              </div>
+
+              <!-- Primary Remote Feeder Action Buttons -->
+              <div class="feeder-action-buttons">
+                <button type="button" id="btn-remote-start" class="btn-ctrl btn-start" onclick="triggerRemoteAction('START')">
+                  <span class="btn-icon">▶</span>
+                  <span>START FEEDING</span>
+                </button>
+                <button type="button" id="btn-remote-stop" class="btn-ctrl btn-stop" onclick="triggerRemoteAction('STOP')">
+                  <span class="btn-icon">⏹</span>
+                  <span>STOP FEEDING</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Operational Status Summary Card -->
+            <div class="card summary-card">
+              <h3 class="section-title-sm">Operational Status</h3>
+              <div class="health-pills-row">
+                <div class="health-pill">
+                  <span class="pill-dot dot-available"></span>
+                  <span class="pill-label">Power Supply: <strong>Battery / Solar OK</strong></span>
+                </div>
+                <div class="health-pill">
+                  <span class="pill-dot dot-available" id="pill-feed-dot"></span>
+                  <span class="pill-label">Hopper Stock: <strong id="pill-feed-status">Feed Available</strong></span>
+                </div>
+                <div class="health-pill">
+                  <span class="pill-dot dot-available"></span>
+                  <span class="pill-label">Active Window: <strong>06:00 AM – 06:00 PM</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Shortcut to History & Trends -->
+            <div class="card shortcut-card">
+              <div class="card-header-row" style="margin-bottom:0;">
+                <div>
+                  <h3 class="section-title">Historic Trends & Analytics</h3>
+                  <p class="section-desc" style="margin-bottom:0;">View 7-day feed history & event logs</p>
+                </div>
+                <button type="button" class="btn-action-sm" onclick="navigateToTab('tab-history')">View Trends 📈</button>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB 2: HISTORIC DATA & TRENDS
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-history" class="tab-screen">
+
+            <!-- Feeder History Header Card -->
+            <div class="card history-header-card">
+              <div class="card-header-row">
+                <div>
+                  <span class="device-tag">HISTORIC ANALYTICS</span>
+                  <h2 class="section-title" id="history-feeder-title">aquaCON Feeder 01 Trends</h2>
+                </div>
+                <span class="badge-pill" id="history-feeder-pond">Pond P-01</span>
+              </div>
+
+              <!-- High-level Stats Overview Grid -->
+              <div class="history-stats-grid">
+                <div class="metric-cell">
+                  <span class="cell-label">FEED THIS WEEK</span>
+                  <span id="stat-week-total" class="cell-value accent-cyan">105.4 Kg</span>
+                  <span class="cell-sub">Past 7 Days</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">DAILY AVERAGE</span>
+                  <span id="stat-daily-avg" class="cell-value text-emerald">17.6 Kg</span>
+                  <span class="cell-sub">Per day rate</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">SCHEDULE ADHERENCE</span>
+                  <span id="stat-adherence" class="cell-value text-emerald">99.1%</span>
+                  <span class="cell-sub">Completion rate</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">SEASON TOTAL</span>
+                  <span id="stat-season-total" class="cell-value">485.0 Kg</span>
+                  <span class="cell-sub">Cycle to date</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 7-Day Feed Consumption Bar Chart -->
+            <div class="card chart-card">
+              <div class="card-header-row">
+                <h3 class="section-title">Daily Feed Dispensed (Last 7 Days)</h3>
+                <span class="chart-legend-tag">Target: <strong id="chart-target-lbl">15.0 Kg</strong></span>
+              </div>
+
+              <!-- Interactive Bar Chart View -->
+              <div class="chart-container" id="history-chart-container">
+                <!-- Dynamically rendered bars -->
+              </div>
+            </div>
+
+            <!-- Feed Event Detailed Logs Table -->
+            <div class="card log-card">
+              <div class="card-header-row">
+                <div>
+                  <h3 class="section-title">Today's Feed Event Log</h3>
+                  <span class="section-desc" id="log-date-label">Showing completed feed events</span>
+                </div>
+                <button type="button" class="btn-text-sm" onclick="refreshHistoryData()">↻ Refresh</button>
+              </div>
+
+              <div class="events-log-list" id="events-log-container">
+                <!-- Dynamically populated event list -->
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB 3: FEED SETTINGS
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-params" class="tab-screen">
+
+            <div class="card param-editor-card">
+              <div class="card-header-row">
+                <div>
+                  <span class="device-tag">DAILY SCHEDULE</span>
+                  <h2 class="section-title">Feed Settings for <span id="param-device-name">Feeder 01</span></h2>
+                </div>
+              </div>
+
+              <!-- Form Controls -->
+              <div class="param-form">
+
+                <!-- 1. Total Daily Quantity -->
+                <div class="form-row-slider">
+                  <div class="slider-header">
+                    <label for="input-qty" class="slider-label">Total Daily Feed</label>
+                    <div class="slider-value-box">
+                      <input type="number" id="input-qty" min="0.5" max="120.0" step="0.5" value="15.0" class="numeric-input">
+                      <span class="input-unit">Kg</span>
+                    </div>
+                  </div>
+                  <input type="range" id="slider-qty" min="0.5" max="120.0" step="0.5" value="15.0" class="range-slider">
+                  <div class="slider-range-hints">
+                    <span>Min: 0.5 Kg</span>
+                    <span>Max: 120 Kg</span>
+                  </div>
+                </div>
+
+                <!-- 2. Feed Per Event -->
+                <div class="form-row-slider">
+                  <div class="slider-header">
+                    <label for="input-fpe" class="slider-label">Feed Per Event</label>
+                    <div class="slider-value-box">
+                      <input type="number" id="input-fpe" min="10" max="500" step="5" value="100" class="numeric-input">
+                      <span class="input-unit">grams</span>
+                    </div>
+                  </div>
+                  <input type="range" id="slider-fpe" min="10" max="500" step="5" value="100" class="range-slider">
+                  <div class="slider-range-hints">
+                    <span>Min: 10 g</span>
+                    <span>Standard: 100 g</span>
+                    <span>Max: 500 g</span>
+                  </div>
+                </div>
+
+                <!-- 3. Operating Feeding Hours -->
+                <div class="form-row-times">
+                  <div class="time-col">
+                    <label class="slider-label">Start Time</label>
+                    <div class="time-input-group">
+                      <input type="number" id="input-start-hour" min="6" max="17" value="6" class="time-box">
+                      <span class="time-colon">:</span>
+                      <input type="number" id="input-start-min" min="0" max="59" step="5" value="0" class="time-box">
+                    </div>
+                    <span class="time-hint">Morning (06:00 AM)</span>
+                  </div>
+
+                  <div class="time-col">
+                    <label class="slider-label">End Time</label>
+                    <div class="time-input-group">
+                      <input type="number" id="input-end-hour" min="7" max="18" value="18" class="time-box">
+                      <span class="time-colon">:</span>
+                      <input type="number" id="input-end-min" min="0" max="59" step="5" value="0" class="time-box">
+                    </div>
+                    <span class="time-hint">Evening (06:00 PM)</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Schedule Calculation Summary -->
+              <div class="calc-results-box">
+                <div class="calc-header">
+                  <span class="calc-title">📊 Calculated Daily Schedule</span>
+                  <span id="calc-valid-badge" class="badge-valid">SCHEDULE OK</span>
+                </div>
+
+                <div class="calc-grid">
+                  <div class="calc-item">
+                    <span class="calc-lbl">TOTAL FEED EVENTS</span>
+                    <span id="calc-total-events" class="calc-val">150</span>
+                    <span class="calc-sub">Events today</span>
+                  </div>
+
+                  <div class="calc-item">
+                    <span class="calc-lbl">FEED INTERVAL</span>
+                    <span id="calc-interval" class="calc-val">4.7 min</span>
+                    <span class="calc-sub">Between events</span>
+                  </div>
+
+                  <div class="calc-item">
+                    <span class="calc-lbl">MOTOR DISPENSE</span>
+                    <span id="calc-motor-time" class="calc-val">1.0 s</span>
+                    <span class="calc-sub">Per event</span>
+                  </div>
+                </div>
+
+                <div id="calc-error-msg" class="calc-error" style="display:none;"></div>
+              </div>
+
+              <!-- Save & Deploy Button -->
+              <button type="button" id="btn-save-params" class="btn-primary btn-block" onclick="saveSettingsToFeeder()">
+                <span id="save-btn-text">💾 Save Settings to Feeder</span>
+              </button>
+            </div>
+
+          </section>
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB 4: PONDS & REALTIME MAP
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-map" class="tab-screen">
+
+            <!-- Ponds Directory & Action Bar -->
+            <div class="card ponds-directory-card">
+              <div class="card-header-row">
+                <div>
+                  <span class="device-tag">FARM MANAGEMENT</span>
+                  <h2 class="section-title">Farm Ponds & Feeders</h2>
+                </div>
+                <div class="action-buttons-group">
+                  <button type="button" class="btn-action-sm" onclick="openAddPondModal()">+ Add Pond</button>
+                  <button type="button" class="btn-action-sm" onclick="openAddDeviceModal()">+ Add Feeder</button>
+                </div>
+              </div>
+
+              <!-- List of Ponds -->
+              <div class="ponds-cards-list" id="ponds-list-container">
+                <!-- Dynamically rendered ponds -->
+              </div>
+            </div>
+
+            <!-- Satellite Map Card -->
+            <div class="card map-card">
+              <div class="map-header">
+                <div>
+                  <span class="device-tag">SATELLITE VIEW</span>
+                  <h3 class="section-title">Realtime Pond Map</h3>
+                </div>
+                <div class="map-actions">
+                  <button type="button" class="btn-map-action" onclick="openCurrentPondInGoogleMaps()">🗺️ Open in Google Maps</button>
+                  <button type="button" class="btn-map-action" onclick="resetMapView()">⌖ Center Map</button>
+                </div>
+              </div>
+
+              <!-- Leaflet Satellite Canvas -->
+              <div id="satellite-map" class="map-viewport"></div>
+            </div>
+
+          </section>
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB 5: HELP & SETTINGS
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-system" class="tab-screen">
+
+            <!-- Farm Profile -->
+            <div class="card profile-card">
+              <h2 class="section-title">Farm Profile</h2>
+              <div class="profile-info-row">
+                <div class="profile-avatar">👨‍🌾</div>
+                <div class="profile-details">
+                  <span class="profile-name" id="sys-operator-name">aquaCON Supervisor</span>
+                  <span class="profile-phone" id="sys-operator-phone">+91 90004 20999</span>
+                  <span class="profile-farm" id="sys-farm-name">Pioneer Aqua Farm</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Service Card (Charan 9154696777) -->
+            <div class="card support-card">
+              <h3 class="section-title">Need Assistance?</h3>
+              <p class="section-desc">Direct line to customer service & technical support:</p>
+              <a href="tel:9154696777" class="support-hotline-btn" id="cust-support-link">
+                <span class="support-icon">📞</span>
+                <div class="support-text-wrap">
+                  <span class="support-label">Customer Service</span>
+                  <span class="support-number">Charan: <strong>+91 91546 96777</strong></span>
+                </div>
+                <span class="call-badge">TAP TO CALL</span>
+              </a>
+            </div>
+
+            <!-- Emergency Alert Contacts -->
+            <div class="card contacts-card">
+              <div class="card-header-row">
+                <div>
+                  <h3 class="section-title">Alert Contacts</h3>
+                  <p class="section-desc" style="margin-bottom:0;">Phone numbers notified for feeder alerts:</p>
+                </div>
+                <button type="button" class="btn-action-sm" onclick="openAddContactModal()">+ Add Contact</button>
+              </div>
+
+              <div class="contacts-list" id="contacts-list-container">
+                <!-- Dynamically rendered contacts -->
+              </div>
+            </div>
+
+            <button type="button" class="btn-danger btn-block" onclick="handleLogout()">
+              Sign Out 🚪
+            </button>
+
+          </section>
+
+        </main>
+
+        <!-- Fixed Ergonomic Bottom Navigation Bar (5 Tabs) -->
+        <nav class="bottom-nav">
+          <button type="button" class="nav-tab active" id="tab-btn-status" onclick="navigateToTab('tab-status')">
+            <span class="nav-tab-icon">📊</span>
+            <span class="nav-tab-label">Status</span>
+          </button>
+
+          <button type="button" class="nav-tab" id="tab-btn-history" onclick="navigateToTab('tab-history')">
+            <span class="nav-tab-icon">📈</span>
+            <span class="nav-tab-label">History</span>
+          </button>
+
+          <button type="button" class="nav-tab" id="tab-btn-params" onclick="navigateToTab('tab-params')">
+            <span class="nav-tab-icon">⚙️</span>
+            <span class="nav-tab-label">Settings</span>
+          </button>
+
+          <button type="button" class="nav-tab" id="tab-btn-map" onclick="navigateToTab('tab-map')">
+            <span class="nav-tab-icon">🗺️</span>
+            <span class="nav-tab-label">Ponds</span>
+          </button>
+
+          <button type="button" class="nav-tab" id="tab-btn-system" onclick="navigateToTab('tab-system')">
+            <span class="nav-tab-icon">🔧</span>
+            <span class="nav-tab-label">Help</span>
+          </button>
+        </nav>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 1: ADD NEW POND
+       ====================================================================== -->
+  <div id="modal-add-pond" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-pond')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Add New Pond</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddPondModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Pond Name / ID</label>
+          <input type="text" id="new-pond-id" class="form-input" placeholder="e.g. Pond P-04">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Size in Acres</label>
+          <input type="number" id="new-pond-acres" class="form-input" placeholder="e.g. 2.0" step="0.1" value="2.0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Culture / Stock</label>
+          <input type="text" id="new-pond-stock" class="form-input" placeholder="e.g. Vannamei Shrimp" value="Vannamei Shrimp">
+        </div>
+        <div class="form-row-times">
+          <div class="form-group">
+            <label class="form-label">Latitude</label>
+            <input type="number" id="new-pond-lat" class="form-input" step="0.0001" value="16.5040">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Longitude</label>
+            <input type="number" id="new-pond-lng" class="form-input" step="0.0001" value="81.6710">
+          </div>
+        </div>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewPond()">Save Pond 💾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 2: ADD NEW DEVICE
+       ====================================================================== -->
+  <div id="modal-add-device" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-device')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Add New Feeder</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddDeviceModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Feeder Serial ID</label>
+          <input type="text" id="new-device-id" class="form-input" placeholder="e.g. aquaCON-02">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Feeder Name</label>
+          <input type="text" id="new-device-name" class="form-input" placeholder="e.g. Feeder South Corner">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Assign to Pond</label>
+          <select id="new-device-pond-select" class="form-input">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Target Daily Feed (Kg)</label>
+          <input type="number" id="new-device-target" class="form-input" value="15.0" step="0.5">
+        </div>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewDevice()">Register Feeder 💾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       MODAL 3: ADD NEW ALERT CONTACT
+       ====================================================================== -->
+  <div id="modal-add-contact" class="modal-backdrop" style="display:none;" onclick="handleModalBackdropClick(event, 'modal-add-contact')">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">➕ Add Alert Contact</h3>
+        <button type="button" class="modal-close-btn" onclick="closeAddContactModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Contact Name</label>
+          <input type="text" id="new-contact-name" class="form-input" placeholder="e.g. Charan, Ravi Kumar">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mobile Number</label>
+          <input type="tel" id="new-contact-phone" class="form-input" placeholder="e.g. 9154696777">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Role / Shift</label>
+          <select id="new-contact-role" class="form-input">
+            <option value="Farm Manager" selected>Farm Manager</option>
+            <option value="Pond Technician">Pond Technician</option>
+            <option value="Night Duty Operator">Night Duty Operator</option>
+            <option value="Emergency Responder">Emergency Responder</option>
+          </select>
+        </div>
+        <button type="button" class="btn-primary btn-block" onclick="submitAddNewContact()">Save Alert Contact 💾</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Toast Notification Banner -->
+  <div id="app-toast" class="toast-banner"></div>
+
+  <!-- Main Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>
