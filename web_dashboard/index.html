@@ -206,7 +206,7 @@
                   <h2 class="device-name" id="current-device-name">aquaCON Feeder 01</h2>
                 </div>
                 <div class="status-badge-container">
-                  <span id="feeder-state-badge" class="badge-state b-idle">IDLE</span>
+                  <span id="feeder-state-badge" class="badge-state b-done">COMPLETED</span>
                 </div>
               </div>
 
@@ -218,8 +218,8 @@
                 </svg>
                 <div class="gauge-inner">
                   <span class="gauge-hero-num" id="gauge-hero-num">235</span>
-                  <span class="gauge-hero-sub" id="gauge-hero-sub">/ 250 Events Today</span>
-                  <span class="gauge-hero-pct" id="gauge-pct-badge">94.0%</span>
+                  <span class="gauge-hero-sub" id="gauge-hero-sub">/ 235 Events • Completed</span>
+                  <span class="gauge-hero-pct" id="gauge-pct-badge">100% Target Met</span>
                 </div>
               </div>
 
@@ -232,7 +232,7 @@
                 <div class="metric-sub-divider"></div>
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Daily Target</span>
-                  <span class="metric-sub-val"><span id="target-val-text">25.0</span> kg</span>
+                  <span class="metric-sub-val"><span id="target-val-text">23.5</span> kg</span>
                 </div>
               </div>
 
@@ -240,14 +240,14 @@
               <div class="metrics-grid">
                 <div class="metric-cell">
                   <span class="cell-label">FEED EVENT</span>
-                  <span id="burst-count-text" class="cell-value">235 / 250</span>
-                  <span class="cell-sub">Events today</span>
+                  <span id="burst-count-text" class="cell-value">235 / 235</span>
+                  <span class="cell-sub" id="burst-count-sub">Schedule completed</span>
                 </div>
 
                 <div class="metric-cell">
-                  <span class="cell-label">NEXT INTERVAL</span>
-                  <span id="next-feed-interval" class="cell-value text-emerald">2.9 min</span>
-                  <span class="cell-sub" id="next-feed-time">At 11:30 AM</span>
+                  <span class="cell-label">NEXT FEED</span>
+                  <span id="next-feed-timestamp" class="cell-value text-emerald">06:00 AM</span>
+                  <span class="cell-sub" id="next-feed-sub">Tomorrow morning</span>
                 </div>
 
                 <!-- Interactive Feed Level Toggle Cell -->

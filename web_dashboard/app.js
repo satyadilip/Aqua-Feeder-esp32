@@ -19,12 +19,12 @@ const defaultDevices = [
     id: 'e072a1fffef6249c',
     name: 'aquaCON Feeder 01 (Live AF_9C2472E0)',
     pondId: 'P-01',
-    status: 'FEEDING',
+    status: 'COMPLETED',
     feedAvailable: true,
     dispensedKg: 23.50,
-    targetKg: 25.0,
+    targetKg: 23.5,
     currentEvent: 235,
-    totalEvents: 250,
+    totalEvents: 235,
     fpeGrams: 100,
     dischargeRateGs: 100,
     startHour: 6,
@@ -492,15 +492,69 @@ function loadSelectedDeviceToUI() {
   }
 
   
-  // Update Dribbble Radial Arc Gauge with strict mathematical clamping
+  // Operational Time & Schedule Completion Engine
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMin = now.getMinutes();
+  const nowTotalMin = currentHour * 60 + currentMin;
+
+  const sHour = dev.startHour !== undefined ? dev.startHour : 6;
+  const sMin = dev.startMin !== undefined ? dev.startMin : 0;
+  const eHour = dev.endHour !== undefined ? dev.endHour : 18;
+  const eMin = dev.endMin !== undefined ? dev.endMin : 0;
+  const startTotalMin = sHour * 60 + sMin;
+  const endTotalMin = eHour * 60 + eMin;
+
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
-  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 235;
 
-  // Logical Invariant: Numerator / Upper value can NEVER exceed Denominator / Lower value
-  const displayCurrent = Math.min(rawCurrent, totalEvents);
   const isTargetCompleted = rawCurrent >= totalEvents;
-  const gaugePct = isTargetCompleted ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
+  const isPastSchedule = nowTotalMin >= endTotalMin;
+  const isBeforeSchedule = nowTotalMin < startTotalMin;
+  const isScheduleDone = isTargetCompleted || isPastSchedule;
 
+  const displayCurrent = Math.min(rawCurrent, totalEvents);
+  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
+
+  // Determine unambiguous status & next feed timestamp
+  let statusText = 'COMPLETED';
+  let badgeClass = 'b-done';
+  let nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
+  let nextSubText = 'Tomorrow morning';
+  let eventSubText = "Schedule completed";
+
+  if (isScheduleDone) {
+    statusText = 'COMPLETED';
+    badgeClass = 'b-done';
+    nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
+    nextSubText = 'Tomorrow morning';
+    eventSubText = "Schedule completed";
+  } else if (isBeforeSchedule) {
+    statusText = 'STANDBY';
+    badgeClass = 'b-idle';
+    nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
+    nextSubText = 'Starts today';
+    eventSubText = 'Ready for schedule';
+  } else {
+    statusText = dev.feedAvailable === false ? 'REFILL' : 'ACTIVE';
+    badgeClass = dev.feedAvailable === false ? 'b-alert' : 'b-run';
+    const intervalMin = dev.intervalMin || 3.1;
+    const nextMin = nowTotalMin + Math.round(intervalMin);
+    const nH = Math.floor(nextMin / 60) % 24;
+    const nM = nextMin % 60;
+    const ampm = nH >= 12 ? 'PM' : 'AM';
+    const dispH = nH % 12 === 0 ? 12 : nH % 12;
+    nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
+    nextSubText = `Interval: ${intervalMin} min`;
+    eventSubText = 'Events today';
+  }
+
+  if (stateBadge) {
+    stateBadge.textContent = statusText;
+    stateBadge.className = `badge-state ${badgeClass}`;
+  }
+
+  // Update Dribbble Radial Arc Gauge
   const gaugeCircle = document.getElementById('gauge-progress-circle');
   const gaugeHeroNum = document.getElementById('gauge-hero-num');
   const gaugeHeroSub = document.getElementById('gauge-hero-sub');
@@ -512,22 +566,39 @@ function loadSelectedDeviceToUI() {
   }
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = isTargetCompleted ? `/ ${totalEvents} Events • Completed` : `/ ${totalEvents} Events Today`;
+    gaugeHeroSub.textContent = isScheduleDone ? `/ ${totalEvents} Events • Completed` : `/ ${totalEvents} Events Today`;
   }
   if (gaugePctBadge) {
-    gaugePctBadge.textContent = isTargetCompleted ? '100% Target Met' : `${gaugePct.toFixed(1)}%`;
+    gaugePctBadge.textContent = isScheduleDone ? '100% Target Met' : `${gaugePct.toFixed(1)}%`;
   }
 
   const rawDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
-  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 25.0;
+  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 23.5;
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
+
   if (burstCountText) {
-    burstCountText.textContent = isTargetCompleted ? `${totalEvents} / ${totalEvents}` : `${displayCurrent} / ${totalEvents}`;
+    burstCountText.textContent = `${displayCurrent} / ${totalEvents}`;
   }
-  if (nextIntervalText) nextIntervalText.textContent = `${dev.intervalMin || 2.9} mins`;
-  if (nextFeedTimeText) {
-    nextFeedTimeText.textContent = isTargetCompleted ? 'Daily schedule done' : (dev.status === 'FEEDING' ? 'Dispensing now' : 'Next in 3 mins');
+  const burstCountSub = document.getElementById('burst-count-sub');
+  if (burstCountSub) burstCountSub.textContent = eventSubText;
+
+  // Next feed exact timestamp & unambiguous sub-label
+  const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
+  const nextFeedSubEl = document.getElementById('next-feed-sub');
+  if (nextFeedTimestampEl) nextFeedTimestampEl.textContent = nextTimestamp;
+  if (nextFeedSubEl) nextFeedSubEl.textContent = nextSubText;
+
+  // Operational notification banner
+  const hopperNotif = document.getElementById('hopper-notif-msg');
+  if (hopperNotif) {
+    if (isScheduleDone) {
+      hopperNotif.textContent = `Today's feeding completed (${rawDispensed.toFixed(1)} kg dispensed). Feeder on standby until ${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM tomorrow.`;
+    } else if (dev.feedAvailable === false) {
+      hopperNotif.textContent = 'Hopper empty! Please refill feed stock to ensure uninterrupted scheduled feeding.';
+    } else {
+      hopperNotif.textContent = `Feeder operational. Next scheduled feed at ${nextTimestamp}.`;
+    }
   }
 
   // Feed Available / Empty Status
@@ -1312,8 +1383,11 @@ function startTelemetryLoop() {
             if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
             if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);
             if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
+            if (cloudDev.StartHour !== undefined) localDev.startHour = Number(cloudDev.StartHour);
+            if (cloudDev.EndHour !== undefined) localDev.endHour = Number(cloudDev.EndHour);
+            if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);
+            if (cloudDev.EndMinute !== undefined) localDev.endMin = Number(cloudDev.EndMinute);
             if (cloudDev.Status) localDev.status = cloudDev.Status;
-            else if (cloudDev.CurrentEvent > 0) localDev.status = 'FEEDING';
           }
         });
         loadSelectedDeviceToUI();

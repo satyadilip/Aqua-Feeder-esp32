@@ -2602,3 +2602,31 @@ svg {
   background: var(--brand-sage-light) !important;
   color: var(--brand-sage) !important;
 }
+
+.badge-state.b-done {
+  background: #E8F5E9 !important;
+  color: #1B5E20 !important;
+  border: 1px solid #A5D6A7 !important;
+  font-weight: 700 !important;
+}
+
+.badge-state.b-idle, .badge-state.b-standby {
+  background: #F1F5F9 !important;
+  color: #475569 !important;
+  border: 1px solid #CBD5E1 !important;
+  font-weight: 700 !important;
+}
+
+.badge-state.b-run, .badge-state.b-feeding {
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border: 1px solid #BFDBFE !important;
+  font-weight: 700 !important;
+}
+
+.badge-state.b-alert {
+  background: #FEF2F2 !important;
+  color: #DC2626 !important;
+  border: 1px solid #FECACA !important;
+  font-weight: 700 !important;
+}

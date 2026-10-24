@@ -1,7 +1,7 @@
 import json
 import boto3
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 devices_table = dynamodb.Table('AquaFeeder_Devices')
@@ -169,10 +169,27 @@ def lambda_handler(event, context):
                     except:
                         pass
 
+                    # Real-time operational schedule status
+                    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                    now_min = now_ist.hour * 60 + now_ist.minute
+                    s_hour = int(d.get('StartHour', 6))
+                    s_min = int(d.get('StartMinute', 0))
+                    e_hour = int(d.get('EndHour', 18))
+                    e_min = int(d.get('EndMinute', 0))
+                    start_min = s_hour * 60 + s_min
+                    end_min = e_hour * 60 + e_min
+
+                    if cur_ev >= tot_ev:
+                        calc_status = 'COMPLETED'
+                    elif now_min >= end_min or now_min < start_min:
+                        calc_status = 'STANDBY'
+                    else:
+                        calc_status = 'SCHEDULED'
+
                     if dev_id == 'e072a1fffef6249c':
                         d['DeviceName'] = 'aquaCON Feeder 01 (Live AF_9C2472E0)'
                         d['PondId'] = 'P-01'
-                        d['Status'] = 'FEEDING' if cur_ev > 0 else 'IDLE'
+                        d['Status'] = calc_status
                         d['FeedAvailable'] = True
                         if 'StartHour' not in d: d['StartHour'] = 6
                         if 'StartMinute' not in d: d['StartMinute'] = 0
@@ -185,8 +202,8 @@ def lambda_handler(event, context):
                     elif 'DeviceName' not in d:
                         d['DeviceName'] = 'aquaCON Feeder ' + dev_id[-4:]
                     
-                    if 'Status' not in d:
-                        d['Status'] = 'FEEDING' if cur_ev > 0 else 'IDLE'
+                    if 'Status' not in d or d.get('Status') == 'FEEDING':
+                        d['Status'] = calc_status
                     if 'FeedAvailable' not in d:
                         d['FeedAvailable'] = True
                         
