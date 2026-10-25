@@ -306,6 +306,17 @@
               </div>
             </div>
 
+            <!-- Quick Shortcut to Check Tray History -->
+            <div class="card shortcut-card" style="margin-top: 10px;">
+              <div class="card-header-row" style="margin-bottom:0;">
+                <div>
+                  <h3 class="section-title">Tray Inspections</h3>
+                  <p class="section-desc" id="status-last-tray-check" style="margin-bottom:0;">Physical feed check-in logged from feeder</p>
+                </div>
+                <button type="button" class="btn-action-sm" onclick="navigateToTab('tab-traycheck')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> View Checks</button>
+              </div>
+            </div>
+
           </section>
 
           <!-- ══════════════════════════════════════════════════════════════════
@@ -376,6 +387,80 @@
 
               <div class="events-log-list" id="events-log-container">
                 <!-- Dynamically populated event list -->
+              </div>
+            </div>
+
+          </section>
+
+          <!-- ══════════════════════════════════════════════════════════════════
+               TAB: TRAY INSPECTION HISTORY (CHECK TRAY)
+               ══════════════════════════════════════════════════════════════════ -->
+          <section id="screen-traycheck" class="tab-screen">
+
+            <!-- Tray Check Header / Overview Card -->
+            <div class="card history-header-card">
+              <div class="card-header-row">
+                <div>
+                  <span class="device-tag">FIELD VERIFICATION</span>
+                  <h2 class="section-title" id="traycheck-feeder-title">Tray Inspection Logs</h2>
+                  <span class="section-desc">Physical feed tray checks recorded by pond technicians</span>
+                </div>
+                <span class="badge-pill pill-cyan" id="traycheck-count-badge">0 CHECKS</span>
+              </div>
+
+              <!-- Quick Metrics Grid for Tray Checks -->
+              <div class="history-metrics-grid">
+                <div class="metric-cell">
+                  <span class="cell-label">TOTAL CHECKS</span>
+                  <span id="tray-total-count" class="cell-value">0</span>
+                  <span class="cell-sub">Recorded checks</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">LAST CHECKED</span>
+                  <span id="tray-last-time" class="cell-value text-emerald">--</span>
+                  <span class="cell-sub" id="tray-last-sub">No checks yet</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">FEED AT CHECK</span>
+                  <span id="tray-last-dispensed" class="cell-value">-- kg</span>
+                  <span class="cell-sub">Dispensed at check</span>
+                </div>
+
+                <div class="metric-cell">
+                  <span class="cell-label">BATTERY</span>
+                  <span id="tray-last-batt" class="cell-value text-emerald">-- V</span>
+                  <span class="cell-sub">At inspection</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- How Check Tray Works Infobox -->
+            <div class="card" style="background: rgba(14, 165, 233, 0.05); border: 1px solid rgba(14, 165, 233, 0.2);">
+              <div style="display:flex; gap:12px; align-items:flex-start;">
+                <div style="font-size:22px; line-height:1;">📋</div>
+                <div>
+                  <strong style="color:var(--brand-teal); font-size:13px;">Physical "Check Tray" Feature</strong>
+                  <p style="margin:4px 0 0; font-size:12px; color:var(--text-muted); line-height:1.4;">
+                    When pond workers inspect the feeding tray in the pond, they select <strong>"Check Tray"</strong> on the feeder LCD menu. The feeder instantly transmits a verification packet to the cloud logging the exact timestamp, feed quantity dispensed, and cycle event.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tray Checks Historic Log Card -->
+            <div class="card log-card">
+              <div class="card-header-row">
+                <div>
+                  <h3 class="section-title">Historic Tray Check Log</h3>
+                  <span class="section-desc" id="tray-log-desc">Showing all recorded tray inspections</span>
+                </div>
+                <button type="button" class="btn-text-sm" onclick="renderTrayChecksView()">↻ Refresh</button>
+              </div>
+
+              <div class="events-log-list" id="tray-checks-log-container">
+                <!-- Dynamically populated tray checks list -->
               </div>
             </div>
 
@@ -614,6 +699,27 @@
                   </div>
                   <span class="btn-test-run">Check Link →</span>
                 </button>
+
+                <!-- Sync RTC Clock Button -->
+                <button type="button" class="btn-test-action" id="btn-sync-rtc" onclick="syncFeederRTC()">
+                  <div class="test-action-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  </div>
+                  <div class="test-action-info">
+                    <span class="test-action-title">Sync Feeder Clock (RTC)</span>
+                    <span class="test-action-desc" id="rtc-sync-status-desc">Synchronize feeder DS3231 RTC with exact Cloud time</span>
+                  </div>
+                  <span class="btn-test-run" id="btn-sync-rtc-label">Sync Time →</span>
+                </button>
+              </div>
+
+              <!-- Live Test Confirmation Status Banner -->
+              <div id="test-confirmation-banner" style="display:none; margin-top:14px; padding:14px; border-radius:12px; background:rgba(0, 209, 178, 0.08); border:1px solid rgba(0, 209, 178, 0.3);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="dot-live-pulse" id="test-confirm-pulse"></span>
+                  <strong id="test-confirm-title" style="color:var(--brand-teal); font-size:13px;">Waiting for Hardware Confirmation...</strong>
+                </div>
+                <p id="test-confirm-detail" style="margin:4px 0 0; font-size:12px; color:var(--text-muted); line-height:1.4;">Command queued to LoRaWAN Gateway. Feeder will execute and report sensor readings.</p>
               </div>
             </div>
 
@@ -904,6 +1010,13 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </span>
             <span class="nav-tab-label">History</span>
+          </button>
+
+          <button type="button" class="nav-tab" id="tab-btn-traycheck" onclick="navigateToTab('tab-traycheck')">
+            <span class="nav-tab-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </span>
+            <span class="nav-tab-label">Tray Checks</span>
           </button>
 
           <button type="button" class="nav-tab" id="tab-btn-params" onclick="navigateToTab('tab-params')">

@@ -10,6 +10,40 @@ telemetry_table = dynamodb.Table('AquaFeeder_Telemetry')
 devices_table = dynamodb.Table('AquaFeeder_Devices')
 daily_metrics_table = dynamodb.Table('AquaFeeder_DailyMetrics')
 settings_table = dynamodb.Table('AquaFeeder_Settings')
+tray_checks_table = dynamodb.Table('AquaFeeder_TrayChecks')
+commands_table = dynamodb.Table('AquaFeeder_Commands')
+
+iw_client = boto3.client('iotwireless')
+
+DEVEUI_TO_WIRELESS_ID = {
+    'e072a1fffef5ba08': '9cd8879c-4265-4ddf-bda1-ab71e80a90a3',
+    'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
+    'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f',
+    'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
+    'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
+}
+
+def auto_sync_rtc_if_needed(dev_eui, reported_ts, now_epoch):
+    """
+    If the device's RTC time is uninitialized (< 1700000000) or drifted by > 300s,
+    automatically queue a CMD_SYNC_TIME (0xA3) downlink to synchronize DS3231 RTC.
+    """
+    try:
+        if reported_ts < 1700000000 or abs(reported_ts - now_epoch) > 300:
+            w_id = DEVEUI_TO_WIRELESS_ID.get(dev_eui.lower())
+            if w_id:
+                # 12-byte LoRaDownlinkPayload: 0xA3 + 4B epoch + 7B 0x00
+                down_bytes = struct.pack('<BI7s', 0xA3, now_epoch, b'\x00' * 7)
+                down_b64 = base64.b64encode(down_bytes).decode('ascii')
+                iw_client.send_data_to_wireless_device(
+                    Id=w_id,
+                    TransmitMode=1,
+                    PayloadData=down_b64,
+                    WirelessMetadata={'LoRaWAN': {'FPort': 1}}
+                )
+                print(f"[RTC-SYNC] Auto-queued RTC time sync for {dev_eui}: sent UTC epoch {now_epoch}")
+    except Exception as e:
+        print(f"[RTC-SYNC] Auto sync error for {dev_eui}: {e}")
 
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
@@ -19,6 +53,9 @@ def lambda_handler(event, context):
         lorawan_metadata = wireless_metadata.get('LoRaWAN', {})
         dev_eui = lorawan_metadata.get('DevEui', 'UNKNOWN_DEVICE')
         rx_timestamp = lorawan_metadata.get('Timestamp', '')
+        
+        now_epoch = int(datetime.utcnow().timestamp())
+        now_iso = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")
         
         try:
             dt = datetime.strptime(rx_timestamp, "%Y-%m-%dT%H:%M:%SZ")
@@ -90,10 +127,11 @@ def lambda_handler(event, context):
             dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
             target_kg = Decimal(str(round((tot_ev_int * fpe_g) / 1000.0, 1)))
             
+            # Store raw telemetry
             telemetry_table.put_item(
                 Item={
                     'DeviceId': dev_eui,
-                    'Timestamp': Decimal(str(timestamp)),
+                    'Timestamp': Decimal(str(timestamp if timestamp > 1700000000 else now_epoch)),
                     'MsgType': msg_type,
                     'Voltage_mV': Decimal(str(voltage)),
                     'Current_mA': Decimal(str(current)),
@@ -104,15 +142,21 @@ def lambda_handler(event, context):
                 }
             )
             
-            now_epoch = int(datetime.utcnow().timestamp())
-            now_iso = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")
+            # Auto-check RTC drift & sync
+            auto_sync_rtc_if_needed(dev_eui, int(timestamp), now_epoch)
             
+            # Fetch existing device record
             existing_dev = {}
             try:
                 d_res = devices_table.get_item(Key={'DeviceId': dev_eui})
                 existing_dev = d_res.get('Item', {})
             except Exception:
                 pass
+
+            prev_status = str(existing_dev.get('Status', 'IDLE')).upper()
+            prev_avail = bool(existing_dev.get('FeedAvailable', True))
+            prev_flags = int(existing_dev.get('StatusFlags', 0))
+            prev_ev = int(existing_dev.get('CurrentEvent', 0))
 
             saved_qty = target_kg
             saved_fpe = Decimal('100')
@@ -137,52 +181,84 @@ def lambda_handler(event, context):
             except Exception:
                 pass
             
-            # --- ALARM & PAUSE STATE MACHINE ---
-            # MsgType 0x04 (4): FEED_PAUSED
-            # MsgType 0x0F (15): ALARM_PROXIMITY (Hopper empty / Proximity Pause)
-            # MsgType 0x05 (5): FEED_RESUMED
-            # MsgType 0x03 (3): FEED_STARTED
-            # MsgType 0x02 (2): SESSION_COMPLETE
-            # MsgType 0x01 (1): PERIODIC_HEARTBEAT
-            # Flags: Bit 0 (0x01) = Proximity Triggered, Bit 3 (0x08) = Hopper Empty / SD Fault, Bit 4 (0x10) = LoRa Connected
-            
+            # Handle special message types
+            # 1. TRAY_CHECKIN (0x0A = 10)
+            if msg_type == 0x0A:
+                try:
+                    tray_checks_table.put_item(
+                        Item={
+                            'DeviceId': dev_eui,
+                            'Timestamp': Decimal(str(now_epoch)),
+                            'CheckEpoch': Decimal(str(now_epoch)),
+                            'EventTime': now_iso,
+                            'CurrentEvent': cur_ev,
+                            'TotalEvents': tot_ev,
+                            'DispensedKg': dispensed_kg,
+                            'Status': 'CONFIRMED',
+                            'Remarks': 'Manual Tray Check logged from Feeder'
+                        }
+                    )
+                    print(f"Recorded TRAY_CHECKIN event for {dev_eui} at {now_iso}")
+                except Exception as t_err:
+                    print("Tray check recording error:", t_err)
+
+            # 2. DIAG_CONFIRMATION (0x24 = 36)
+            elif msg_type == 0x24:
+                motor_num = int(cur_ev) # 1=Loader, 2=Spreader
+                motor_name = 'Loader' if motor_num == 1 else 'Spreader'
+                duration_sec = int(tot_ev)
+                res_str = 'PASSED' if int(status_flags) == 1 else 'FAILED'
+                test_info = {
+                    'motorNum': motor_num,
+                    'motorName': motor_name,
+                    'durationSec': duration_sec,
+                    'currentMA': int(current),
+                    'result': res_str,
+                    'confirmedAt': now_iso,
+                    'confirmedEpoch': int(now_epoch)
+                }
+                print(f"Recorded DIAG_CONFIRMATION for {dev_eui}: {test_info}")
+
+            # Schedule time calculation
+            now_ist_mins = (datetime.utcnow().hour * 60 + datetime.utcnow().minute + 330) % 1440
+            start_mins = int(saved_shour) * 60 + int(saved_smin)
+            end_mins = int(saved_ehour) * 60 + int(saved_emin)
+            is_inside_schedule = (now_ist_mins >= start_mins and now_ist_mins < end_mins)
+
+            # Flag decoding
             flag_proximity = (status_flags & 0x01) != 0
             flag_empty = (status_flags & 0x08) != 0
-            flag_paused = (status_flags & 0x10) != 0
-            
-            prev_status = str(existing_dev.get('Status', 'IDLE')).upper()
-            prev_avail = bool(existing_dev.get('FeedAvailable', True))
-            prev_flags = int(existing_dev.get('StatusFlags', 0))
+            flag_paused = (status_flags & 0x10) != 0 or (msg_type in [4, 15])
 
-            is_alarm_event = (msg_type in [4, 15]) or flag_proximity or flag_empty
-            is_resume_event = (msg_type in [3, 5])
-
-            if is_alarm_event:
-                # Device is physically paused & empty
+            # State transition engine:
+            if cur_ev_int > prev_ev:
+                # Cycle has advanced! Device is actively feeding.
+                feed_available = True
+                status_str = 'FEEDING'
+                effective_flags = status_flags & ~0x10
+            elif flag_paused or flag_proximity:
                 status_str = 'PAUSED'
                 feed_available = False
                 effective_flags = status_flags if status_flags > 0 else 24
-            elif is_resume_event:
-                # Feeding explicitly resumed / started
-                status_str = 'FEEDING'
-                feed_available = True
-                effective_flags = status_flags
-            elif prev_status in ['PAUSED', 'FEED EMPTY'] or not prev_avail:
-                # Periodic heartbeats (MsgType 1) or device boots must NEVER wipe alarm / pause!
-                status_str = prev_status
-                feed_available = prev_avail
-                effective_flags = status_flags if status_flags > 0 else prev_flags
+            elif flag_empty:
+                status_str = 'FEED EMPTY'
+                feed_available = False
+                effective_flags = status_flags if status_flags > 0 else 8
             elif cur_ev_int >= tot_ev_int and tot_ev_int > 0:
                 status_str = 'COMPLETED'
-                feed_available = prev_avail
+                feed_available = True
+                effective_flags = status_flags
+            elif not is_inside_schedule:
+                status_str = 'STANDBY'
+                feed_available = True
                 effective_flags = status_flags
             elif cur_ev_int > 0:
                 status_str = 'FEEDING'
-                feed_available = prev_avail
+                feed_available = True
                 effective_flags = status_flags
             else:
-                status_str = 'IDLE'
-                feed_available = prev_avail
+                status_str = 'SCHEDULED'
+                feed_available = True
                 effective_flags = status_flags
 
             dev_item = {
@@ -208,6 +284,24 @@ def lambda_handler(event, context):
                 'FeedAvailable': feed_available,
                 'Status': status_str
             }
+            if msg_type == 0x0A:
+                dev_item['LastTrayCheck'] = now_iso
+                dev_item['LastTrayCheckEpoch'] = Decimal(str(now_epoch))
+            elif msg_type == 0x24:
+                dev_item['LastTestResult'] = {
+                    'motorNum': int(cur_ev),
+                    'motorName': 'Loader' if int(cur_ev) == 1 else 'Spreader',
+                    'durationSec': int(tot_ev),
+                    'currentMA': int(current),
+                    'result': 'PASSED' if int(status_flags) == 1 else 'FAILED',
+                    'confirmedAt': now_iso
+                }
+            elif 'LastTrayCheck' in existing_dev:
+                dev_item['LastTrayCheck'] = existing_dev['LastTrayCheck']
+                dev_item['LastTrayCheckEpoch'] = existing_dev.get('LastTrayCheckEpoch', Decimal(str(now_epoch)))
+            if 'LastTestResult' in existing_dev and msg_type != 0x24:
+                dev_item['LastTestResult'] = existing_dev['LastTestResult']
+
             if dev_eui == 'e072a1fffef6249c':
                 dev_item['DeviceName'] = 'aquaCON Feeder 01 (Live AF_9C2472E0)'
                 dev_item['PondId'] = 'P-01'

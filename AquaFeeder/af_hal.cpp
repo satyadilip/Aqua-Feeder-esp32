@@ -47,6 +47,9 @@ void HardwareLayer::initButton(ButtonState& btn, uint8_t pin) {
     btn.risingEdge = false;
     btn.fallingEdge = false;
     btn.lastDebounceTime = 0;
+    btn.pressStartTime = 0;
+    btn.lastRepeatTime = 0;
+    btn.repeatEvent = false;
 }
 
 void HardwareLayer::setRelay(int relay, bool on) {
@@ -101,20 +104,37 @@ void HardwareLayer::processButton(ButtonState& btn) {
     bool reading = digitalRead(btn.pin);
     btn.risingEdge = false;
     btn.fallingEdge = false;
+    btn.repeatEvent = false;
+    unsigned long now = millis();
     
     if (reading != btn.lastState) {
-        btn.lastDebounceTime = millis();
+        btn.lastDebounceTime = now;
     }
     
-    if ((millis() - btn.lastDebounceTime) > BUTTON_DEBOUNCE_MS) {
+    if ((now - btn.lastDebounceTime) > BUTTON_DEBOUNCE_MS) {
         if (reading != btn.stableState) {
             btn.stableState = reading;
             
             // Buttons are Active LOW, so LOW means pressed
             if (btn.stableState == LOW) {
                 btn.risingEdge = true; // Pressed
+                btn.repeatEvent = true; // Initial press triggers event
+                btn.pressStartTime = now;
+                btn.lastRepeatTime = now;
             } else {
                 btn.fallingEdge = true; // Released
+                btn.pressStartTime = 0;
+            }
+        }
+    }
+    
+    // Auto-repeat when held down (Active LOW)
+    // 400ms initial hold delay, then repeat every 140ms (smooth, not too fast, not too slow)
+    if (btn.stableState == LOW && btn.pressStartTime > 0) {
+        if ((now - btn.pressStartTime) >= 400) {
+            if ((now - btn.lastRepeatTime) >= 140) {
+                btn.repeatEvent = true;
+                btn.lastRepeatTime = now;
             }
         }
     }

@@ -86,6 +86,12 @@ void RTCManager::setDateTime(int y, int mo, int d, int h, int m, int s) {
     Serial.println("[RTC] Date & Time updated");
 }
 
+void RTCManager::setEpoch(uint32_t epoch) {
+    if (!statusOK) return;
+    rtc.adjust(DateTime(epoch));
+    Serial.println("[RTC] Epoch updated");
+}
+
 float RTCManager::getTemperature() {
     if (!statusOK) return 0.0f;
     return rtc.getTemperature();

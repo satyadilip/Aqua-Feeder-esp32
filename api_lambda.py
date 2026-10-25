@@ -1,4 +1,6 @@
 import json
+import base64
+import struct
 import boto3
 from decimal import Decimal
 from datetime import datetime, timedelta
@@ -10,6 +12,18 @@ settings_table = dynamodb.Table('AquaFeeder_Settings')
 metrics_table = dynamodb.Table('AquaFeeder_DailyMetrics')
 users_table = dynamodb.Table('AquaCon_Users')
 lora_table = dynamodb.Table('LoRaDeviceTelemetry')
+tray_checks_table = dynamodb.Table('AquaFeeder_TrayChecks')
+commands_table = dynamodb.Table('AquaFeeder_Commands')
+
+iw_client = boto3.client('iotwireless', region_name='us-east-1')
+
+DEVEUI_TO_WIRELESS_ID = {
+    'e072a1fffef5ba08': '9cd8879c-4265-4ddf-bda1-ab71e80a90a3',
+    'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
+    'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f',
+    'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
+    'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
+}
 
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -29,6 +43,22 @@ def build_response(status_code, body):
         'body': json.dumps(body, cls=DecimalEncoder)
     }
 
+def send_lora_downlink(dev_eui, downlink_bytes, fport=1):
+    w_id = DEVEUI_TO_WIRELESS_ID.get(str(dev_eui).lower().strip())
+    if not w_id:
+        return False, f"Device {dev_eui} not registered in Wireless Device mapping"
+    try:
+        down_b64 = base64.b64encode(downlink_bytes).decode('ascii')
+        iw_client.send_data_to_wireless_device(
+            Id=w_id,
+            TransmitMode=0, # 0 = queue for Class A (delivered on next uplink)
+            PayloadData=down_b64,
+            WirelessMetadata={'LoRaWAN': {'FPort': fport}}
+        )
+        return True, f"Downlink queued successfully for {dev_eui} ({w_id})"
+    except Exception as err:
+        return False, str(err)
+
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
     try:
@@ -46,6 +76,8 @@ def lambda_handler(event, context):
                 body = json.loads(event['body'])
             except:
                 body = {}
+
+        query_params = event.get('queryStringParameters') or {}
 
         # 2. User Authentication (Login)
         if path == '/api/auth/login' and http_method == 'POST':
@@ -210,8 +242,10 @@ def lambda_handler(event, context):
                             actual_status = 'PAUSED'
                         elif not actual_feed_avail or raw_status == 'FEED EMPTY':
                             actual_status = 'FEED EMPTY'
+                        elif raw_status == 'FEEDING':
+                            actual_status = 'FEEDING'
                         else:
-                            actual_status = raw_status if raw_status in ['FEEDING', 'COMPLETED', 'STANDBY'] else calc_status
+                            actual_status = calc_status
 
                         d['FeedAvailable'] = actual_feed_avail if is_online else False
                         d['Status'] = actual_status
@@ -293,22 +327,20 @@ def lambda_handler(event, context):
             devices_table.put_item(Item=item)
             return build_response(201, {'status': 'success', 'message': f'Device {dev_id} added successfully', 'device': item})
 
-        # 5. Device Remote Commands (START, STOP, TEST_LOADER, TEST_DISPENSER, TEST_HOOTER)
+        # 5. Device Remote Commands (START, STOP, TEST_LOADER, TEST_DISPENSER, SYNC_RTC)
         elif path.startswith('/api/command/') and http_method == 'POST':
             device_id = path.split('/')[-1]
             cmd = str(body.get('command', '')).upper().strip()
+            now_ts = int(datetime.utcnow().timestamp())
             
             print(f"Executing command '{cmd}' for device '{device_id}'")
             
-            # Update device state in DynamoDB table
-            now_ts = int(datetime.utcnow().timestamp())
             if cmd in ['START', 'FEED']:
                 # User pressed start feed: counted as ONE EVENT DONE in the entire feed cycle
                 cur_ev = int(body.get('currentEvent', 0))
                 disp_kg = Decimal(str(body.get('dispensedKg', '0.0')))
                 fpe_g = int(body.get('feedGrams', 100))
                 
-                # Fetch current item if not provided
                 if cur_ev == 0:
                     item_res = devices_table.get_item(Key={'DeviceId': device_id})
                     existing = item_res.get('Item', {})
@@ -319,7 +351,7 @@ def lambda_handler(event, context):
 
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET #st = :st, CurrentEvent = :ce, DispensedFeed_kg = :df, LastFeed_g = :lf, LastSeen = :ls, LastEventTime = :lt',
+                    UpdateExpression='SET #st = :st, CurrentEvent = :ce, DispensedFeed_kg = :df, LastFeed_g = :lf, LastSeen = :ls, LastEventTime = :lt, FeedAvailable = :fa',
                     ExpressionAttributeNames={'#st': 'Status'},
                     ExpressionAttributeValues={
                         ':st': 'FEEDING',
@@ -327,7 +359,8 @@ def lambda_handler(event, context):
                         ':df': disp_kg,
                         ':lf': fpe_g,
                         ':ls': now_ts,
-                        ':lt': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ')
+                        ':lt': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ'),
+                        ':fa': True
                     }
                 )
                 return build_response(200, {
@@ -336,25 +369,83 @@ def lambda_handler(event, context):
                     'currentEvent': cur_ev,
                     'dispensedKg': float(disp_kg)
                 })
+
             elif cmd in ['TEST_LOADER', 'TEST_R1']:
-                return build_response(200, {'status': 'success', 'message': 'Relay 1 (Loader augur) 2s test pulse dispatched', 'test': 'R1'})
-            elif cmd in ['TEST_DISPENSER', 'TEST_R2']:
-                return build_response(200, {'status': 'success', 'message': 'Relay 2 (Dispenser thrower) 2s test pulse dispatched', 'test': 'R2'})
-            elif cmd in ['TEST_HOOTER', 'TEST_HORN']:
-                return build_response(200, {'status': 'success', 'message': 'Alarm Hooter 1s alert test dispatched', 'test': 'HOOTER'})
-            elif cmd in ['DIAGNOSTIC_SCAN', 'SELF_TEST']:
-                return build_response(200, {
-                    'status': 'success',
-                    'message': 'Hardware diagnostic scan completed',
-                    'results': {
-                        'i2c': 'PASSED (RTC DS3231 & INA219 OK)',
-                        'motor_r1': 'PASSED (Augur Loader Driver OK)',
-                        'motor_r2': 'PASSED (Spinner Dispenser Driver OK)',
-                        'hopper_sensor': 'PASSED (Feed Stock Detected)',
-                        'lora_rf': 'PASSED (SenseCAP Gateway RSSI -84 dBm, SNR +9.5 dB)',
-                        'power': 'PASSED (Battery 3.92V, Solar 18.4V)'
-                    }
+                # Real LoRaWAN Downlink: CMD_TEST_MOTOR (0xA2), motorNum=1, durationSec=2
+                downlink_bytes = struct.pack('<BBHHBBBB2s', 0xA2, 0, 0, 0, 0, 1, 0, 2, b'\x00\x00')
+                success, msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                
+                cmd_id = f"cmd_loader_{now_ts}"
+                commands_table.put_item(Item={
+                    'DeviceId': device_id,
+                    'CommandId': cmd_id,
+                    'Command': 'TEST_LOADER',
+                    'MotorNum': 1,
+                    'DurationSec': 2,
+                    'Status': 'QUEUED',
+                    'DownlinkQueued': success,
+                    'DownlinkMessage': msg,
+                    'CreatedAt': now_ts,
+                    'Description': 'Augur Loader (Relay 1) 2s Test'
                 })
+                
+                return build_response(200, {
+                    'status': 'queued',
+                    'commandId': cmd_id,
+                    'motor': 'LOADER',
+                    'motorNum': 1,
+                    'durationSec': 2,
+                    'downlinkQueued': success,
+                    'message': 'Loader augur (Relay 1) test queued. Feeder will run motor for 2s and measure real current on next transmission.'
+                })
+
+            elif cmd in ['TEST_DISPENSER', 'TEST_R2']:
+                # Real LoRaWAN Downlink: CMD_TEST_MOTOR (0xA2), motorNum=2, durationSec=2
+                downlink_bytes = struct.pack('<BBHHBBBB2s', 0xA2, 0, 0, 0, 0, 2, 0, 2, b'\x00\x00')
+                success, msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                
+                cmd_id = f"cmd_dispenser_{now_ts}"
+                commands_table.put_item(Item={
+                    'DeviceId': device_id,
+                    'CommandId': cmd_id,
+                    'Command': 'TEST_DISPENSER',
+                    'MotorNum': 2,
+                    'DurationSec': 2,
+                    'Status': 'QUEUED',
+                    'DownlinkQueued': success,
+                    'DownlinkMessage': msg,
+                    'CreatedAt': now_ts,
+                    'Description': 'Dispenser Spreader (Relay 2) 2s Test'
+                })
+                
+                return build_response(200, {
+                    'status': 'queued',
+                    'commandId': cmd_id,
+                    'motor': 'DISPENSER',
+                    'motorNum': 2,
+                    'durationSec': 2,
+                    'downlinkQueued': success,
+                    'message': 'Dispenser thrower (Relay 2) test queued. Feeder will run motor for 2s and measure real current on next transmission.'
+                })
+
+            elif cmd in ['SYNC_RTC', 'SYNC_TIME']:
+                # Real LoRaWAN Downlink: CMD_SYNC_TIME (0xA3) with current UTC epoch (4 bytes)
+                downlink_bytes = struct.pack('<BI7s', 0xA3, now_ts, b'\x00' * 7)
+                success, msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                
+                devices_table.update_item(
+                    Key={'DeviceId': device_id},
+                    UpdateExpression='SET RtcSyncQueued = :sq, RtcSyncEpoch = :se',
+                    ExpressionAttributeValues={':sq': True, ':se': now_ts}
+                )
+                
+                return build_response(200, {
+                    'status': 'queued',
+                    'utcEpoch': now_ts,
+                    'downlinkQueued': success,
+                    'message': f'RTC synchronization queued with UTC timestamp {now_ts}. Feeder will sync DS3231 RTC on next transmission.'
+                })
+
             elif cmd == 'STOP':
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
@@ -365,6 +456,59 @@ def lambda_handler(event, context):
                 return build_response(200, {'status': 'success', 'message': f'Feeder paused on {device_id}', 'state': 'STANDBY'})
             else:
                 return build_response(400, {'error': f'Unsupported command {cmd}'})
+
+        # 5b. Query Command Execution Status & Hardware Diagnostic Results
+        elif path.startswith('/api/command-status/') and http_method == 'GET':
+            device_id = path.split('/')[-1]
+            latest_commands = []
+            last_test_result = None
+            try:
+                cmd_res = commands_table.query(
+                    KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
+                    ScanIndexForward=False,
+                    Limit=5
+                )
+                latest_commands = cmd_res.get('Items', [])
+            except Exception as e:
+                print("Commands query error:", e)
+
+            try:
+                dev_res = devices_table.get_item(Key={'DeviceId': device_id})
+                dev_item = dev_res.get('Item', {})
+                last_test_result = dev_item.get('LastTestResult')
+            except Exception as e:
+                print("Device test result lookup error:", e)
+
+            return build_response(200, {
+                'deviceId': device_id,
+                'commands': latest_commands,
+                'lastTestResult': last_test_result
+            })
+
+        # 5c. Fetch Check Tray Historic Logs
+        elif (path == '/api/tray-checks' or path.startswith('/api/tray-checks/')) and http_method == 'GET':
+            dev_id = path.split('/')[-1] if (path.startswith('/api/tray-checks/') and path != '/api/tray-checks') else query_params.get('deviceId', '')
+            checks = []
+            try:
+                if dev_id:
+                    res = tray_checks_table.query(
+                        KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(dev_id),
+                        ScanIndexForward=False,
+                        Limit=50
+                    )
+                    checks = res.get('Items', [])
+                else:
+                    res = tray_checks_table.scan(Limit=50)
+                    checks = res.get('Items', [])
+                    checks.sort(key=lambda x: int(x.get('Timestamp', 0)), reverse=True)
+            except Exception as e:
+                print("Tray checks query error:", e)
+
+            return build_response(200, {
+                'deviceId': dev_id or 'all',
+                'trayChecks': checks,
+                'count': len(checks)
+            })
 
         # 6. Fetch Device Telemetry
         elif path.startswith('/api/telemetry/') and http_method == 'GET':
@@ -454,42 +598,19 @@ def lambda_handler(event, context):
                 )
                 
                 # Queue LoRaWAN Binary Downlink (CMD_SET_SETTINGS = 0xA0) to Hardware
-                downlink_queued = False
-                try:
-                    wireless_dev_map = {
-                        'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
-                        'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
-                        'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f',
-                        'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f'
-                    }
-                    w_id = wireless_dev_map.get(device_id)
-                    if w_id:
-                        import struct, base64
-                        # struct LoRaDownlinkPayload (12 bytes):
-                        # msgType(1), endMinute(1), feedQuantity*10(2), feedPerEvent(2), endHour(1), startHour(1), startMinute(1), dischargeRate(1), padding(2)
-                        downlink_bytes = struct.pack('<BBHHBBBB2s',
-                            0xA0,
-                            int(emin),
-                            int(float(feed_qty) * 10),
-                            int(feed_burst),
-                            int(ehour),
-                            int(shour),
-                            int(smin),
-                            int(rate),
-                            b'\x00\x00'
-                        )
-                        b64_downlink = base64.b64encode(downlink_bytes).decode('ascii')
-                        iotw_client = boto3.client('iotwireless', region_name='us-east-1')
-                        iotw_client.send_data_to_wireless_device(
-                            Id=w_id,
-                            TransmitMode=0,
-                            PayloadData=b64_downlink,
-                            WirelessMetadata={'LoRaWAN': {'FPort': 2}}
-                        )
-                        downlink_queued = True
-                        print(f"Queued LoRaWAN SET_SETTINGS downlink for {device_id} ({w_id}): {b64_downlink}")
-                except Exception as dl_err:
-                    print(f"Downlink error (non-fatal): {dl_err}")
+                downlink_bytes = struct.pack('<BBHHBBBB2s',
+                    0xA0,
+                    int(emin),
+                    int(float(feed_qty) * 10),
+                    int(feed_burst),
+                    int(ehour),
+                    int(shour),
+                    int(smin),
+                    int(rate),
+                    b'\x00\x00'
+                )
+                downlink_queued, dl_msg = send_lora_downlink(device_id, downlink_bytes, fport=2)
+                print(f"Downlink SET_SETTINGS status: {downlink_queued} - {dl_msg}")
                 
                 return build_response(200, {
                     'status': 'saved',
@@ -535,7 +656,6 @@ def lambda_handler(event, context):
                 
             today_str = datetime.utcnow().strftime("%Y-%m-%d")
             
-            # Format and enrich items from DailyMetrics
             formatted_items = []
             if items:
                 for it in items:
@@ -566,7 +686,6 @@ def lambda_handler(event, context):
                 formatted_items.sort(key=lambda x: str(x.get('Date', '')))
                 items = formatted_items[-7:]
                 
-            # If metrics table has fewer than 7 days, provide complete 7-day historic trend records
             if len(items) < 7:
                 import datetime as dt_mod
                 today = dt_mod.date.today()

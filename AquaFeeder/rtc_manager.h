@@ -14,6 +14,7 @@ public:
     String getDateTimeStr();
     void setTime(int h, int m, int s);
     void setDateTime(int y, int mo, int d, int h, int m, int s);
+    void setEpoch(uint32_t epoch);
     DateTime getNow();
     float getTemperature();
 

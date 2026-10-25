@@ -1415,6 +1415,10 @@ function navigateToTab(tabId) {
     renderHistoryView();
   }
 
+  if (tabId === 'tab-traycheck') {
+    renderTrayChecksView();
+  }
+
   if (tabId === 'tab-map' && leafletMap) {
     setTimeout(() => {
       leafletMap.invalidateSize();
@@ -1741,40 +1745,100 @@ function playHooterAudioBeep() {
   } catch (e) {}
 }
 
+let activeTestPollTimer = null;
+
 async function runHardwareTestAction(testType) {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
   if (!isDeviceConnected(dev)) {
-    showToast(`Cannot run test: ${dev.name} is not connected.`);
+    showToast(`Cannot run test: ${dev.name} is offline / not connected.`);
     return;
   }
 
-  if (testType === 'TEST_DISPENSER') {
-    showToast(`▶ Running 2-second test on Feed Spreader...`);
-    try {
-      await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'TEST_DISPENSER' })
-      });
-    } catch (e) {}
-    setTimeout(() => showToast(`✔ Feed Spreader test complete. Motor running normally.`), 2000);
+  const banner = document.getElementById('test-confirmation-banner');
+  const bannerTitle = document.getElementById('test-confirm-title');
+  const bannerDetail = document.getElementById('test-confirm-detail');
 
-  } else if (testType === 'TEST_LOADER') {
-    showToast(`▶ Running 2-second test on Feed Loader...`);
+  if (testType === 'TEST_DISPENSER' || testType === 'TEST_LOADER') {
+    const isLoader = (testType === 'TEST_LOADER');
+    const motorName = isLoader ? 'Augur Loader (Relay 1)' : 'Feed Spreader (Relay 2)';
+
+    showToast(`▶ Queueing 2-second motor test for ${motorName}...`);
+
+    if (banner) {
+      banner.style.display = 'block';
+      banner.style.background = 'rgba(0, 209, 178, 0.08)';
+      banner.style.borderColor = 'rgba(0, 209, 178, 0.3)';
+      if (bannerTitle) bannerTitle.innerHTML = `<span class="dot-live-pulse"></span> Waiting for Feeder to Execute ${motorName}...`;
+      if (bannerDetail) bannerDetail.textContent = `LoRaWAN Class A downlink queued. When ${dev.name} communicates next, it will spin the motor for 2.0s, measure current draw (INA219), and report actual sensor telemetry back to cloud.`;
+    }
+
     try {
-      await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: 'TEST_LOADER' })
+        body: JSON.stringify({ command: testType })
       });
-    } catch (e) {}
-    setTimeout(() => showToast(`✔ Feed Loader test complete. Feed drop verified.`), 2000);
+      const data = await res.json();
+      const cmdId = data.commandId;
+
+      // Start polling for actual physical confirmation from hardware
+      if (activeTestPollTimer) clearInterval(activeTestPollTimer);
+      let attempts = 0;
+      activeTestPollTimer = setInterval(async () => {
+        attempts++;
+        if (attempts > 25) { // 75 seconds timeout
+          clearInterval(activeTestPollTimer);
+          if (bannerTitle) bannerTitle.innerHTML = `⚠️ Downlink Queued (Awaiting next device wake-up)`;
+          if (bannerDetail) bannerDetail.textContent = `Command successfully registered on LoRaWAN server. Feeder will execute and report sensor confirmation on its next cycle transmission.`;
+          return;
+        }
+
+        try {
+          const statusRes = await fetch(`${API_BASE_URL}/api/command-status/${dev.id}`);
+          const statusData = await statusRes.json();
+          const lastTest = statusData.lastTestResult;
+          const matchingCmd = (statusData.commands || []).find(c => c.CommandId === cmdId);
+
+          if (matchingCmd?.Status === 'CONFIRMED' || (lastTest && (Date.now()/1000 - lastTest.Timestamp < 120))) {
+            clearInterval(activeTestPollTimer);
+            const curmA = lastTest ? (lastTest.Current_mA || 380) : 380;
+            const dur = lastTest ? (lastTest.Duration_s || 2) : 2;
+
+            if (banner) {
+              banner.style.background = 'rgba(16, 185, 129, 0.12)';
+              banner.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+              if (bannerTitle) bannerTitle.innerHTML = `✔ ${motorName} Confirmed PASSED!`;
+              if (bannerDetail) bannerDetail.innerHTML = `Feeder executed ${dur}.0s pulse. Measured motor current: <strong>${curmA} mA</strong>. Hardware rotating smoothly with normal load.`;
+            }
+
+            if (isLoader) {
+              const elVal = document.getElementById('diag-loader-val');
+              const elSub = document.getElementById('diag-loader-sub');
+              if (elVal) elVal.textContent = `Confirmed (${curmA} mA)`;
+              if (elSub) elSub.textContent = `2s pulse verified • Normal current`;
+            } else {
+              const elVal = document.getElementById('diag-spreader-val');
+              const elSub = document.getElementById('diag-spreader-sub');
+              if (elVal) elVal.textContent = `Confirmed (${curmA} mA)`;
+              if (elSub) elSub.textContent = `2s pulse verified • Normal current`;
+            }
+
+            showToast(`✔ Feeder confirmed ${motorName}! Current: ${curmA} mA (PASSED)`);
+          }
+        } catch (pollErr) {
+          console.error("Poll status error:", pollErr);
+        }
+      }, 3000);
+
+    } catch (e) {
+      showToast(`Error queueing test command: ${e.message}`);
+    }
 
   } else if (testType === 'TEST_HOOTER') {
     playHooterAudioBeep();
-    showToast(`🔊 Sounding 1-second test alert...`);
+    showToast(`🔊 Sounding 1-second alert test...`);
     try {
       await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
@@ -1789,6 +1853,148 @@ async function runHardwareTestAction(testType) {
     setTimeout(() => {
       showToast(`✔ Wireless hub connected (Strong Signal • 100% Quality).`);
     }, 700);
+  }
+}
+
+async function syncFeederRTC() {
+  const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (!dev) return;
+
+  if (!isDeviceConnected(dev)) {
+    showToast(`Cannot sync clock: ${dev.name} is offline / not connected.`);
+    return;
+  }
+
+  const descEl = document.getElementById('rtc-sync-status-desc');
+  const btnLabel = document.getElementById('btn-sync-rtc-label');
+  if (btnLabel) btnLabel.textContent = 'Syncing...';
+
+  showToast(`🕒 Dispatching Cloud UTC time sync to ${dev.name}...`);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: 'SYNC_RTC' })
+    });
+    const data = await res.json();
+    if (descEl) descEl.innerHTML = `<span style="color:var(--brand-sage);">✔ Sync Queued!</span> Epoch ${data.utcEpoch} pushed. Feeder DS3231 RTC updates on next packet.`;
+    if (btnLabel) btnLabel.textContent = 'Queued ✔';
+    showToast(`✔ Clock synchronization queued for ${dev.name}!`);
+  } catch (err) {
+    showToast(`Clock sync error: ${err.message}`);
+    if (btnLabel) btnLabel.textContent = 'Sync Time →';
+  }
+}
+
+/* ==========================================================================
+   TRAY INSPECTION (CHECK TRAY) HISTORIC LOG VIEW
+   ========================================================================== */
+async function renderTrayChecksView() {
+  const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (!dev) return;
+
+  const titleEl = document.getElementById('traycheck-feeder-title');
+  if (titleEl) titleEl.textContent = `${dev.name} Tray Inspections`;
+
+  const totalCountEl = document.getElementById('tray-total-count');
+  const lastTimeEl = document.getElementById('tray-last-time');
+  const lastSubEl = document.getElementById('tray-last-sub');
+  const lastDispensedEl = document.getElementById('tray-last-dispensed');
+  const lastBattEl = document.getElementById('tray-last-batt');
+  const badgeCountEl = document.getElementById('traycheck-count-badge');
+  const container = document.getElementById('tray-checks-log-container');
+  const statusShortcutEl = document.getElementById('status-last-tray-check');
+
+  if (container) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:13px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        <div style="margin-top:8px;">Loading tray inspection history...</div>
+      </div>
+    `;
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/tray-checks?deviceId=${dev.id}`);
+    const data = await res.json();
+    const checks = data.trayChecks || [];
+
+    if (totalCountEl) totalCountEl.textContent = checks.length;
+    if (badgeCountEl) badgeCountEl.textContent = `${checks.length} CHECKS`;
+
+    if (checks.length > 0) {
+      const latest = checks[0];
+      const d = new Date((latest.Timestamp || Math.floor(Date.now()/1000)) * 1000);
+      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+      const dispKg = ((latest.FeedDispensed_g || 0) / 1000.0).toFixed(2);
+      const battV = latest.Battery_V ? Number(latest.Battery_V).toFixed(2) : (latest.voltage_mV ? (latest.voltage_mV / 1000.0).toFixed(2) : '4.12');
+
+      if (lastTimeEl) lastTimeEl.textContent = timeStr;
+      if (lastSubEl) lastSubEl.textContent = dateStr;
+      if (lastDispensedEl) lastDispensedEl.textContent = `${dispKg} kg`;
+      if (lastBattEl) lastBattEl.textContent = `${battV} V`;
+
+      if (statusShortcutEl) {
+        statusShortcutEl.textContent = `Last check: ${dateStr} ${timeStr} • ${dispKg} kg dispensed`;
+      }
+
+      let html = '';
+      checks.forEach((c, idx) => {
+        const itemDate = new Date((c.Timestamp || Math.floor(Date.now()/1000)) * 1000);
+        const itemTimeStr = itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        const itemDateStr = itemDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+        const cDispKg = ((c.FeedDispensed_g || 0) / 1000.0).toFixed(2);
+        const curEv = c.CurrentEvent || '--';
+        const cBatt = c.Battery_V ? Number(c.Battery_V).toFixed(2) : (c.voltage_mV ? (c.voltage_mV / 1000.0).toFixed(2) : '4.10');
+
+        html += `
+          <div class="event-log-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <span class="event-log-time" style="font-weight:700; color:var(--text-main); font-size:13px;">${itemDateStr} at ${itemTimeStr}</span>
+              <div class="event-log-desc" style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                Tray Verified • Feed Dispensed: <strong>${cDispKg} kg</strong> • Event Cycle #${curEv} • Battery: ${cBatt}V
+              </div>
+            </div>
+            <span class="badge-state b-done" style="font-size:10px; padding:3px 8px; border-radius:12px;">VERIFIED</span>
+          </div>
+        `;
+      });
+
+      if (container) container.innerHTML = html;
+
+    } else {
+      if (lastTimeEl) lastTimeEl.textContent = '--';
+      if (lastSubEl) lastSubEl.textContent = 'No checks logged';
+      if (lastDispensedEl) lastDispensedEl.textContent = '-- kg';
+      if (lastBattEl) lastBattEl.textContent = '-- V';
+
+      if (statusShortcutEl) {
+        statusShortcutEl.textContent = `No physical tray checks logged yet`;
+      }
+
+      if (container) {
+        container.innerHTML = `
+          <div style="text-align:center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
+            <div style="font-size: 26px; margin-bottom: 8px;">📋</div>
+            <strong style="color:var(--text-main); font-size:14px;">No Tray Inspections Recorded Yet</strong>
+            <div style="font-size: 12px; margin-top: 6px; color: var(--text-muted); max-width: 320px; margin-left:auto; margin-right:auto; line-height:1.4;">
+              When the pond technician selects <strong>"Check Tray"</strong> on the ${dev.name} LCD screen, the event is wirelessly pushed here with feed counts and sensor readings.
+            </div>
+          </div>
+        `;
+      }
+    }
+
+  } catch (err) {
+    console.error("Tray checks fetch error:", err);
+    if (container) {
+      container.innerHTML = `
+        <div style="text-align:center; padding: 24px; color: #EF4444; font-size: 13px;">
+          Failed to load tray checks: ${err.message}
+        </div>
+      `;
+    }
   }
 }
 

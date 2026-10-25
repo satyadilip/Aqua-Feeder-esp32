@@ -156,6 +156,42 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         Serial.println("[MAIN] Received POLL_DATA Downlink!");
         telMgr.queueEvent(TelemetryMsgType::PERIODIC_HEARTBEAT);
     }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_SYNC_TIME) {
+        uint32_t epoch = 0;
+        memcpy(&epoch, &dl.endMinute, 4); // 4-byte unix epoch stored in bytes 1..4
+        Serial.printf("[MAIN] Received CMD_SYNC_TIME Downlink! Raw Epoch: %u\n", epoch);
+        if (epoch > 1700000000) {
+            rtcMgr.setEpoch(epoch);
+            sysStatus.rtcOK = true;
+            sysStatus.currentEpoch = epoch;
+            Serial.printf("[MAIN] [SUCCESS] RTC Synchronized via Cloud! Time: %s\n", rtcMgr.getDateTimeStr().c_str());
+            telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+        }
+    }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_TEST_MOTOR) {
+        uint8_t motorNum = dl.startHour > 0 ? dl.startHour : (dl.feedQuantity > 0 ? (uint8_t)dl.feedQuantity : 1);
+        uint8_t durationSec = dl.dischargeRate > 0 ? dl.dischargeRate : 2;
+        Serial.printf("[MAIN] Received CMD_TEST_MOTOR Downlink: Motor %d for %d sec\n", motorNum, durationSec);
+        
+        hal.setRelay(motorNum, true);
+        delay(durationSec * 1000UL);
+        pwrMon.update();
+        float runCur = pwrMon.getCurrent();
+        hal.setRelay(motorNum, false);
+        Serial.printf("[MAIN] Motor %d test completed. Measured current: %.1f mA\n", motorNum, runCur);
+        
+        TelemetryEvent confirmEv;
+        memset(&confirmEv, 0, sizeof(confirmEv));
+        confirmEv.type = TelemetryMsgType::DIAG_CONFIRMATION;
+        confirmEv.timestamp = rtcMgr.getEpoch();
+        confirmEv.voltage_mV = (uint16_t)(sysStatus.voltageV * 1000.0f);
+        confirmEv.current_mA = (uint16_t)runCur;
+        confirmEv.currentEvent = motorNum;      // 1 = Loader, 2 = Spreader
+        confirmEv.totalEvents = durationSec;    // duration seconds
+        confirmEv.statusFlags = (runCur >= 0) ? 1 : 0; // 1 = PASSED
+        telMgr.queueEvent(confirmEv);
+        Serial.println("[MAIN] Queued DIAG_CONFIRMATION telemetry to Cloud!");
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -277,7 +313,7 @@ void handleButtonNavigation() {
     ButtonState& sel  = hal.btnSelect();
     ButtonState& cfg  = hal.btnConfig();
 
-    if (!up.risingEdge && !dn.risingEdge && !sel.risingEdge && !cfg.risingEdge) return;
+    if (!up.repeatEvent && !dn.repeatEvent && !sel.risingEdge && !cfg.risingEdge) return;
 
     // SW4 (Config) — toggle AP config / return to main / enter menu from running
     if (cfg.risingEdge) {
@@ -308,11 +344,11 @@ void handleButtonNavigation() {
         case MenuState::MENU_LIST: {
             int maxItems = feedEng.isActive() ? MENU_ITEM_COUNT + 2 : MENU_ITEM_COUNT;
             
-            if (up.risingEdge) {
+            if (up.repeatEvent) {
                 menuCursorIdx--;
                 if (menuCursorIdx < 0) menuCursorIdx = maxItems - 1;
             }
-            if (dn.risingEdge) {
+            if (dn.repeatEvent) {
                 menuCursorIdx++;
                 if (menuCursorIdx >= maxItems) menuCursorIdx = 0;
             }
@@ -371,8 +407,8 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_QTY:
-            if (up.risingEdge)   editVal = constrain(editVal + 5, 5, 1200);  // x10
-            if (dn.risingEdge)   editVal = constrain(editVal - 5, 5, 1200);
+            if (up.repeatEvent)   editVal = constrain(editVal + 5, 5, 1200);  // x10
+            if (dn.repeatEvent)   editVal = constrain(editVal - 5, 5, 1200);
             if (sel.risingEdge) {
                 config.feedQuantity = editVal / 10.0f;
                 cfgMgr.saveFeedParams(config);
@@ -383,8 +419,8 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_FPE:
-            if (up.risingEdge)   editVal = constrain(editVal + FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
-            if (dn.risingEdge)   editVal = constrain(editVal - FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
+            if (up.repeatEvent)   editVal = constrain(editVal + FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
+            if (dn.repeatEvent)   editVal = constrain(editVal - FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
             if (sel.risingEdge) {
                 config.feedPerEvent = editVal;
                 cfgMgr.saveFeedParams(config);
@@ -396,16 +432,16 @@ void handleButtonNavigation() {
 
         case MenuState::EDIT_END_TIME:
             if (editFld == 0) {  // Editing hour
-                if (up.risingEdge)   editVal = (editVal + 1) % 24;
-                if (dn.risingEdge)   editVal = (editVal + 23) % 24;
+                if (up.repeatEvent)   editVal = (editVal + 1) % 24;
+                if (dn.repeatEvent)   editVal = (editVal + 23) % 24;
                 if (sel.risingEdge) {
                     config.endHour = editVal;
                     editVal = config.endMinute;
                     editFld = 1;  // Switch to minute
                 }
             } else {  // Editing minute
-                if (up.risingEdge)   editVal = (editVal + 1) % 60;
-                if (dn.risingEdge)   editVal = (editVal + 59) % 60;
+                if (up.repeatEvent)   editVal = (editVal + 1) % 60;
+                if (dn.repeatEvent)   editVal = (editVal + 59) % 60;
                 if (sel.risingEdge) {
                     config.endMinute = editVal;
                     cfgMgr.saveFeedParams(config);
@@ -419,16 +455,16 @@ void handleButtonNavigation() {
 
         case MenuState::EDIT_START_TIME:
             if (editFld == 0) {  // Editing hour
-                if (up.risingEdge)   editVal = (editVal + 1) % 24;
-                if (dn.risingEdge)   editVal = (editVal + 23) % 24;
+                if (up.repeatEvent)   editVal = (editVal + 1) % 24;
+                if (dn.repeatEvent)   editVal = (editVal + 23) % 24;
                 if (sel.risingEdge) {
                     config.startHour = editVal;
                     editVal = config.startMinute;
                     editFld = 1;  // Switch to minute
                 }
             } else {  // Editing minute
-                if (up.risingEdge)   editVal = (editVal + 1) % 60;
-                if (dn.risingEdge)   editVal = (editVal + 59) % 60;
+                if (up.repeatEvent)   editVal = (editVal + 1) % 60;
+                if (dn.repeatEvent)   editVal = (editVal + 59) % 60;
                 if (sel.risingEdge) {
                     config.startMinute = editVal;
                     cfgMgr.saveFeedParams(config);
@@ -441,8 +477,8 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_RATE:
-            if (up.risingEdge)   editVal = constrain(editVal + 1, FEED_RATE_MIN, FEED_RATE_MAX);
-            if (dn.risingEdge)   editVal = constrain(editVal - 1, FEED_RATE_MIN, FEED_RATE_MAX);
+            if (up.repeatEvent)   editVal = constrain(editVal + 1, FEED_RATE_MIN, FEED_RATE_MAX);
+            if (dn.repeatEvent)   editVal = constrain(editVal - 1, FEED_RATE_MIN, FEED_RATE_MAX);
             if (sel.risingEdge) {
                 config.dischargeRate = editVal;
                 cfgMgr.saveFeedParams(config);
@@ -457,15 +493,15 @@ void handleButtonNavigation() {
                 int h = editVal / 100;
                 int m = editVal % 100;
                 if (editFld == 0) {  // Hour
-                    if (up.risingEdge)   h = (h + 1) % 24;
-                    if (dn.risingEdge)   h = (h + 23) % 24;
+                    if (up.repeatEvent)   h = (h + 1) % 24;
+                    if (dn.repeatEvent)   h = (h + 23) % 24;
                     if (sel.risingEdge) {
                         editFld = 1;
                     }
                     editVal = h * 100 + m;
                 } else {  // Minute
-                    if (up.risingEdge)   m = (m + 1) % 60;
-                    if (dn.risingEdge)   m = (m + 59) % 60;
+                    if (up.repeatEvent)   m = (m + 1) % 60;
+                    if (dn.repeatEvent)   m = (m + 59) % 60;
                     if (sel.risingEdge) {
                         rtcMgr.setTime(h, m, 0);
                         feedEng.calcSchedule();

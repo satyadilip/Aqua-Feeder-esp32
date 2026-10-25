@@ -26,8 +26,24 @@ void CloudManager::loop() {
     if (!_tm || !_cfg || !_status) return;
     
     unsigned long nowMs = millis();
-    // Use 30 seconds interval if we are disconnected/error (Join Retry), otherwise 5 seconds for telemetry check
-    unsigned long interval = (_status->loraStatus == ConnStatus::ERROR || _status->loraStatus == ConnStatus::DISCONNECTED) ? 30000 : 5000;
+    bool hasPendingEvents = _tm->hasEvents() || (_sd && _sd->hasQueuedTelemetry());
+
+    // Intelligent uplink scheduling:
+    // - 30s on join error/disconnected
+    // - 2s rapid drain for priority queued events (tray check, alarms, diagnostic confirmation)
+    // - 60s heartbeat during active feeding
+    // - 300s (5 mins) relaxed heartbeat outside feeding hours (standby/idle)
+    unsigned long interval = 5000;
+    if (_status->loraStatus == ConnStatus::ERROR || _status->loraStatus == ConnStatus::DISCONNECTED) {
+        interval = 30000;
+    } else if (hasPendingEvents) {
+        interval = 2000;
+    } else if (_status->feedActive) {
+        interval = 60000;
+    } else {
+        unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;
+        interval = (cfgInterval >= 60000) ? cfgInterval : 300000UL;
+    }
     
     if (nowMs - _lastSendAttemptMs < interval) return;
     
@@ -65,12 +81,21 @@ void CloudManager::loop() {
     } else {
         memset(&heartBeatEvent, 0, sizeof(heartBeatEvent));
         heartBeatEvent.type = TelemetryMsgType::PERIODIC_HEARTBEAT;
-        heartBeatEvent.timestamp = time(nullptr);
+        heartBeatEvent.timestamp = _status->currentEpoch > 0 ? _status->currentEpoch : (uint32_t)time(nullptr);
         heartBeatEvent.voltage_mV = (uint16_t)(_status->voltageV * 1000);
         heartBeatEvent.current_mA = (uint16_t)_status->currentMA;
-        heartBeatEvent.feedDispensed_g = 100;
+        heartBeatEvent.feedDispensed_g = (uint16_t)_status->dispensedQuantity_g;
         heartBeatEvent.currentEvent = _status->currentEvent;
         heartBeatEvent.totalEvents = _status->totalEvents;
+        uint8_t flags = 0;
+        if (_status->proximityTriggered) flags |= (1 << 0);
+        if (_status->state == SystemState::ERROR_FATAL) flags |= (1 << 1);
+        if (!_status->rtcOK) flags |= (1 << 2);
+        if (!_status->sdCardOK) flags |= (1 << 3);
+        if (_status->loraStatus == ConnStatus::CONNECTED) flags |= (1 << 4);
+        if (_status->wifiStatus == ConnStatus::CONNECTED) flags |= (1 << 5);
+        if (_status->gsmStatus == ConnStatus::CONNECTED) flags |= (1 << 6);
+        heartBeatEvent.statusFlags = flags;
         event = &heartBeatEvent;
     }
     if (!event) return;

@@ -200,13 +200,16 @@ enum class TelemetryMsgType : uint8_t {
     ALARM_RTC_FAULT    = 0x10,
     DEVICE_BOOT        = 0x20,
     CONFIG_CHANGED     = 0x21,
-    SETTINGS_REPORT    = 0x22
+    SETTINGS_REPORT    = 0x22,
+    DIAG_CONFIRMATION  = 0x24
 };
 
 // Downlink command types
 enum class CommandMsgType : uint8_t {
     CMD_SET_SETTINGS = 0xA0,
-    CMD_POLL_DATA    = 0xA1
+    CMD_POLL_DATA    = 0xA1,
+    CMD_TEST_MOTOR   = 0xA2,
+    CMD_SYNC_TIME    = 0xA3
 };
 
 // Connection status for each channel
@@ -420,7 +423,7 @@ struct __attribute__((packed)) LoRaDownlinkPayload {
     uint8_t  padding2[2];      // Pad to 12 bytes
 };
 
-// Button state (for debounce logic)
+// Button state (for debounce and long-press repeat logic)
 struct ButtonState {
     uint8_t  pin;
     bool     rawState;
@@ -429,6 +432,9 @@ struct ButtonState {
     bool     risingEdge;    // Just pressed
     bool     fallingEdge;   // Just released
     unsigned long lastDebounceTime;
+    unsigned long pressStartTime;
+    unsigned long lastRepeatTime;
+    bool     repeatEvent;   // Pressed OR repeating on hold
 };
 
 #endif // CONFIG_H
