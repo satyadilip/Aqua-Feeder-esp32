@@ -38,7 +38,10 @@ def build_response(status_code, body):
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'OPTIONS,GET,POST,PUT',
             'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
         },
         'body': json.dumps(body, cls=DecimalEncoder)
     }

@@ -306,6 +306,7 @@ function revealMainApp(instant = false) {
     renderPondsDirectory();
     renderAlertContacts();
     renderHistoryView();
+    renderTrayChecksView();
 
     // Initialize Map
     setTimeout(() => {
@@ -531,6 +532,7 @@ function switchActivePond(pondId) {
   updatePondContextBar();
   loadSelectedDeviceToUI();
   renderHistoryView();
+  renderTrayChecksView();
   showToast(`Switched to ${pond.name}`);
 
   // Center Map if on Map Tab
@@ -614,6 +616,7 @@ function switchActiveDevice(deviceId) {
   updatePondContextBar();
   loadSelectedDeviceToUI();
   renderHistoryView();
+  renderTrayChecksView();
   if (dev) showToast(`Selected: ${dev.name}`);
 }
 
@@ -1937,6 +1940,8 @@ async function renderTrayChecksView() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
+  const currentDevId = dev.id;
+
   const titleEl = document.getElementById('traycheck-feeder-title');
   if (titleEl) titleEl.textContent = `${dev.name} Tray Inspections`;
 
@@ -1953,13 +1958,18 @@ async function renderTrayChecksView() {
     container.innerHTML = `
       <div style="text-align:center; padding: 24px; color:var(--text-muted); font-size:13px;">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-        <div style="margin-top:8px;">Loading tray inspection history...</div>
+        <div style="margin-top:8px;">Fetching live tray checks for ${dev.name}...</div>
       </div>
     `;
   }
 
   try {
-    const res = await fetch(`${API_BASE_URL}/api/tray-checks?deviceId=${dev.id}`);
+    const res = await fetch(`${API_BASE_URL}/api/tray-checks?deviceId=${currentDevId}&_t=${Date.now()}`, {
+      cache: 'no-store'
+    });
+    // Guard against race conditions if feeder was switched while request was pending
+    if (appState.selectedDeviceId !== currentDevId) return;
+
     const data = await res.json();
     const checks = data.trayChecks || [];
 
@@ -2031,6 +2041,7 @@ async function renderTrayChecksView() {
     }
 
   } catch (err) {
+    if (appState.selectedDeviceId !== currentDevId) return;
     console.error("Tray checks fetch error:", err);
     if (container) {
       container.innerHTML = `
@@ -2298,6 +2309,9 @@ function startTelemetryLoop() {
         });
         loadSelectedDeviceToUI();
         updatePondContextBar();
+        if (appState.activeTab === 'tab-traycheck') {
+          renderTrayChecksView();
+        }
       }
     } catch (e) {}
   }
