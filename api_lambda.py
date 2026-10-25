@@ -225,6 +225,26 @@ def lambda_handler(event, context):
                         d['PondId'] = 'P-01'
                         is_online = (now_epoch - int(d.get('LastSeenEpoch', 0))) < 900
                         d['Connected'] = is_online
+
+                        # Verify if last event was actually from TODAY during today's feeding schedule (IST)
+                        last_ev_str = str(d.get('LastEventTime', '')).strip()
+                        is_today_feed_event = False
+                        if last_ev_str:
+                            try:
+                                clean_ts = last_ev_str.replace('Z', '').replace('T', ' ')
+                                dt_val = datetime.strptime(clean_ts[:19], "%Y-%m-%d %H:%M:%S")
+                                dt_ist = dt_val + timedelta(hours=5, minutes=30)
+                                if dt_ist.date() == now_ist.date() and (dt_ist.hour * 60 + dt_ist.minute) >= start_min:
+                                    is_today_feed_event = True
+                            except:
+                                pass
+
+                        # If feed for today hasn't started yet (before 6:00 AM or no events today), reset today counters
+                        if not is_today_feed_event or now_min < start_min:
+                            d['CurrentEvent'] = 0
+                            d['DispensedFeed_kg'] = 0.0
+                            cur_ev = 0
+                            dispensed_kg = 0.0
                         
                         raw_feed_avail = d.get('FeedAvailable', True)
                         raw_status = str(d.get('Status', '')).strip().upper()
@@ -242,7 +262,9 @@ def lambda_handler(event, context):
                             actual_status = 'PAUSED'
                         elif not actual_feed_avail or raw_status == 'FEED EMPTY':
                             actual_status = 'FEED EMPTY'
-                        elif raw_status == 'FEEDING':
+                        elif now_min < start_min:
+                            actual_status = 'STANDBY'
+                        elif raw_status == 'FEEDING' and is_today_feed_event:
                             actual_status = 'FEEDING'
                         else:
                             actual_status = calc_status
@@ -692,6 +714,29 @@ def lambda_handler(event, context):
                         'AdherencePct': round(min(100.0, (feed_kg / t_kg) * 100.0) if t_kg > 0 else 100.0, 1)
                     }
                     
+            # Determine if today's feeding schedule has actually started in IST
+            start_hour = 6
+            start_min = 0
+            last_ev_str = ''
+            if dev_item:
+                start_hour = int(dev_item.get('StartHour', 6))
+                start_min = int(dev_item.get('StartMinute', 0))
+                last_ev_str = str(dev_item.get('LastEventTime', '')).strip()
+
+            now_min = now_ist.hour * 60 + now_ist.minute
+            sched_start_min = start_hour * 60 + start_min
+            
+            is_today_live_event = False
+            if last_ev_str:
+                try:
+                    clean_ts = last_ev_str.replace('Z', '').replace('T', ' ')
+                    dt_val = datetime.strptime(clean_ts[:19], "%Y-%m-%d %H:%M:%S")
+                    dt_ist = dt_val + timedelta(hours=5, minutes=30)
+                    if dt_ist.date() == today_ist and (dt_ist.hour * 60 + dt_ist.minute) >= sched_start_min:
+                        is_today_live_event = True
+                except:
+                    pass
+
             # Build rolling 7-day calendar window ending today (IST)
             rolling_7_days = []
             for i in range(6, -1, -1):
@@ -704,7 +749,7 @@ def lambda_handler(event, context):
                     record['dateLabel'] = weekday_name
                     record['isToday'] = (i == 0)
                     rolling_7_days.append(record)
-                elif i == 0 and live_dispensed_kg > 0:
+                elif i == 0 and is_today_live_event and live_dispensed_kg > 0:
                     rolling_7_days.append({
                         'DeviceId': device_id,
                         'Date': d_str,

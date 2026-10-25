@@ -46,12 +46,12 @@ const defaultDevices = [
     id: 'e072a1fffef5ba08',
     name: 'aquaCON Feeder 02',
     pondId: 'P-01',
-    status: 'SCHEDULED',
+    status: 'STANDBY',
     connected: true,
     feedAvailable: true,
-    dispensedKg: 0.5,
+    dispensedKg: 0.0,
     targetKg: 15.0,
-    currentEvent: 5,
+    currentEvent: 0,
     totalEvents: 150,
     fpeGrams: 100,
     dischargeRateGs: 100,
@@ -801,26 +801,29 @@ function loadSelectedDeviceToUI() {
   const startTotalMin = sHour * 60 + sMin;
   const endTotalMin = eHour * 60 + eMin;
 
-  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
-  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
-
-  const isTargetCompleted = rawCurrent >= totalEvents;
-  const isPastSchedule = nowTotalMin >= endTotalMin;
-  const isBeforeSchedule = nowTotalMin < startTotalMin;
-  const isScheduleDone = isTargetCompleted || isPastSchedule;
-
-  const displayCurrent = Math.min(rawCurrent, totalEvents);
-  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
-
   const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
   const isFeedEmpty = dev.feedAvailable === false || dev.status === 'FEED EMPTY' || ((dev.statusFlags || 0) & 0x08) !== 0 || ((dev.statusFlags || 0) & 0x01) !== 0;
 
-  // Determine unambiguous status & next feed timestamp
-  let statusText = 'COMPLETED';
-  let badgeClass = 'b-done';
-  let nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
-  let nextSubText = 'Tomorrow morning';
-  let eventSubText = "Schedule completed";
+  const isBeforeSchedule = nowTotalMin < startTotalMin && !isPaused && !isFeedEmpty && dev.status !== 'FEEDING' && dev.status !== 'ACTIVE';
+  const isPastSchedule = nowTotalMin >= endTotalMin;
+
+  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
+
+  // Before today's schedule begins (e.g. before 06:00 AM), today's feeding progress is 0
+  const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
+  const isTargetCompleted = !isBeforeSchedule && effectiveCurrent >= totalEvents;
+  const isScheduleDone = !isBeforeSchedule && (isTargetCompleted || isPastSchedule);
+
+  const displayCurrent = Math.min(effectiveCurrent, totalEvents);
+  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
+
+  let statusText = 'STANDBY';
+  let badgeClass = 'b-idle';
+  const timeFormatted = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
+  let nextTimestamp = timeFormatted;
+  let nextSubText = `Starts today at ${timeFormatted}`;
+  let eventSubText = "Ready for schedule";
 
   if (isPaused) {
     statusText = 'PAUSED';
@@ -834,18 +837,30 @@ function loadSelectedDeviceToUI() {
     nextTimestamp = '--';
     nextSubText = 'Hopper Empty';
     eventSubText = 'Refill Required';
-  } else if (isScheduleDone) {
-    statusText = 'COMPLETED';
-    badgeClass = 'b-done';
-    nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
-    nextSubText = 'Tomorrow morning';
-    eventSubText = "Schedule completed";
   } else if (isBeforeSchedule) {
     statusText = 'STANDBY';
     badgeClass = 'b-idle';
-    nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
-    nextSubText = 'Starts today';
+    nextTimestamp = timeFormatted;
+    nextSubText = `Starts today at ${timeFormatted}`;
     eventSubText = 'Ready for schedule';
+  } else if (isScheduleDone) {
+    statusText = 'COMPLETED';
+    badgeClass = 'b-done';
+    nextTimestamp = timeFormatted;
+    nextSubText = 'Tomorrow morning';
+    eventSubText = "Schedule completed";
+  } else if (dev.status === 'FEEDING' || effectiveCurrent > 0) {
+    statusText = 'FEEDING';
+    badgeClass = 'b-run';
+    const intervalMin = dev.intervalMin || 3.1;
+    const nextMin = nowTotalMin + Math.round(intervalMin);
+    const nH = Math.floor(nextMin / 60) % 24;
+    const nM = nextMin % 60;
+    const ampm = nH >= 12 ? 'PM' : 'AM';
+    const dispH = nH % 12 === 0 ? 12 : nH % 12;
+    nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
+    nextSubText = `Interval: ${intervalMin} min`;
+    eventSubText = 'Events today';
   } else {
     statusText = 'ACTIVE';
     badgeClass = 'b-run';
@@ -876,10 +891,10 @@ function loadSelectedDeviceToUI() {
     gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
   }
   if (gaugePctBadge) {
-    gaugePctBadge.textContent = isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`;
+    gaugePctBadge.textContent = isBeforeSchedule ? 'Scheduled 06:00 AM' : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
   }
 
-  const rawDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  const rawDispensed = isBeforeSchedule ? 0.0 : (dev.dispensedKg !== undefined ? dev.dispensedKg : 0);
   const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
@@ -888,7 +903,7 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${totalEvents}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = eventSubText;
+  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : eventSubText);
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
@@ -1174,7 +1189,7 @@ async function renderHistoryView() {
   renderBarChart(metrics, dev.targetKg || 15.0);
 
   // Render Feed Events Log
-  renderEventsLog(dev);
+  renderEventsLog(dev, metrics);
 }
 
 function renderBarChart(metrics, targetKg) {
@@ -1202,17 +1217,29 @@ function renderBarChart(metrics, targetKg) {
   container.innerHTML = html;
 }
 
-function renderEventsLog(dev) {
+function renderEventsLog(dev, metrics) {
   const container = document.getElementById('events-log-container');
   if (!container) return;
 
   const isConn = isDeviceConnected(dev);
   const logLabel = document.getElementById('log-date-label');
+  const now = new Date();
+  const currentTotalMin = now.getHours() * 60 + now.getMinutes();
+  const startTotalMin = (dev.startHour || 6) * 60 + (dev.startMin || 0);
+  const isBeforeSchedule = currentTotalMin < startTotalMin;
 
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
-  const eventsCount = Math.min(rawCurrent, totalEvents);
   const fpe = dev.fpeGrams || 100;
+
+  // Retrieve metrics from appState if not explicitly passed
+  const metricList = (metrics && metrics.length) ? metrics : (appState.deviceMetrics[dev.id] || []);
+  const lastActiveMetric = metricList.slice().reverse().find(m => (m.EventsCompleted || 0) > 0 || (m.FeedDispensed_kg || 0) > 0);
+
+  const hasTodayEvents = rawCurrent > 0 && !isBeforeSchedule;
+  const eventsCount = hasTodayEvents
+    ? Math.min(rawCurrent, totalEvents)
+    : (lastActiveMetric ? (lastActiveMetric.EventsCompleted || Math.round((lastActiveMetric.FeedDispensed_kg * 1000) / fpe)) : 0);
 
   if (eventsCount === 0 && !isConn) {
     if (logLabel) logLabel.textContent = 'Feeder is not connected';
@@ -1232,14 +1259,17 @@ function renderEventsLog(dev) {
   const endEvent = Math.max(1, startEvent - maxToDisplay + 1);
 
   if (logLabel) {
-    if (!isConn) {
+    if (hasTodayEvents) {
       logLabel.textContent = eventsCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: Sunday, Oct 25)` 
-        : `Showing ${eventsCount} feed events (Last Active: Sunday, Oct 25)`;
+        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events today` 
+        : `Showing ${eventsCount} completed feed events today`;
+    } else if (lastActiveMetric) {
+      const activeLabel = lastActiveMetric.dateLabel || 'Sunday, Oct 25';
+      logLabel.textContent = eventsCount > maxToDisplay 
+        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at 06:00 AM)` 
+        : `Showing ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at 06:00 AM)`;
     } else {
-      logLabel.textContent = eventsCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events` 
-        : `Showing ${eventsCount} completed feed events`;
+      logLabel.textContent = `Today's feed schedule begins at ${String(dev.startHour || 6).padStart(2, '0')}:${String(dev.startMin || 0).padStart(2, '0')} AM`;
     }
   }
 
