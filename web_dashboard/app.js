@@ -767,10 +767,7 @@ function loadSelectedDeviceToUI() {
     if (pillFeedDot) pillFeedDot.className = 'pill-dot dot-offline';
     if (pillFeedStatus) pillFeedStatus.textContent = 'Not Connected';
 
-    // Tab 3 Param Editor Inputs
-    const paramDevName = document.getElementById('param-device-name');
-    if (paramDevName) paramDevName.textContent = heroTitle;
-
+    populateParamEditorUI(dev, heroTitle);
     updateDiagnosticsUI(dev, false, heroTitle);
     return;
   }
@@ -967,25 +964,39 @@ function loadSelectedDeviceToUI() {
   const pct = Math.min(100, Math.max(0, ((dev.dispensedKg || 0) / (dev.targetKg || 15.0)) * 100));
   if (fillBar) fillBar.style.width = `${pct.toFixed(1)}%`;
 
-  // Tab 3 Param Editor Inputs
+  populateParamEditorUI(dev, heroTitle);
+}
+
+function populateParamEditorUI(dev, heroTitle) {
+  if (!dev) return;
   const paramDevName = document.getElementById('param-device-name');
-  const cleanParamName = (dev.name || '').match(/Feeder\s*\d+/i) ? dev.name.match(/Feeder\s*\d+/i)[0] : 'Feeder 01';
-  if (paramDevName) paramDevName.textContent = cleanParamName;
+  if (paramDevName) paramDevName.textContent = heroTitle;
 
   const inputQty = document.getElementById('input-qty');
   const sliderQty = document.getElementById('slider-qty');
   const inputFpe = document.getElementById('input-fpe');
   const sliderFpe = document.getElementById('slider-fpe');
+  const inputStartHour = document.getElementById('input-start-hour');
+  const inputStartMin = document.getElementById('input-start-min');
+  const inputEndHour = document.getElementById('input-end-hour');
+  const inputEndMin = document.getElementById('input-end-min');
 
   if (inputQty && sliderQty) {
-    inputQty.value = dev.targetKg || 15.0;
-    sliderQty.value = dev.targetKg || 15.0;
+    const qty = dev.targetKg !== undefined ? dev.targetKg : 15.0;
+    inputQty.value = qty;
+    sliderQty.value = qty;
   }
 
   if (inputFpe && sliderFpe) {
-    inputFpe.value = dev.fpeGrams || 100;
-    sliderFpe.value = dev.fpeGrams || 100;
+    const fpe = dev.fpeGrams !== undefined ? dev.fpeGrams : 100;
+    inputFpe.value = fpe;
+    sliderFpe.value = fpe;
   }
+
+  if (inputStartHour) inputStartHour.value = dev.startHour !== undefined ? dev.startHour : 6;
+  if (inputStartMin) inputStartMin.value = dev.startMin !== undefined ? dev.startMin : 0;
+  if (inputEndHour) inputEndHour.value = dev.endHour !== undefined ? dev.endHour : 18;
+  if (inputEndMin) inputEndMin.value = dev.endMin !== undefined ? dev.endMin : 0;
 
   recalculateSchedule();
 }
@@ -1141,7 +1152,7 @@ async function renderHistoryView() {
   let metrics = appState.deviceMetrics[dev.id];
   if (!metrics) {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/metrics/${dev.id}`);
+      const res = await fetch(`${API_BASE_URL}/api/metrics/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
       const data = await res.json();
       if (data && data.metrics && data.metrics.length > 0) {
         metrics = data.metrics;
