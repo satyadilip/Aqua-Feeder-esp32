@@ -636,14 +636,15 @@ def lambda_handler(event, context):
                 response = metrics_table.query(
                     KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
                     ScanIndexForward=False,
-                    Limit=30
+                    Limit=60
                 )
                 items = response.get('Items', [])
             except Exception as e:
                 print("Metrics query error:", e)
                 
-            base_qty = 25.0 if device_id == 'e072a1fffef6249c' else 15.0
+            base_qty = 50.0 if device_id == 'e072a1fffef6249c' else 15.0
             live_cur_ev = 0
+            live_dispensed_kg = 0.0
             try:
                 dev_res = devices_table.get_item(Key={'DeviceId': device_id})
                 dev_item = dev_res.get('Item', {})
@@ -651,69 +652,84 @@ def lambda_handler(event, context):
                     base_qty = float(dev_item['FeedQuantity_kg'])
                 if dev_item and 'CurrentEvent' in dev_item:
                     live_cur_ev = float(dev_item['CurrentEvent'])
+                if dev_item and 'DispensedFeed_kg' in dev_item:
+                    live_dispensed_kg = float(dev_item['DispensedFeed_kg'])
             except:
                 pass
                 
-            today_str = datetime.utcnow().strftime("%Y-%m-%d")
+            # Indian Standard Time (+05:30) for farm calendar
+            now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+            today_ist = now_ist.date()
+            today_str = today_ist.strftime("%Y-%m-%d")
             
-            formatted_items = []
+            # Map all available database metrics by date string
+            db_by_date = {}
             if items:
                 for it in items:
+                    d_date = str(it.get('Date', '')).strip()
+                    if not d_date: continue
                     tot_cycles = int(it.get('TotalCycles', 0))
                     raw_feed_g = float(it.get('DailyFeed_g', 0))
-                    d_date = str(it.get('Date', ''))
+                    raw_feed_kg = float(it.get('DailyFeed_kg', 0))
                     
-                    if d_date == today_str and live_cur_ev > 0:
-                        feed_kg = round((live_cur_ev * 100) / 1000.0, 2)
-                        tot_cycles = int(live_cur_ev)
-                    elif tot_cycles > 1 and raw_feed_g <= 100:
-                        feed_kg = round((tot_cycles * 100) / 1000.0, 2)
+                    if raw_feed_kg > 0:
+                        feed_kg = raw_feed_kg
                     elif raw_feed_g > 0:
                         feed_kg = round(raw_feed_g / 1000.0, 2)
-                    else:
+                    elif tot_cycles > 0:
                         feed_kg = round((tot_cycles * 100) / 1000.0, 2)
-                    
+                    else:
+                        feed_kg = 0.0
+                        
                     t_kg = float(it.get('Target_kg', base_qty))
-                    formatted_items.append({
+                    db_by_date[d_date] = {
                         'DeviceId': it.get('DeviceId', device_id),
                         'Date': d_date,
                         'FeedDispensed_kg': feed_kg,
                         'Target_kg': t_kg,
                         'EventsCompleted': tot_cycles,
-                        'TotalEvents': int(t_kg * 10),
+                        'TotalEvents': int(t_kg * 10) if t_kg > 0 else 250,
                         'AdherencePct': round(min(100.0, (feed_kg / t_kg) * 100.0) if t_kg > 0 else 100.0, 1)
-                    })
-                formatted_items.sort(key=lambda x: str(x.get('Date', '')))
-                items = formatted_items[-7:]
+                    }
+                    
+            # Build rolling 7-day calendar window ending today (IST)
+            rolling_7_days = []
+            for i in range(6, -1, -1):
+                day_date = today_ist - timedelta(days=i)
+                d_str = day_date.strftime("%Y-%m-%d")
+                weekday_name = day_date.strftime("%a %m/%d")
                 
-            if len(items) < 7:
-                import datetime as dt_mod
-                today = dt_mod.date.today()
-                existing_dates = {it['Date'] for it in items}
-                variations = [0.4, -0.2, 0.5, -0.1, 0.3, -0.3, 0.1]
-                for i in range(6, -1, -1):
-                    d = today - dt_mod.timedelta(days=i)
-                    d_str = d.strftime('%Y-%m-%d')
-                    if d_str in existing_dates:
-                        continue
-                    var = variations[i % len(variations)]
-                    if i == 0:
-                        dispensed = round((live_cur_ev * 100) / 1000.0, 2) if live_cur_ev > 0 else 0.4
-                    else:
-                        dispensed = round(base_qty + var, 2)
-                    if dispensed < 0.4: dispensed = 0.4
-                    items.append({
+                if d_str in db_by_date:
+                    record = dict(db_by_date[d_str])
+                    record['dateLabel'] = weekday_name
+                    record['isToday'] = (i == 0)
+                    rolling_7_days.append(record)
+                elif i == 0 and live_dispensed_kg > 0:
+                    rolling_7_days.append({
                         'DeviceId': device_id,
                         'Date': d_str,
-                        'FeedDispensed_kg': dispensed,
+                        'dateLabel': weekday_name,
+                        'FeedDispensed_kg': live_dispensed_kg,
                         'Target_kg': base_qty,
-                        'EventsCompleted': int((dispensed * 1000) / 100),
-                        'TotalEvents': int((base_qty * 1000) / 100),
-                        'AdherencePct': round(min(100.0, (dispensed / base_qty) * 100) if base_qty > 0 else 100, 1)
+                        'EventsCompleted': int(live_cur_ev),
+                        'TotalEvents': int(base_qty * 10),
+                        'AdherencePct': round(min(100.0, (live_dispensed_kg / base_qty) * 100.0) if base_qty > 0 else 100.0, 1),
+                        'isToday': True
                     })
-                items.sort(key=lambda x: str(x.get('Date', '')))
-                items = items[-7:]
-            return build_response(200, {'deviceId': device_id, 'metrics': items})
+                else:
+                    rolling_7_days.append({
+                        'DeviceId': device_id,
+                        'Date': d_str,
+                        'dateLabel': weekday_name,
+                        'FeedDispensed_kg': 0.0,
+                        'Target_kg': base_qty,
+                        'EventsCompleted': 0,
+                        'TotalEvents': int(base_qty * 10),
+                        'AdherencePct': 0.0,
+                        'isToday': (i == 0)
+                    })
+                    
+            return build_response(200, {'deviceId': device_id, 'metrics': rolling_7_days})
 
         return build_response(404, {'error': f'Route {http_method} {path} not found'})
 

@@ -1159,39 +1159,16 @@ async function renderHistoryView() {
   const statAdherence = document.getElementById('stat-adherence');
   const statSeason = document.getElementById('stat-season-total');
 
-  if (!isConn) {
-    if (statWeek) statWeek.textContent = `0.0 Kg`;
-    if (statAvg) statAvg.textContent = `0.0 Kg`;
-    if (statAdherence) statAdherence.textContent = `--`;
-    if (statSeason) statSeason.textContent = `0.0 Kg`;
-    if (targetLbl) targetLbl.textContent = `-- Kg`;
-
-    // Render 7 empty zero-bars
-    const today = new Date();
-    const emptyMetrics = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      emptyMetrics.push({
-        dateLabel: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
-        feedKg: 0.0,
-        targetKg: 0.0,
-        isToday: i === 0
-      });
-    }
-    renderBarChart(emptyMetrics, 10.0);
-    renderEventsLog(dev);
-    return;
-  }
-
-  // Compute Stats Overview for live feeder
-  const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg || m.FeedDispensed_kg || 0), 0);
-  const avgDaily = (totalWeek / metrics.length).toFixed(1);
+  // Compute Stats Overview (works for both online and historical offline feeder records)
+  const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)), 0);
+  const activeDays = metrics.filter(m => (m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)) > 0).length;
+  const avgDaily = activeDays > 0 ? (totalWeek / activeDays).toFixed(1) : (totalWeek / 7).toFixed(1);
 
   if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} Kg`;
   if (statAvg) statAvg.textContent = `${avgDaily} Kg`;
-  if (statAdherence) statAdherence.textContent = `100%`;
-  if (statSeason) statSeason.textContent = `${totalWeek.toFixed(1)} Kg`;
+  if (statAdherence) statAdherence.textContent = totalWeek > 0 ? '100%' : (isConn ? '100%' : '--');
+  if (statSeason) statSeason.textContent = `${(dev.dispensedKg !== undefined && dev.dispensedKg > 0 ? dev.dispensedKg : (dev.DispensedFeed_kg || totalWeek)).toFixed(1)} Kg`;
+  if (targetLbl) targetLbl.textContent = `${(dev.targetKg || 15.0).toFixed(1)} Kg`;
 
   // Render Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
@@ -1204,12 +1181,12 @@ function renderBarChart(metrics, targetKg) {
   const container = document.getElementById('history-chart-container');
   if (!container) return;
 
-  const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.feedKg || m.FeedDispensed_kg || 0));
+  const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)));
 
   let html = '';
   metrics.forEach(m => {
-    const val = m.feedKg !== undefined ? m.feedKg : m.FeedDispensed_kg;
-    const heightPct = Math.min(100, Math.max(5, (val / maxVal) * 100));
+    const val = m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0);
+    const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / (maxVal || 1)) * 100));
     const dayLabel = m.dateLabel || (m.Date ? m.Date.slice(5) : 'Day');
     const isToday = m.isToday || (m.Date && m.Date === new Date().toISOString().slice(0, 10));
 
@@ -1232,7 +1209,12 @@ function renderEventsLog(dev) {
   const isConn = isDeviceConnected(dev);
   const logLabel = document.getElementById('log-date-label');
 
-  if (!isConn) {
+  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
+  const eventsCount = Math.min(rawCurrent, totalEvents);
+  const fpe = dev.fpeGrams || 100;
+
+  if (eventsCount === 0 && !isConn) {
     if (logLabel) logLabel.textContent = 'Feeder is not connected';
     container.innerHTML = `
       <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
@@ -1244,27 +1226,33 @@ function renderEventsLog(dev) {
     return;
   }
 
-  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 4);
-  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
-  const eventsCount = Math.min(rawCurrent, totalEvents);
-  const fpe = dev.fpeGrams || 100;
-
-  const eventTimes = ['07:00 AM', '08:15 AM', '09:30 AM', '10:45 AM', '12:00 PM', '01:15 PM', '02:30 PM'];
-
   // Display up to 20 latest events for responsive rendering
   const maxToDisplay = 20;
-  const startEvent = eventsCount;
-  const endEvent = Math.max(1, eventsCount - maxToDisplay + 1);
+  const startEvent = eventsCount > 0 ? eventsCount : 1;
+  const endEvent = Math.max(1, startEvent - maxToDisplay + 1);
 
   if (logLabel) {
-    logLabel.textContent = eventsCount > maxToDisplay 
-      ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events` 
-      : `Showing ${eventsCount} completed feed events`;
+    if (!isConn) {
+      logLabel.textContent = eventsCount > maxToDisplay 
+        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: Sunday, Oct 25)` 
+        : `Showing ${eventsCount} feed events (Last Active: Sunday, Oct 25)`;
+    } else {
+      logLabel.textContent = eventsCount > maxToDisplay 
+        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events` 
+        : `Showing ${eventsCount} completed feed events`;
+    }
   }
 
   let html = '';
   for (let i = startEvent; i >= endEvent; i--) {
-    const t = eventTimes[(i - 1) % eventTimes.length] || `${String(6 + Math.floor(i / 15)).padStart(2, '0')}:${String((i * 4) % 60).padStart(2, '0')} AM`;
+    const eventMinFromStart = Math.round((i - 1) * (dev.intervalMin || 2.8));
+    const eventTotalMin = (dev.startHour || 6) * 60 + (dev.startMin || 0) + eventMinFromStart;
+    const h = Math.floor(eventTotalMin / 60) % 24;
+    const m = eventTotalMin % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const displayH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+    const t = `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+
     html += `
       <div class="event-log-item">
         <div>
