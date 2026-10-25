@@ -57,6 +57,12 @@ def auth_driver():
     except Exception:
         pass
 
+def safe_click(driver, element):
+    """Scrolls element into center view and executes click without bottom-nav overlay interference"""
+    driver.execute_script("arguments[0].scrollIntoView({behavior: 'instant', block: 'center', inline: 'center'});", element)
+    time.sleep(0.3)
+    driver.execute_script("arguments[0].click();", element)
+
 def take_test_screenshot(driver, name):
     filepath = os.path.join(SCREENSHOT_DIR, f"{name}.png")
     driver.save_screenshot(filepath)
