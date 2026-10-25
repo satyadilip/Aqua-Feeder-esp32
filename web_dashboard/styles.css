@@ -938,6 +938,14 @@ svg {
   color: var(--brand-sage);
 }
 
+.text-coral, .text-danger {
+  color: #DC2626 !important;
+}
+
+.text-amber, .text-warning {
+  color: #D97706 !important;
+}
+
 .dot-live-pulse {
   display: inline-block;
   width: 7px;
@@ -1957,6 +1965,16 @@ svg {
 
 .dot-available {
   background: var(--brand-sage);
+}
+
+.dot-empty, .feed-dot.dot-empty, .pill-dot.dot-empty {
+  background: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}
+
+.dot-paused, .feed-dot.dot-paused, .pill-dot.dot-paused {
+  background: #F59E0B !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
 }
 
 .b-idle {

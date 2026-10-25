@@ -186,59 +186,72 @@ def lambda_handler(event, context):
                     else:
                         calc_status = 'SCHEDULED'
 
-                    if dev_id == 'e072a1fffef6249c':
-                        d['DeviceName'] = 'aquaCON Feeder 01 (Live AF_9C2472E0)'
+                    now_epoch = int(datetime.utcnow().timestamp())
+                    if dev_id in ['e072a1fffef6249c', 'e072a1fffef5ba08']:
+                        feeder_name = 'aquaCON Feeder 01' if dev_id == 'e072a1fffef6249c' else 'aquaCON Feeder 02'
+                        d['DeviceName'] = feeder_name
                         d['PondId'] = 'P-01'
-                        d['Status'] = calc_status
-                        d['FeedAvailable'] = True
+                        is_online = (now_epoch - int(d.get('LastSeenEpoch', 0))) < 900
+                        d['Connected'] = is_online
+                        
+                        raw_feed_avail = d.get('FeedAvailable', True)
+                        raw_status = str(d.get('Status', '')).strip().upper()
+                        status_flags = int(d.get('StatusFlags', 0))
+                        
+                        # Alarm bit decoding: Bit 3 (8) = Feed Empty, Bit 4 (16) = Proximity Pause
+                        if (status_flags & 0x08) != 0 or raw_feed_avail is False or raw_status == 'FEED EMPTY':
+                            actual_feed_avail = False
+                        else:
+                            actual_feed_avail = True
+                            
+                        if not is_online:
+                            actual_status = 'NOT CONNECTED'
+                        elif (status_flags & 0x10) != 0 or raw_status == 'PAUSED':
+                            actual_status = 'PAUSED'
+                        elif not actual_feed_avail or raw_status == 'FEED EMPTY':
+                            actual_status = 'FEED EMPTY'
+                        else:
+                            actual_status = raw_status if raw_status in ['FEEDING', 'COMPLETED', 'STANDBY'] else calc_status
+
+                        d['FeedAvailable'] = actual_feed_avail if is_online else False
+                        d['Status'] = actual_status
+                        d['StatusFlags'] = status_flags
+
                         if 'StartHour' not in d: d['StartHour'] = 6
                         if 'StartMinute' not in d: d['StartMinute'] = 0
                         if 'EndHour' not in d: d['EndHour'] = 18
                         if 'EndMinute' not in d: d['EndMinute'] = 0
-                        if 'IntervalMin' not in d: d['IntervalMin'] = 2.9
+                        if 'IntervalMin' not in d: d['IntervalMin'] = 4.8 if dev_id == 'e072a1fffef5ba08' else 2.9
                         if 'DischargeRate_gs' not in d: d['DischargeRate_gs'] = 100
                         if 'MotorTimeSec' not in d: d['MotorTimeSec'] = 1.0
                         d['ScheduleValid'] = True
-                    elif 'DeviceName' not in d:
-                        d['DeviceName'] = 'aquaCON Feeder ' + dev_id[-4:]
-                    
-                    if 'Status' not in d or d.get('Status') == 'FEEDING':
-                        d['Status'] = calc_status
-                    if 'FeedAvailable' not in d:
-                        d['FeedAvailable'] = True
-                        
-                    devices.append(d)
+                        devices.append(d)
+                    elif dev_id == 'aquaCON-Feeder-02' and not any(x.get('DeviceId') == 'e072a1fffef5ba08' for x in raw_devices):
+                        d['DeviceName'] = 'aquaCON Feeder 02'
+                        d['PondId'] = 'P-01'
+                        d['Status'] = 'NOT CONNECTED'
+                        d['Connected'] = False
+                        d['FeedAvailable'] = False
+                        d['DispensedFeed_kg'] = 0.0
+                        d['CurrentEvent'] = 0
+                        d['TotalEvents'] = 0
+                        d['FeedQuantity_kg'] = 0.0
+                        d['NextFeed'] = '--'
+                        devices.append(d)
+                    elif dev_id == 'aquaCON-Feeder-03':
+                        d['DeviceName'] = 'aquaCON Feeder 03'
+                        d['PondId'] = 'P-02'
+                        d['Status'] = 'NOT CONNECTED'
+                        d['Connected'] = False
+                        d['FeedAvailable'] = False
+                        d['DispensedFeed_kg'] = 0.0
+                        d['CurrentEvent'] = 0
+                        d['TotalEvents'] = 0
+                        d['FeedQuantity_kg'] = 0.0
+                        d['NextFeed'] = '--'
+                        devices.append(d)
             except Exception as e:
                 print("Devices scan error:", e)
-                
-            device_ids = [d.get('DeviceId') for d in devices]
-            
-            # aquaCON Primary Feeder Unit
-            if 'aquaCON-AGV1-01' not in device_ids:
-                devices.append({
-                    'DeviceId': 'aquaCON-AGV1-01',
-                    'DeviceName': 'aquaCON Feeder 01',
-                    'PondId': 'P-01',
-                    'Type': 'aquaCON_Feeder',
-                    'Status': 'IDLE',
-                    'FeedActive': False,
-                    'FeedAvailable': True,
-                    'LastSeen': int(datetime.utcnow().timestamp()),
-                    'FeedQuantity_kg': 15.0,
-                    'FeedPerEvent_g': 100,
-                    'DischargeRate_gs': 100,
-                    'StartHour': 6,
-                    'StartMinute': 0,
-                    'EndHour': 18,
-                    'EndMinute': 0,
-                    'CurrentEvent': 4,
-                    'TotalEvents': 150,
-                    'DispensedFeed_kg': 0.4,
-                    'NextFeed': '11:30',
-                    'MotorTimeSec': 1.0,
-                    'IntervalMin': 4.7,
-                    'ScheduleValid': True
-                })
             devices.sort(key=lambda x: str(x.get('LastSeen', 0)), reverse=True)
             return build_response(200, {'devices': devices})
 

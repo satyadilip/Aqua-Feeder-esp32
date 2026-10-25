@@ -14,12 +14,11 @@ settings_table = dynamodb.Table('AquaFeeder_Settings')
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
     try:
-        # AWS IoT Wireless puts base64 payload in 'PayloadData'
         payload_b64 = event.get('PayloadData')
         wireless_metadata = event.get('WirelessMetadata', {})
         lorawan_metadata = wireless_metadata.get('LoRaWAN', {})
         dev_eui = lorawan_metadata.get('DevEui', 'UNKNOWN_DEVICE')
-        rx_timestamp = lorawan_metadata.get('Timestamp', '') # e.g. "2026-08-25T17:16:20Z"
+        rx_timestamp = lorawan_metadata.get('Timestamp', '')
         
         try:
             dt = datetime.strptime(rx_timestamp, "%Y-%m-%dT%H:%M:%SZ")
@@ -36,7 +35,6 @@ def lambda_handler(event, context):
         
         if msg_type == 0x22: # SETTINGS_REPORT (34)
             if len(payload_bytes) >= 13:
-                # Firmware LoRaSettingsPayload: msgType(1), feedQuantity_g(4), feedPerEvent_g(2), startHour(1), startMinute(1), endHour(1), endMinute(1), dischargeRate(2)
                 unpacked = struct.unpack('<BIHBBBBH', payload_bytes[:13])
                 feed_qty_kg = Decimal(str(round(unpacked[1] / 1000.0, 2)))
                 fpe_g = Decimal(str(unpacked[2]))
@@ -76,7 +74,6 @@ def lambda_handler(event, context):
                 print(f"Payload too small for SETTINGS_REPORT: {len(payload_bytes)}")
                 
         elif len(payload_bytes) >= 15:
-            # Parse 15-byte telemetry struct
             unpacked = struct.unpack('<BIHHHBBBB', payload_bytes[:15])
             timestamp = unpacked[1]
             voltage = unpacked[2]
@@ -93,7 +90,6 @@ def lambda_handler(event, context):
             dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
             target_kg = Decimal(str(round((tot_ev_int * fpe_g) / 1000.0, 1)))
             
-            # Store in Telemetry table
             telemetry_table.put_item(
                 Item={
                     'DeviceId': dev_eui,
@@ -111,7 +107,13 @@ def lambda_handler(event, context):
             now_epoch = int(datetime.utcnow().timestamp())
             now_iso = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")
             
-            # Read and preserve custom user-saved settings if present
+            existing_dev = {}
+            try:
+                d_res = devices_table.get_item(Key={'DeviceId': dev_eui})
+                existing_dev = d_res.get('Item', {})
+            except Exception:
+                pass
+
             saved_qty = target_kg
             saved_fpe = Decimal('100')
             saved_shour = Decimal('6')
@@ -132,10 +134,57 @@ def lambda_handler(event, context):
                     saved_emin = s_item.get('EndMinute', saved_emin)
                     saved_rate = s_item.get('DischargeRate_gs', saved_rate)
                     saved_interval = s_item.get('IntervalMin', saved_interval)
-            except Exception as se:
+            except Exception:
                 pass
             
-            # Update Devices table with latest status
+            # --- ALARM & PAUSE STATE MACHINE ---
+            # MsgType 0x04 (4): FEED_PAUSED
+            # MsgType 0x0F (15): ALARM_PROXIMITY (Hopper empty / Proximity Pause)
+            # MsgType 0x05 (5): FEED_RESUMED
+            # MsgType 0x03 (3): FEED_STARTED
+            # MsgType 0x02 (2): SESSION_COMPLETE
+            # MsgType 0x01 (1): PERIODIC_HEARTBEAT
+            # Flags: Bit 0 (0x01) = Proximity Triggered, Bit 3 (0x08) = Hopper Empty / SD Fault, Bit 4 (0x10) = LoRa Connected
+            
+            flag_proximity = (status_flags & 0x01) != 0
+            flag_empty = (status_flags & 0x08) != 0
+            flag_paused = (status_flags & 0x10) != 0
+            
+            prev_status = str(existing_dev.get('Status', 'IDLE')).upper()
+            prev_avail = bool(existing_dev.get('FeedAvailable', True))
+            prev_flags = int(existing_dev.get('StatusFlags', 0))
+
+            is_alarm_event = (msg_type in [4, 15]) or flag_proximity or flag_empty
+            is_resume_event = (msg_type in [3, 5])
+
+            if is_alarm_event:
+                # Device is physically paused & empty
+                status_str = 'PAUSED'
+                feed_available = False
+                effective_flags = status_flags if status_flags > 0 else 24
+            elif is_resume_event:
+                # Feeding explicitly resumed / started
+                status_str = 'FEEDING'
+                feed_available = True
+                effective_flags = status_flags
+            elif prev_status in ['PAUSED', 'FEED EMPTY'] or not prev_avail:
+                # Periodic heartbeats (MsgType 1) or device boots must NEVER wipe alarm / pause!
+                status_str = prev_status
+                feed_available = prev_avail
+                effective_flags = status_flags if status_flags > 0 else prev_flags
+            elif cur_ev_int >= tot_ev_int and tot_ev_int > 0:
+                status_str = 'COMPLETED'
+                feed_available = prev_avail
+                effective_flags = status_flags
+            elif cur_ev_int > 0:
+                status_str = 'FEEDING'
+                feed_available = prev_avail
+                effective_flags = status_flags
+            else:
+                status_str = 'IDLE'
+                feed_available = prev_avail
+                effective_flags = status_flags
+
             dev_item = {
                 'DeviceId': dev_eui,
                 'LastSeen': Decimal(str(timestamp)),
@@ -146,7 +195,7 @@ def lambda_handler(event, context):
                 'LastFeed_g': Decimal(str(feed_disp)),
                 'CurrentEvent': cur_ev,
                 'TotalEvents': tot_ev,
-                'StatusFlags': status_flags,
+                'StatusFlags': effective_flags,
                 'DispensedFeed_kg': dispensed_kg,
                 'FeedQuantity_kg': saved_qty,
                 'FeedPerEvent_g': saved_fpe,
@@ -156,8 +205,8 @@ def lambda_handler(event, context):
                 'EndHour': saved_ehour,
                 'EndMinute': saved_emin,
                 'IntervalMin': saved_interval,
-                'FeedAvailable': True,
-                'Status': 'FEEDING' if cur_ev > 0 else 'IDLE'
+                'FeedAvailable': feed_available,
+                'Status': status_str
             }
             if dev_eui == 'e072a1fffef6249c':
                 dev_item['DeviceName'] = 'aquaCON Feeder 01 (Live AF_9C2472E0)'
@@ -168,7 +217,6 @@ def lambda_handler(event, context):
 
             devices_table.put_item(Item=dev_item)
             
-            # Aggregate Daily Metrics
             daily_metrics_table.put_item(
                 Item={
                     'DeviceId': dev_eui,
@@ -179,11 +227,9 @@ def lambda_handler(event, context):
                     'Target_kg': target_kg
                 }
             )
-            
-            print(f"Successfully processed and stored telemetry for device {dev_eui}: {dispensed_kg}kg ({cur_ev}/{tot_ev} events)")
+            print(f"Stored telemetry for {dev_eui}: {dispensed_kg}kg ({cur_ev}/{tot_ev}) | Status: {status_str} | FeedAvailable: {feed_available}")
         else:
             print(f"Payload too small: {len(payload_bytes)} bytes")
-            
     except Exception as e:
         print(f"Error processing payload: {e}")
         raise e

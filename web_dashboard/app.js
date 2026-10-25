@@ -536,12 +536,14 @@ function updatePondContextBar() {
     pondDevices.forEach(d => {
       const isActive = d.id === appState.selectedDeviceId;
       const isConn = isDeviceConnected(d);
+      const isPaused = isConn && (d.status === 'PAUSED' || ((d.statusFlags || 0) & 0x10) !== 0);
+      const isFeedEmpty = isConn && (d.feedAvailable === false || d.status === 'FEED EMPTY');
       const isLive = isConn && d.status === 'FEEDING';
       const match = (d.name || '').match(/Feeder\s*\d+/i);
       const cleanName = match ? match[0] : (d.name || d.id).slice(0, 9);
       html += `
-        <button type="button" class="story-item ${isActive ? 'active-story' : ''} ${!isConn ? 'story-offline' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id} (${isConn ? 'Connected' : 'Not Connected'})">
-          <div class="story-ring ${isLive ? 'live-feeding' : ''} ${isActive ? 'ring-active' : ''}">
+        <button type="button" class="story-item ${isActive ? 'active-story' : ''} ${!isConn ? 'story-offline' : ''}" onclick="switchActiveDevice('${d.id}')" title="${d.name || d.id} (${isConn ? (isPaused ? 'Paused' : 'Connected') : 'Not Connected'})">
+          <div class="story-ring ${isLive || isPaused ? 'live-feeding' : ''} ${isActive ? 'ring-active' : ''}">
             <div class="story-avatar">
               <span class="story-icon">
                 ${isLive 
@@ -550,8 +552,15 @@ function updatePondContextBar() {
                 }
               </span>
             </div>
-            ${isLive ? '<span class="story-live-badge">LIVE</span>' : ''}
-            ${!isConn ? '<span class="story-live-badge" style="background:#64748B;">OFF</span>' : ''}
+            ${isPaused 
+              ? '<span class="story-live-badge" style="background:#DC2626;">PAUSE</span>' 
+              : isFeedEmpty 
+                ? '<span class="story-live-badge" style="background:#EA580C;">EMPTY</span>' 
+                : isLive 
+                  ? '<span class="story-live-badge">LIVE</span>' 
+                  : !isConn 
+                    ? '<span class="story-live-badge" style="background:#64748B;">OFF</span>' 
+                    : ''}
           </div>
           <span class="story-name">${cleanName}</span>
         </button>
@@ -582,7 +591,7 @@ function switchActiveDevice(deviceId) {
   if (dev) showToast(`Selected: ${dev.name}`);
 }
 
-function updateDiagnosticsUI(isConnected, heroTitle) {
+function updateDiagnosticsUI(dev, isConnected, heroTitle) {
   const diagDevName = document.getElementById('troubleshoot-dev-name');
   if (diagDevName) diagDevName.textContent = heroTitle;
 
@@ -602,18 +611,30 @@ function updateDiagnosticsUI(isConnected, heroTitle) {
   const wirelessSub = document.getElementById('diag-wireless-sub');
   const wirelessDot = document.getElementById('diag-wireless-dot');
 
+  const isFeedAvail = dev ? dev.feedAvailable !== false : true;
+  const isPaused = dev ? (dev.status === 'PAUSED') : false;
+
   if (isConnected) {
-    if (spreaderVal) { spreaderVal.textContent = 'Healthy'; spreaderVal.className = 'cell-value text-emerald'; }
-    if (spreaderSub) spreaderSub.textContent = 'Normal • Ready';
-    if (spreaderDot) spreaderDot.className = 'feed-dot dot-available';
+    if (spreaderVal) {
+      spreaderVal.textContent = isPaused ? 'Paused' : 'Healthy';
+      spreaderVal.className = isPaused ? 'cell-value text-amber' : 'cell-value text-emerald';
+    }
+    if (spreaderSub) spreaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
+    if (spreaderDot) spreaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
 
-    if (loaderVal) { loaderVal.textContent = 'Healthy'; loaderVal.className = 'cell-value text-emerald'; }
-    if (loaderSub) loaderSub.textContent = 'Normal • Ready';
-    if (loaderDot) loaderDot.className = 'feed-dot dot-available';
+    if (loaderVal) {
+      loaderVal.textContent = isPaused ? 'Paused' : 'Healthy';
+      loaderVal.className = isPaused ? 'cell-value text-amber' : 'cell-value text-emerald';
+    }
+    if (loaderSub) loaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
+    if (loaderDot) loaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
 
-    if (feedVal) { feedVal.textContent = 'Available'; feedVal.className = 'cell-value text-emerald'; }
-    if (feedSub) feedSub.textContent = 'Feed in Hopper';
-    if (feedDot) feedDot.className = 'feed-dot dot-available';
+    if (feedVal) {
+      feedVal.textContent = isFeedAvail ? 'Available' : 'Empty / Refill';
+      feedVal.className = isFeedAvail ? 'cell-value text-emerald' : 'cell-value text-coral';
+    }
+    if (feedSub) feedSub.textContent = isFeedAvail ? 'Feed in Hopper' : 'Hopper Empty - Refill';
+    if (feedDot) feedDot.className = isFeedAvail ? 'feed-dot dot-available' : 'feed-dot dot-empty';
 
     if (wirelessVal) { wirelessVal.textContent = 'Connected'; wirelessVal.className = 'cell-value text-emerald'; }
     if (wirelessSub) wirelessSub.textContent = 'Connected • Strong Signal';
@@ -721,11 +742,11 @@ function loadSelectedDeviceToUI() {
     const paramDevName = document.getElementById('param-device-name');
     if (paramDevName) paramDevName.textContent = heroTitle;
 
-    updateDiagnosticsUI(false, heroTitle);
+    updateDiagnosticsUI(dev, false, heroTitle);
     return;
   }
 
-  // CONNECTED LIVE FEEDER (Feeder 01)
+  // CONNECTED LIVE FEEDER (Feeder 01 / Feeder 02)
   if (devTag) devTag.textContent = `${heroTitle} • Connected`;
 
   // Connection Cell
@@ -738,7 +759,7 @@ function loadSelectedDeviceToUI() {
   if (connText) connText.textContent = 'Connected';
   if (connSub) connSub.textContent = 'Signal Strong';
 
-  updateDiagnosticsUI(true, heroTitle);
+  updateDiagnosticsUI(dev, true, heroTitle);
 
   
   // Operational Time & Schedule Completion Engine
@@ -755,7 +776,7 @@ function loadSelectedDeviceToUI() {
   const endTotalMin = eHour * 60 + eMin;
 
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
-  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 235;
+  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
   const isTargetCompleted = rawCurrent >= totalEvents;
   const isPastSchedule = nowTotalMin >= endTotalMin;
@@ -765,6 +786,9 @@ function loadSelectedDeviceToUI() {
   const displayCurrent = Math.min(rawCurrent, totalEvents);
   const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
 
+  const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
+  const isFeedEmpty = dev.feedAvailable === false || dev.status === 'FEED EMPTY' || ((dev.statusFlags || 0) & 0x08) !== 0 || ((dev.statusFlags || 0) & 0x01) !== 0;
+
   // Determine unambiguous status & next feed timestamp
   let statusText = 'COMPLETED';
   let badgeClass = 'b-done';
@@ -772,7 +796,19 @@ function loadSelectedDeviceToUI() {
   let nextSubText = 'Tomorrow morning';
   let eventSubText = "Schedule completed";
 
-  if (isScheduleDone) {
+  if (isPaused) {
+    statusText = 'PAUSED';
+    badgeClass = 'b-alert';
+    nextTimestamp = '--';
+    nextSubText = 'Feed Paused';
+    eventSubText = 'Proximity / Feed Paused';
+  } else if (isFeedEmpty) {
+    statusText = 'FEED EMPTY';
+    badgeClass = 'b-alert';
+    nextTimestamp = '--';
+    nextSubText = 'Hopper Empty';
+    eventSubText = 'Refill Required';
+  } else if (isScheduleDone) {
     statusText = 'COMPLETED';
     badgeClass = 'b-done';
     nextTimestamp = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
@@ -785,8 +821,8 @@ function loadSelectedDeviceToUI() {
     nextSubText = 'Starts today';
     eventSubText = 'Ready for schedule';
   } else {
-    statusText = dev.feedAvailable === false ? 'REFILL' : 'ACTIVE';
-    badgeClass = dev.feedAvailable === false ? 'b-alert' : 'b-run';
+    statusText = 'ACTIVE';
+    badgeClass = 'b-run';
     const intervalMin = dev.intervalMin || 3.1;
     const nextMin = nowTotalMin + Math.round(intervalMin);
     const nH = Math.floor(nextMin / 60) % 24;
@@ -818,7 +854,7 @@ function loadSelectedDeviceToUI() {
   }
 
   const rawDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
-  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 23.5;
+  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
 
@@ -837,10 +873,14 @@ function loadSelectedDeviceToUI() {
   // Operational notification banner
   const hopperNotif = document.getElementById('hopper-notif-msg');
   if (hopperNotif) {
-    if (isScheduleDone) {
-      hopperNotif.textContent = `Today's feeding completed (${rawDispensed.toFixed(1)} kg dispensed). Feeder on standby until ${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM tomorrow.`;
-    } else if (dev.feedAvailable === false) {
+    if (isPaused && isFeedEmpty) {
+      hopperNotif.textContent = 'Hopper empty & feed paused! Proximity sensor triggered. Refill feed hopper to resume feeding.';
+    } else if (isPaused) {
+      hopperNotif.textContent = 'Feeder paused! Proximity sensor active. Clear obstruction to resume scheduled feeding.';
+    } else if (isFeedEmpty) {
       hopperNotif.textContent = 'Hopper empty! Please refill feed stock to ensure uninterrupted scheduled feeding.';
+    } else if (isScheduleDone) {
+      hopperNotif.textContent = `Today's feeding completed (${rawDispensed.toFixed(1)} kg dispensed). Feeder on standby until ${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM tomorrow.`;
     } else {
       hopperNotif.textContent = `Feeder operational. Next scheduled feed at ${nextTimestamp}.`;
     }
@@ -848,7 +888,7 @@ function loadSelectedDeviceToUI() {
 
   // Feed Available / Empty Status
   if (feedDot && feedStatusText) {
-    if (dev.feedAvailable !== false) {
+    if (!isFeedEmpty && dev.feedAvailable !== false) {
       feedDot.className = 'feed-dot dot-available';
       feedStatusText.textContent = 'Available';
       feedStatusText.className = 'cell-value text-emerald';
@@ -858,17 +898,24 @@ function loadSelectedDeviceToUI() {
       feedStatusText.className = 'cell-value text-coral';
     }
   }
+  const feedStockSub = document.getElementById('feed-stock-sub');
+  if (feedStockSub) {
+    feedStockSub.textContent = isFeedEmpty ? 'Hopper Empty - Refill' : 'Feed in Hopper';
+  }
 
   // Also sync Operational Status Summary Pill
   const pillFeedDot = document.getElementById('pill-feed-dot');
   const pillFeedStatus = document.getElementById('pill-feed-status');
   if (pillFeedDot && pillFeedStatus) {
-    if (dev.feedAvailable !== false) {
-      pillFeedDot.className = 'pill-dot dot-available';
-      pillFeedStatus.textContent = 'Feed Available';
-    } else {
+    if (isPaused) {
+      pillFeedDot.className = 'pill-dot dot-empty';
+      pillFeedStatus.textContent = 'Feed Paused';
+    } else if (isFeedEmpty) {
       pillFeedDot.className = 'pill-dot dot-empty';
       pillFeedStatus.textContent = 'Refill Needed';
+    } else {
+      pillFeedDot.className = 'pill-dot dot-available';
+      pillFeedStatus.textContent = 'Feed Available';
     }
   }
 
@@ -1996,9 +2043,11 @@ function startTelemetryLoop() {
             if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);
             if (cloudDev.EndMinute !== undefined) localDev.endMin = Number(cloudDev.EndMinute);
             if (cloudDev.Status) localDev.status = cloudDev.Status;
+            if (cloudDev.StatusFlags !== undefined) localDev.statusFlags = Number(cloudDev.StatusFlags);
           }
         });
         loadSelectedDeviceToUI();
+        updatePondContextBar();
       }
     } catch (e) {}
   }
