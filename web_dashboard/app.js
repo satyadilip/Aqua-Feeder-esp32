@@ -13,20 +13,26 @@ const defaultPonds = [
   { id: 'P-03', name: 'Pond P-03', acres: 1.5, stock: 'Vannamei Shrimp', lat: 16.5030, lng: 81.6695 }
 ];
 
-// Default Feeders Registry (Only Feeder 01 has live hardware telemetry)
+// Helper to test if device is currently connected with signal
+function isDeviceConnected(dev) {
+  if (!dev) return false;
+  return dev.connected === true && dev.status !== 'NOT CONNECTED';
+}
+
+// Default Feeders Registry (Live aquaCON hardware telemetry)
 const defaultDevices = [
   {
     id: 'e072a1fffef6249c',
     name: 'aquaCON Feeder 01',
     pondId: 'P-01',
-    status: 'COMPLETED',
-    connected: true,
-    feedAvailable: true,
-    dispensedKg: 23.50,
-    targetKg: 23.5,
-    currentEvent: 235,
-    totalEvents: 235,
-    fpeGrams: 100,
+    status: 'NOT CONNECTED',
+    connected: false,
+    feedAvailable: false,
+    dispensedKg: 0.0,
+    targetKg: 50.0,
+    currentEvent: 0,
+    totalEvents: 250,
+    fpeGrams: 200,
     dischargeRateGs: 100,
     startHour: 6,
     startMin: 0,
@@ -37,25 +43,25 @@ const defaultDevices = [
     scheduleValid: true
   },
   {
-    id: 'aquaCON-Feeder-02',
+    id: 'e072a1fffef5ba08',
     name: 'aquaCON Feeder 02',
     pondId: 'P-01',
-    status: 'NOT CONNECTED',
-    connected: false,
-    feedAvailable: false,
-    dispensedKg: 0.0,
-    targetKg: 0.0,
-    currentEvent: 0,
-    totalEvents: 0,
+    status: 'SCHEDULED',
+    connected: true,
+    feedAvailable: true,
+    dispensedKg: 0.5,
+    targetKg: 15.0,
+    currentEvent: 5,
+    totalEvents: 150,
     fpeGrams: 100,
     dischargeRateGs: 100,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 0,
-    motorTimeSec: 0,
-    scheduleValid: false
+    intervalMin: 4.8,
+    motorTimeSec: 1.0,
+    scheduleValid: true
   },
   {
     id: 'aquaCON-Feeder-03',
@@ -123,7 +129,7 @@ const appState = {
   
   // Selected Context
   selectedPondId: 'P-01',
-  selectedDeviceId: 'e072a1fffef6249c',
+  selectedDeviceId: 'e072a1fffef5ba08',
   
   // Historical Metrics Cache
   deviceMetrics: {},
@@ -162,25 +168,41 @@ function loadDataFromStorage() {
   appState.ponds = savedPonds ? JSON.parse(savedPonds) : [...defaultPonds];
 
   const savedDevices = localStorage.getItem('aquacon_devices');
-  appState.devices = savedDevices ? JSON.parse(savedDevices).map(d => {
-    if (d.name && d.name.includes('AF_')) {
-      d.name = d.name.replace(/\s*\(Live AF_[^)]+\)/gi, '').trim();
+  if (savedDevices) {
+    try {
+      let parsed = JSON.parse(savedDevices);
+      parsed = parsed.map(d => {
+        if (d.name && d.name.includes('AF_')) {
+          d.name = d.name.replace(/\s*\(Live AF_[^)]+\)/gi, '').trim();
+        }
+        return d;
+      });
+      // Ensure e072a1fffef5ba08 is present and mapped to Feeder 02
+      const ba08Idx = parsed.findIndex(d => d.id === 'e072a1fffef5ba08');
+      if (ba08Idx === -1) {
+        const dummy02Idx = parsed.findIndex(d => d.id === 'aquaCON-Feeder-02');
+        if (dummy02Idx !== -1) {
+          parsed[dummy02Idx] = { ...defaultDevices[1] };
+        } else {
+          parsed.push({ ...defaultDevices[1] });
+        }
+      }
+      appState.devices = parsed;
+    } catch(e) {
+      appState.devices = [...defaultDevices];
     }
-    // Only e072a1fffef6249c has live hardware connected
-    if (d.id !== 'e072a1fffef6249c') {
-      d.status = 'NOT CONNECTED';
-      d.connected = false;
-      d.feedAvailable = false;
-      d.dispensedKg = 0.0;
-      d.targetKg = 0.0;
-      d.currentEvent = 0;
-      d.totalEvents = 0;
-      d.intervalMin = 0;
-    } else {
-      d.connected = true;
+  } else {
+    appState.devices = [...defaultDevices];
+  }
+
+  // Ensure default selected device is the online device
+  const selDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (!selDev || (!selDev.connected && selDev.status === 'NOT CONNECTED')) {
+    const liveDev = appState.devices.find(d => isDeviceConnected(d));
+    if (liveDev) {
+      appState.selectedDeviceId = liveDev.id;
     }
-    return d;
-  }) : [...defaultDevices];
+  }
 
   const savedContacts = localStorage.getItem('aquacon_contacts');
   appState.contacts = savedContacts ? JSON.parse(savedContacts) : [...defaultContacts];
@@ -513,7 +535,7 @@ function updatePondContextBar() {
     let html = '';
     pondDevices.forEach(d => {
       const isActive = d.id === appState.selectedDeviceId;
-      const isConn = d.id === 'e072a1fffef6249c' && d.status !== 'NOT CONNECTED';
+      const isConn = isDeviceConnected(d);
       const isLive = isConn && d.status === 'FEEDING';
       const match = (d.name || '').match(/Feeder\s*\d+/i);
       const cleanName = match ? match[0] : (d.name || d.id).slice(0, 9);
@@ -619,7 +641,7 @@ function loadSelectedDeviceToUI() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
-  const isConnected = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
+  const isConnected = isDeviceConnected(dev);
 
   // Tab 1 Hero Card
   const devTag = document.getElementById('current-device-tag');
@@ -1058,7 +1080,7 @@ async function renderHistoryView() {
     appState.deviceMetrics[dev.id] = metrics;
   }
 
-  const isConn = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
+  const isConn = isDeviceConnected(dev);
   const statWeek = document.getElementById('stat-week-total');
   const statAvg = document.getElementById('stat-daily-avg');
   const statAdherence = document.getElementById('stat-adherence');
@@ -1134,7 +1156,7 @@ function renderEventsLog(dev) {
   const container = document.getElementById('events-log-container');
   if (!container) return;
 
-  const isConn = dev.id === 'e072a1fffef6249c' && dev.status !== 'NOT CONNECTED';
+  const isConn = isDeviceConnected(dev);
   const logLabel = document.getElementById('log-date-label');
 
   if (!isConn) {
@@ -1226,7 +1248,7 @@ function renderPondsDirectory() {
         </div>
         <div class="pond-devices-summary">
           ${pondDevices.map(d => {
-            const isConn = d.id === 'e072a1fffef6249c' && d.status !== 'NOT CONNECTED';
+            const isConn = isDeviceConnected(d);
             const dotClass = isConn ? `dot-${(d.status || 'completed').toLowerCase()}` : 'dot-offline';
             const statusLabel = isConn ? (d.status || 'COMPLETED') : 'NOT CONNECTED';
             return `<span class="device-chip-badge"><span class="dot-indicator ${dotClass}"></span> ${d.name} (${statusLabel})</span>`;
@@ -1564,7 +1586,7 @@ async function triggerRemoteAction(action) {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
-  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+  if (!isDeviceConnected(dev)) {
     showToast(`Cannot ${action.toLowerCase()}: ${dev.name} is not connected.`);
     return;
   }
@@ -1676,7 +1698,7 @@ async function runHardwareTestAction(testType) {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
-  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+  if (!isDeviceConnected(dev)) {
     showToast(`Cannot run test: ${dev.name} is not connected.`);
     return;
   }
@@ -1914,7 +1936,7 @@ function toggleFeedStockState() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
 
-  if (dev.id !== 'e072a1fffef6249c' || dev.status === 'NOT CONNECTED') {
+  if (!isDeviceConnected(dev)) {
     showToast(`${dev.name} is not connected.`);
     return;
   }
@@ -1940,7 +1962,24 @@ function startTelemetryLoop() {
 
       if (data && data.devices) {
         data.devices.forEach(cloudDev => {
-          const localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
+          let localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
+          if (!localDev) {
+            if (cloudDev.DeviceId === 'e072a1fffef5ba08') {
+              const dummy02 = appState.devices.find(d => d.id === 'aquaCON-Feeder-02');
+              if (dummy02) {
+                dummy02.id = 'e072a1fffef5ba08';
+                localDev = dummy02;
+              }
+            }
+            if (!localDev) {
+              localDev = {
+                id: cloudDev.DeviceId,
+                name: cloudDev.DeviceName || 'aquaCON Feeder',
+                pondId: cloudDev.PondId || 'P-01'
+              };
+              appState.devices.push(localDev);
+            }
+          }
           if (localDev) {
             if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
             if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
