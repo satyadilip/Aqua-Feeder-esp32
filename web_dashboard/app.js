@@ -195,13 +195,24 @@ function loadDataFromStorage() {
     appState.devices = [...defaultDevices];
   }
 
-  // Ensure default selected device is the online device
-  const selDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
-  if (!selDev || (!selDev.connected && selDev.status === 'NOT CONNECTED')) {
+  // Restore user's saved device selection across page refreshes
+  const savedSelectedDev = localStorage.getItem('aquacon_selected_device');
+  if (savedSelectedDev && appState.devices.some(d => d.id === savedSelectedDev)) {
+    appState.selectedDeviceId = savedSelectedDev;
+  } else {
+    // If no prior user selection saved, prefer the online device or the first device
     const liveDev = appState.devices.find(d => isDeviceConnected(d));
     if (liveDev) {
       appState.selectedDeviceId = liveDev.id;
+    } else if (appState.devices.length > 0) {
+      appState.selectedDeviceId = appState.devices[0].id;
     }
+  }
+
+  // Synchronize pond context with the selected feeder
+  const currentDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (currentDev && currentDev.pondId) {
+    appState.selectedPondId = currentDev.pondId;
   }
 
   const savedContacts = localStorage.getItem('aquacon_contacts');
@@ -215,6 +226,12 @@ function saveDataToStorage() {
   localStorage.setItem('aquacon_ponds', JSON.stringify(appState.ponds));
   localStorage.setItem('aquacon_devices', JSON.stringify(appState.devices));
   localStorage.setItem('aquacon_contacts', JSON.stringify(appState.contacts));
+  if (appState.selectedDeviceId) {
+    localStorage.setItem('aquacon_selected_device', appState.selectedDeviceId);
+  }
+  if (appState.selectedPondId) {
+    localStorage.setItem('aquacon_selected_pond', appState.selectedPondId);
+  }
 }
 
 /* ==========================================================================
@@ -504,7 +521,11 @@ function switchActivePond(pondId) {
   // Find devices belonging to this pond
   const pondDevices = appState.devices.filter(d => d.pondId === pondId);
   if (pondDevices.length > 0) {
-    appState.selectedDeviceId = pondDevices[0].id;
+    // Only switch if current selected device is not in this pond
+    if (!pondDevices.some(d => d.id === appState.selectedDeviceId)) {
+      appState.selectedDeviceId = pondDevices[0].id;
+      localStorage.setItem('aquacon_selected_device', appState.selectedDeviceId);
+    }
   }
 
   updatePondContextBar();
@@ -584,10 +605,15 @@ function updatePondContextBar() {
 
 function switchActiveDevice(deviceId) {
   appState.selectedDeviceId = deviceId;
+  localStorage.setItem('aquacon_selected_device', deviceId);
+  const dev = appState.devices.find(d => d.id === deviceId);
+  if (dev && dev.pondId) {
+    appState.selectedPondId = dev.pondId;
+    localStorage.setItem('aquacon_selected_pond', dev.pondId);
+  }
   updatePondContextBar();
   loadSelectedDeviceToUI();
   renderHistoryView();
-  const dev = appState.devices.find(d => d.id === deviceId);
   if (dev) showToast(`Selected: ${dev.name}`);
 }
 
