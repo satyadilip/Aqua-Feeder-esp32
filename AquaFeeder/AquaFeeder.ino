@@ -330,7 +330,7 @@ const char* menuLabels[] = {
     "End Time", "Discharge Rate", "Set Clock",
     "Run Feed", "Diagnostics", "Network Info", "Power Info"
 };
-const int MENU_ITEM_COUNT = 10;
+const int MENU_ITEM_COUNT = 11;
 
 static int diagCursorIdx = 0;
 static const int DIAG_ITEM_COUNT = 6;
@@ -361,6 +361,7 @@ void handleButtonNavigation() {
             return;
         } else if (currentMenu == MenuState::DIAG_MENU) {
             currentMenu = MenuState::MENU_LIST;
+            menuCursorIdx = 2;
             return;
         } else if (currentMenu == MenuState::MENU_LIST || currentMenu == MenuState::MAIN_STATUS) {
             if (currentMenu == MenuState::MAIN_STATUS) {
@@ -383,11 +384,14 @@ void handleButtonNavigation() {
 
     switch (currentMenu) {
         case MenuState::MAIN_STATUS:
-            if (sel.risingEdge) currentMenu = MenuState::MENU_LIST;
+            if (sel.risingEdge) {
+                currentMenu = MenuState::MENU_LIST;
+                menuCursorIdx = 0;
+            }
             break;
 
         case MenuState::MENU_LIST: {
-            int maxItems = feedEng.isActive() ? MENU_ITEM_COUNT + 2 : MENU_ITEM_COUNT;
+            int maxItems = MENU_ITEM_COUNT;
             
             if (up.repeatEvent) {
                 menuCursorIdx--;
@@ -398,58 +402,73 @@ void handleButtonNavigation() {
                 if (menuCursorIdx >= maxItems) menuCursorIdx = 0;
             }
             if (sel.risingEdge) {
-                int actionIdx = menuCursorIdx;
-                if (feedEng.isActive()) {
-                    if (actionIdx == 0) {
+                switch (menuCursorIdx) {
+                    case 0: // Check Tray (Available anytime)
                         telMgr.queueEvent(TelemetryMsgType::TRAY_CHECKIN);
                         lcd.showMessage("Tray Check-in", "Sent to Cloud!", 2000);
-                        currentMenu = MenuState::RUNNING;
+                        currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MAIN_STATUS;
                         break;
-                    } else if (actionIdx == 1) {
-                        feedEng.stopFeed();
-                        telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
-                        currentMenu = MenuState::MAIN_STATUS;
-                        Serial.println("[!] FEED STOPPED via menu!");
-                        break;
-                    } else {
-                        actionIdx -= 2;
-                    }
-                }
-                
-                switch (actionIdx) {
-                    case 0: editVal = (int)(config.feedQuantity * 10);
-                            currentMenu = MenuState::EDIT_QTY; break;
-                    case 1: editVal = config.feedPerEvent;
-                            currentMenu = MenuState::EDIT_FPE; break;
-                    case 2: editVal = config.startHour;
-                            editFld = 0;
-                            currentMenu = MenuState::EDIT_START_TIME; break;
-                    case 3: editVal = config.endHour;
-                            editFld = 0;
-                            currentMenu = MenuState::EDIT_END_TIME; break;
-                    case 4: editVal = config.dischargeRate;
-                            currentMenu = MenuState::EDIT_RATE; break;
-                    case 5: if (sysStatus.rtcOK) {
-                                int h, m, s;
-                                rtcMgr.getTime(h, m, s);
-                                editVal = h * 100 + m;
-                                editFld = 0;
-                            }
-                            currentMenu = MenuState::EDIT_CLOCK; break;
-                    case 6: // Run Feed
+                    case 1: // Start or Stop Feeding
+                        if (feedEng.isActive()) {
+                            feedEng.stopFeed();
+                            telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
+                            currentMenu = MenuState::MAIN_STATUS;
+                            Serial.println("[!] FEED STOPPED via menu!");
+                            lcd.showMessage("Feeding Stopped", "Motors Turned OFF", 1500);
+                        } else {
                             feedEng.calcSchedule();
                             if (sysStatus.scheduleValid) {
                                 feedEng.startFeed();
                                 currentMenu = MenuState::RUNNING;
                                 telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
+                                lcd.showMessage("Feeding Started", "Cycle Active", 1500);
+                            } else {
+                                lcd.showMessage("Schedule Invalid", "Check Start/End", 2000);
                             }
-                            break;
-                    case 7: diagCursorIdx = 0;
-                            currentMenu = MenuState::DIAG_MENU;
-                            Serial.println("[NAV] Diagnostics Menu Opened");
-                            break;
-                    case 8: currentMenu = MenuState::INFO_NETWORK; break;
-                    case 9: currentMenu = MenuState::INFO_POWER; break;
+                        }
+                        break;
+                    case 2: // Diagnostics
+                        diagCursorIdx = 0;
+                        currentMenu = MenuState::DIAG_MENU;
+                        Serial.println("[NAV] Diagnostics Menu Opened");
+                        break;
+                    case 3: // Feed Quantity
+                        editVal = (int)(config.feedQuantity * 10);
+                        currentMenu = MenuState::EDIT_QTY;
+                        break;
+                    case 4: // Feed Per Event
+                        editVal = config.feedPerEvent;
+                        currentMenu = MenuState::EDIT_FPE;
+                        break;
+                    case 5: // Start Time
+                        editVal = config.startHour;
+                        editFld = 0;
+                        currentMenu = MenuState::EDIT_START_TIME;
+                        break;
+                    case 6: // End Time
+                        editVal = config.endHour;
+                        editFld = 0;
+                        currentMenu = MenuState::EDIT_END_TIME;
+                        break;
+                    case 7: // Discharge Rate
+                        editVal = config.dischargeRate;
+                        currentMenu = MenuState::EDIT_RATE;
+                        break;
+                    case 8: // Set Real Clock
+                        if (sysStatus.rtcOK) {
+                            int h, m, s;
+                            rtcMgr.getTime(h, m, s);
+                            editVal = h * 100 + m;
+                            editFld = 0;
+                        }
+                        currentMenu = MenuState::EDIT_CLOCK;
+                        break;
+                    case 9: // Network Info
+                        currentMenu = MenuState::INFO_NETWORK;
+                        break;
+                    case 10: // Power Monitor
+                        currentMenu = MenuState::INFO_POWER;
+                        break;
                 }
             }
             } // Close curly brace for case MenuState::MENU_LIST:
@@ -464,6 +483,7 @@ void handleButtonNavigation() {
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                menuCursorIdx = 3;
             }
             break;
 
@@ -476,6 +496,7 @@ void handleButtonNavigation() {
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                menuCursorIdx = 4;
             }
             break;
 
@@ -497,6 +518,7 @@ void handleButtonNavigation() {
                     if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                     else feedEng.calcSchedule();
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                    menuCursorIdx = 6;
                     editFld = 0;
                 }
             }
@@ -520,6 +542,7 @@ void handleButtonNavigation() {
                     if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                     else feedEng.calcSchedule();
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                    menuCursorIdx = 5;
                     editFld = 0;
                 }
             }
@@ -534,6 +557,7 @@ void handleButtonNavigation() {
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
+                menuCursorIdx = 7;
             }
             break;
 
@@ -555,6 +579,7 @@ void handleButtonNavigation() {
                         rtcMgr.setTime(h, m, 0);
                         feedEng.calcSchedule();
                         currentMenu = MenuState::MENU_LIST;
+                        menuCursorIdx = 8;
                         editFld = 0;
                         Serial.println("[RTC] Clock set!");
                     }
@@ -681,6 +706,7 @@ void handleButtonNavigation() {
                         break;
                     case 5: // Back to Menu
                         currentMenu = MenuState::MENU_LIST;
+                        menuCursorIdx = 2;
                         break;
                 }
             }

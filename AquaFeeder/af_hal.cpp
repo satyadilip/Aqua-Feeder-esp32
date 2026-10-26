@@ -155,7 +155,10 @@ ButtonState& HardwareLayer::btnSelect() { return m_btnSelect; }
 ButtonState& HardwareLayer::btnConfig() { return m_btnConfig; }
 
 bool HardwareLayer::isProximityTriggered() {
-    return digitalRead(PIN_PROXIMITY) == LOW;
+    // Proximity switch detects feed pellets in hopper.
+    // When pellets are present, sensor output conducts to GND (PIN_PROXIMITY == LOW -> Feed Present, Normal).
+    // When hopper is empty, sensor is unobstructed and pin is pulled HIGH by 10k resistor (PIN_PROXIMITY == HIGH -> FEED EMPTY Alarm).
+    return digitalRead(PIN_PROXIMITY) == HIGH;
 }
 
 void HardwareLayer::updateStatusLed(SystemState state, bool hasError) {

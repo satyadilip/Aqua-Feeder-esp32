@@ -228,22 +228,21 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
 }
 
 void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
-    const char* staticItems[] = {
+    const char* items[] = {
+        "Check Tray",
+        isRunning ? "Stop Feeding" : "Start Feeding",
+        "Diagnostics",
         "Feed Quantity", 
         "Feed Per Event", 
         "Start Time", 
         "End Time", 
         "Discharge Rate", 
         "Set Real Clock", 
-        "Start Feeding", 
-        "Diagnostics",
         "Network Info", 
         "Power Monitor"
     };
     
-    int totalItems = 10;
-    if (isRunning) totalItems += 2;
-    
+    int totalItems = 11;
     int startIdx = (menuCursor / 4) * 4;
     
     for (int i = 0; i < 4; i++) {
@@ -251,20 +250,10 @@ void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
         int itemIdx = startIdx + i;
         if (itemIdx < totalItems) {
             char buf[21];
-            const char* text = "";
-            
-            if (isRunning) {
-                if (itemIdx == 0) text = "Check Tray";
-                else if (itemIdx == 1) text = "Stop Feed";
-                else text = staticItems[itemIdx - 2];
-            } else {
-                text = staticItems[itemIdx];
-            }
-            
             if (itemIdx == menuCursor) {
-                snprintf(buf, sizeof(buf), "> %-18s", text);
+                snprintf(buf, sizeof(buf), "> %-18s", items[itemIdx]);
             } else {
-                snprintf(buf, sizeof(buf), "  %-18s", text);
+                snprintf(buf, sizeof(buf), "  %-18s", items[itemIdx]);
             }
             lcd->print(buf);
         } else {
