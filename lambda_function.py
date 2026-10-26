@@ -23,17 +23,20 @@ DEVEUI_TO_WIRELESS_ID = {
     'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
 }
 
+IST_OFFSET_SEC = 19800  # UTC + 5:30 (Indian Standard Time)
+
 def auto_sync_rtc_if_needed(dev_eui, reported_ts, now_epoch):
     """
-    If the device's RTC time is uninitialized (< 1700000000) or drifted by > 300s,
-    automatically queue a CMD_SYNC_TIME (0xA3) downlink to synchronize DS3231 RTC.
+    If the device's RTC time is uninitialized (< 1700000000) or drifted by > 300s from IST,
+    automatically queue a CMD_SYNC_TIME (0xA3) downlink to synchronize DS3231 RTC to IST.
     """
     try:
-        if reported_ts < 1700000000 or abs(reported_ts - now_epoch) > 300:
+        ist_now = now_epoch + IST_OFFSET_SEC
+        if reported_ts < 1700000000 or abs(reported_ts - ist_now) > 300:
             w_id = DEVEUI_TO_WIRELESS_ID.get(dev_eui.lower())
             if w_id:
                 # 12-byte LoRaDownlinkPayload: 0xA3 + 4B epoch + 7B 0x00
-                down_bytes = struct.pack('<BI7s', 0xA3, now_epoch, b'\x00' * 7)
+                down_bytes = struct.pack('<BI7s', 0xA3, ist_now, b'\x00' * 7)
                 down_b64 = base64.b64encode(down_bytes).decode('ascii')
                 iw_client.send_data_to_wireless_device(
                     Id=w_id,
@@ -41,7 +44,7 @@ def auto_sync_rtc_if_needed(dev_eui, reported_ts, now_epoch):
                     PayloadData=down_b64,
                     WirelessMetadata={'LoRaWAN': {'FPort': 1}}
                 )
-                print(f"[RTC-SYNC] Auto-queued RTC time sync for {dev_eui}: sent UTC epoch {now_epoch}")
+                print(f"[RTC-SYNC] Auto-queued RTC time sync for {dev_eui}: sent IST epoch {ist_now}")
     except Exception as e:
         print(f"[RTC-SYNC] Auto sync error for {dev_eui}: {e}")
 

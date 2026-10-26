@@ -454,21 +454,22 @@ def lambda_handler(event, context):
                 })
 
             elif cmd in ['SYNC_RTC', 'SYNC_TIME']:
-                # Real LoRaWAN Downlink: CMD_SYNC_TIME (0xA3) with current UTC epoch (4 bytes)
-                downlink_bytes = struct.pack('<BI7s', 0xA3, now_ts, b'\x00' * 7)
+                # Real LoRaWAN Downlink: CMD_SYNC_TIME (0xA3) with Indian Standard Time (IST = UTC + 5:30) epoch
+                ist_epoch = now_ts + 19800
+                downlink_bytes = struct.pack('<BI7s', 0xA3, ist_epoch, b'\x00' * 7)
                 success, msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
                 
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
                     UpdateExpression='SET RtcSyncQueued = :sq, RtcSyncEpoch = :se',
-                    ExpressionAttributeValues={':sq': True, ':se': now_ts}
+                    ExpressionAttributeValues={':sq': True, ':se': ist_epoch}
                 )
                 
                 return build_response(200, {
                     'status': 'queued',
-                    'utcEpoch': now_ts,
+                    'istEpoch': ist_epoch,
                     'downlinkQueued': success,
-                    'message': f'RTC synchronization queued with UTC timestamp {now_ts}. Feeder will sync DS3231 RTC on next transmission.'
+                    'message': f'RTC synchronization queued with IST timestamp (UTC+5:30: {ist_epoch}). Feeder will sync DS3231 RTC to IST on next transmission.'
                 })
 
             elif cmd == 'STOP':
