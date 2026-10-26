@@ -142,11 +142,12 @@ void LCDDisplay::update(const SystemStatus& status, const DeviceConfig& cfg, Men
         prevMenuState = (MenuState)255; // Force full redraw
     }
     
-    // Limit update rate to 4Hz (250ms) to prevent flicker
-    if (now - lastUpdateMs < 250) return;
+    // Instant transition if menu state changed, else limit refresh rate to 4Hz (250ms)
+    bool stateChanged = (menuState != prevMenuState);
+    if (!stateChanged && (now - lastUpdateMs < 250)) return;
     lastUpdateMs = now;
     
-    if (menuState != prevMenuState) {
+    if (stateChanged) {
         lcd->clear();
         prevMenuState = menuState;
     }

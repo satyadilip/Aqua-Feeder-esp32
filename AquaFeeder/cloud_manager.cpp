@@ -42,7 +42,7 @@ void CloudManager::loop() {
         interval = 60000;
     } else {
         unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;
-        interval = (cfgInterval >= 60000) ? cfgInterval : 300000UL;
+        interval = (cfgInterval >= 5000 && cfgInterval <= 60000) ? cfgInterval : 20000UL; // 20s responsive standby check
     }
     
     if (nowMs - _lastSendAttemptMs < interval) return;

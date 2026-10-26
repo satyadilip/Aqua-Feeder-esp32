@@ -446,6 +446,7 @@ void handleButtonNavigation() {
                             break;
                     case 7: diagCursorIdx = 0;
                             currentMenu = MenuState::DIAG_MENU;
+                            Serial.println("[NAV] Diagnostics Menu Opened");
                             break;
                     case 8: currentMenu = MenuState::INFO_NETWORK; break;
                     case 9: currentMenu = MenuState::INFO_POWER; break;
