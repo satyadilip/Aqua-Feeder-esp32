@@ -249,7 +249,10 @@ enum class MenuState : uint8_t {
     PAUSED,
     FINISHED,
     INFO_NETWORK,
-    INFO_POWER
+    INFO_POWER,
+    DIAG_MENU,
+    TEST_FEED_SELECT,
+    TEST_FEED_RUNNING
 };
 
 // ═══════════════════════════════════════════════════════════════════════════

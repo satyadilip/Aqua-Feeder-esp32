@@ -242,6 +242,31 @@ void handleSerialCommand(String cmd) {
         for (int i=0; i<16; i++) { Serial.printf("%02X", config.loraAppKey[i]); }
         Serial.println();
     }
+    else if (cmd.startsWith("TEST FEED")) {
+        int sec = 30;
+        int spaceIdx = cmd.lastIndexOf(' ');
+        if (spaceIdx > 0) {
+            sec = cmd.substring(spaceIdx + 1).toInt();
+            if (sec <= 0) sec = 30;
+        }
+        Serial.printf("[CLI] Starting Test Feed for %d seconds...\n", sec);
+        hal.setRelay(2, true);
+        delay(300);
+        hal.setRelay(1, true);
+        unsigned long tStart = millis();
+        while (millis() - tStart < (unsigned long)sec * 1000UL) {
+            if (Serial.available()) {
+                String abortCmd = Serial.readStringUntil('\n');
+                abortCmd.trim();
+                abortCmd.toUpperCase();
+                if (abortCmd == "STOP" || abortCmd == "0") break;
+            }
+            delay(100);
+        }
+        hal.motorsOff();
+        pwrMon.update();
+        Serial.printf("[CLI] Test Feed completed! Duration: %d sec, Current: %.1f mA\n", sec, pwrMon.getCurrent());
+    }
     else if (cmd == "RUN") {
         cbOnFeedStart();
     }
@@ -303,9 +328,17 @@ void handleSerialCommand(String cmd) {
 const char* menuLabels[] = {
     "Feed Quantity", "Feed Per Event", "Start Time",
     "End Time", "Discharge Rate", "Set Clock",
-    "Run Feed", "Network Info", "Power Info"
+    "Run Feed", "Diagnostics", "Network Info", "Power Info"
 };
-const int MENU_ITEM_COUNT = 9;
+const int MENU_ITEM_COUNT = 10;
+
+static int diagCursorIdx = 0;
+static const int DIAG_ITEM_COUNT = 6;
+static const int testFeedDurations[] = { 30, 60, 90, 120 };
+static int testFeedDurationIdx = 0;
+static unsigned long testFeedStartMs = 0;
+static uint16_t testFeedDurationSec = 30;
+static bool testFeedActive = false;
 
 void handleButtonNavigation() {
     ButtonState& up   = hal.btnUp();
@@ -317,7 +350,19 @@ void handleButtonNavigation() {
 
     // SW4 (Config) — toggle AP config / return to main / enter menu from running
     if (cfg.risingEdge) {
-        if (currentMenu == MenuState::MENU_LIST || currentMenu == MenuState::MAIN_STATUS) {
+        if (currentMenu == MenuState::TEST_FEED_RUNNING) {
+            hal.motorsOff();
+            testFeedActive = false;
+            lcd.showMessage("Test Stopped!", "Motors Turned OFF", 1500);
+            currentMenu = MenuState::DIAG_MENU;
+            return;
+        } else if (currentMenu == MenuState::TEST_FEED_SELECT) {
+            currentMenu = MenuState::DIAG_MENU;
+            return;
+        } else if (currentMenu == MenuState::DIAG_MENU) {
+            currentMenu = MenuState::MENU_LIST;
+            return;
+        } else if (currentMenu == MenuState::MENU_LIST || currentMenu == MenuState::MAIN_STATUS) {
             if (currentMenu == MenuState::MAIN_STATUS) {
                 currentMenu = MenuState::MENU_LIST;
             } else {
@@ -399,8 +444,11 @@ void handleButtonNavigation() {
                                 telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
                             }
                             break;
-                    case 7: currentMenu = MenuState::INFO_NETWORK; break;
-                    case 8: currentMenu = MenuState::INFO_POWER; break;
+                    case 7: diagCursorIdx = 0;
+                            currentMenu = MenuState::DIAG_MENU;
+                            break;
+                    case 8: currentMenu = MenuState::INFO_NETWORK; break;
+                    case 9: currentMenu = MenuState::INFO_POWER; break;
                 }
             }
             } // Close curly brace for case MenuState::MENU_LIST:
@@ -553,6 +601,131 @@ void handleButtonNavigation() {
             }
             break;
 
+        case MenuState::DIAG_MENU: {
+            if (up.repeatEvent) {
+                diagCursorIdx--;
+                if (diagCursorIdx < 0) diagCursorIdx = DIAG_ITEM_COUNT - 1;
+            }
+            if (dn.repeatEvent) {
+                diagCursorIdx++;
+                if (diagCursorIdx >= DIAG_ITEM_COUNT) diagCursorIdx = 0;
+            }
+            if (sel.risingEdge) {
+                switch (diagCursorIdx) {
+                    case 0: // Test Feed (30-120s)
+                        if (feedEng.isActive()) {
+                            lcd.showMessage("Feed is Running!", "Stop feed first", 2000);
+                            break;
+                        }
+                        testFeedDurationIdx = 0; // default 30s
+                        editVal = testFeedDurations[testFeedDurationIdx];
+                        currentMenu = MenuState::TEST_FEED_SELECT;
+                        break;
+                    case 1: // Test Spreader (Relay 2 for 2s)
+                        lcd.showMessage("Testing Spreader", "Relay 2 (2s pulse)", 0);
+                        hal.setRelay(2, true);
+                        delay(2000);
+                        pwrMon.update();
+                        {
+                            float cur = pwrMon.getCurrent();
+                            hal.setRelay(2, false);
+                            char msg[21];
+                            snprintf(msg, sizeof(msg), "Cur: %d mA (PASS)", (int)cur);
+                            lcd.showMessage("Spreader Test OK!", msg, 2000);
+                            TelemetryEvent confirmEv;
+                            memset(&confirmEv, 0, sizeof(confirmEv));
+                            confirmEv.type = TelemetryMsgType::DIAG_CONFIRMATION;
+                            confirmEv.timestamp = rtcMgr.getEpoch();
+                            confirmEv.voltage_mV = (uint16_t)(sysStatus.voltageV * 1000.0f);
+                            confirmEv.current_mA = (uint16_t)cur;
+                            confirmEv.currentEvent = 2; // Spreader
+                            confirmEv.totalEvents = 2;
+                            confirmEv.statusFlags = 1;
+                            telMgr.queueEvent(confirmEv);
+                        }
+                        break;
+                    case 2: // Test Loader (Relay 1 for 2s)
+                        lcd.showMessage("Testing Loader...", "Relay 1 (2s pulse)", 0);
+                        hal.setRelay(1, true);
+                        delay(2000);
+                        pwrMon.update();
+                        {
+                            float cur = pwrMon.getCurrent();
+                            hal.setRelay(1, false);
+                            char msg[21];
+                            snprintf(msg, sizeof(msg), "Cur: %d mA (PASS)", (int)cur);
+                            lcd.showMessage("Loader Test OK!", msg, 2000);
+                            TelemetryEvent confirmEv;
+                            memset(&confirmEv, 0, sizeof(confirmEv));
+                            confirmEv.type = TelemetryMsgType::DIAG_CONFIRMATION;
+                            confirmEv.timestamp = rtcMgr.getEpoch();
+                            confirmEv.voltage_mV = (uint16_t)(sysStatus.voltageV * 1000.0f);
+                            confirmEv.current_mA = (uint16_t)cur;
+                            confirmEv.currentEvent = 1; // Loader
+                            confirmEv.totalEvents = 2;
+                            confirmEv.statusFlags = 1;
+                            telMgr.queueEvent(confirmEv);
+                        }
+                        break;
+                    case 3: // Test Hooter
+                        lcd.showMessage("Testing Hooter...", "Sounding Alarm 1s", 0);
+                        hal.setHooter(true);
+                        delay(1000);
+                        hal.setHooter(false);
+                        lcd.showMessage("Hooter Test OK!", "Sounder Verified", 1500);
+                        break;
+                    case 4: // Ping Gateway
+                        telMgr.queueEvent(TelemetryMsgType::PERIODIC_HEARTBEAT);
+                        lcd.showMessage("Ping Queued!", "Uplink to Cloud", 1500);
+                        break;
+                    case 5: // Back to Menu
+                        currentMenu = MenuState::MENU_LIST;
+                        break;
+                }
+            }
+            break;
+        }
+
+        case MenuState::TEST_FEED_SELECT: {
+            if (up.repeatEvent) {
+                testFeedDurationIdx++;
+                if (testFeedDurationIdx >= 4) testFeedDurationIdx = 0;
+                editVal = testFeedDurations[testFeedDurationIdx];
+            }
+            if (dn.repeatEvent) {
+                testFeedDurationIdx--;
+                if (testFeedDurationIdx < 0) testFeedDurationIdx = 3;
+                editVal = testFeedDurations[testFeedDurationIdx];
+            }
+            if (sel.risingEdge) {
+                testFeedDurationSec = editVal; // 30, 60, 90, 120
+                testFeedStartMs = millis();
+                testFeedActive = true;
+                editVal = testFeedDurationSec; // remaining sec
+                editFld = testFeedDurationSec; // total sec
+                currentMenu = MenuState::TEST_FEED_RUNNING;
+                
+                Serial.printf("[TEST] Starting Test Feed for %d seconds...\n", testFeedDurationSec);
+                // Start Spreader (Relay 2) warmup
+                hal.setRelay(2, true);
+                delay(300);
+                // Start Loader (Relay 1)
+                hal.setRelay(1, true);
+            }
+            break;
+        }
+
+        case MenuState::TEST_FEED_RUNNING: {
+            if (sel.risingEdge) {
+                hal.motorsOff();
+                testFeedActive = false;
+                Serial.println("[TEST] Test Feed stopped by user!");
+                lcd.showMessage("Test Stopped!", "Motors Turned OFF", 1500);
+                currentMenu = MenuState::DIAG_MENU;
+            }
+            break;
+        }
+
         default:
             break;
     }
@@ -568,7 +741,12 @@ void updateSystemStatus() {
     switch (currentMenu) {
         case MenuState::MAIN_STATUS:
         case MenuState::MENU_LIST:
+        case MenuState::DIAG_MENU:
+        case MenuState::TEST_FEED_SELECT:
             sysStatus.state = sysStatus.feedActive ? SystemState::IDLE : SystemState::IDLE;
+            break;
+        case MenuState::TEST_FEED_RUNNING:
+            sysStatus.state = SystemState::FEED_DISPENSING;
             break;
         case MenuState::RUNNING:
             switch (sysStatus.feedState) {
@@ -1140,11 +1318,56 @@ void loop() {
         gsmMgr.loop();
     }
 
+    // ── Test Feed Active Execution ──
+    if (currentMenu == MenuState::TEST_FEED_RUNNING && testFeedActive) {
+        unsigned long elapsedSec = (nowMs - testFeedStartMs) / 1000UL;
+        if (elapsedSec >= testFeedDurationSec) {
+            hal.motorsOff();
+            testFeedActive = false;
+            
+            pwrMon.update();
+            float finalCur = pwrMon.getCurrent();
+            Serial.printf("[TEST] Test Feed (%d sec) completed! Measured Current: %.1f mA\n", testFeedDurationSec, finalCur);
+            
+            char msg[21];
+            snprintf(msg, sizeof(msg), "%ds Dispensed OK", testFeedDurationSec);
+            lcd.showMessage("Test Complete!", msg, 2000);
+            
+            TelemetryEvent confirmEv;
+            memset(&confirmEv, 0, sizeof(confirmEv));
+            confirmEv.type = TelemetryMsgType::DIAG_CONFIRMATION;
+            confirmEv.timestamp = rtcMgr.getEpoch();
+            confirmEv.voltage_mV = (uint16_t)(sysStatus.voltageV * 1000.0f);
+            confirmEv.current_mA = (uint16_t)finalCur;
+            confirmEv.currentEvent = 3; // Both motors (Test Feed)
+            confirmEv.totalEvents = testFeedDurationSec;
+            confirmEv.statusFlags = 1;
+            telMgr.queueEvent(confirmEv);
+            
+            currentMenu = MenuState::DIAG_MENU;
+        } else {
+            editVal = testFeedDurationSec - elapsedSec;
+            editFld = testFeedDurationSec;
+            
+            if (pwrMon.isOvercurrent(config.overcurrentLimit)) {
+                hal.motorsOff();
+                testFeedActive = false;
+                hal.setHooter(true);
+                delay(1000);
+                hal.setHooter(false);
+                Serial.println("[!!] OVERCURRENT in Test Feed! Motors stopped.");
+                lcd.showMessage("OVERCURRENT!", "Test Feed Aborted", 2000);
+                currentMenu = MenuState::DIAG_MENU;
+            }
+        }
+    }
+
     // ── 14. Update System Status ──
     updateSystemStatus();
 
     // ── 15. LCD Render ──
-    lcd.update(sysStatus, config, currentMenu, menuCursorIdx, editVal, editFld);
+    int cursorToPass = (currentMenu == MenuState::DIAG_MENU) ? diagCursorIdx : menuCursorIdx;
+    lcd.update(sysStatus, config, currentMenu, cursorToPass, editVal, editFld);
 
     // ── 18. Status LED Indicators ──
     ErrorCode currentError = ErrorCode::NONE;

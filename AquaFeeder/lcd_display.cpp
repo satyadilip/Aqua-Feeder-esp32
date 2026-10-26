@@ -165,6 +165,9 @@ void LCDDisplay::update(const SystemStatus& status, const DeviceConfig& cfg, Men
         case MenuState::FINISHED: drawFinished(status); break;
         case MenuState::INFO_NETWORK: drawNetworkInfo(status); break;
         case MenuState::INFO_POWER: drawPowerInfo(status); break;
+        case MenuState::DIAG_MENU: drawDiagMenu(menuCursor); break;
+        case MenuState::TEST_FEED_SELECT: drawTestFeedSelect(editValue); break;
+        case MenuState::TEST_FEED_RUNNING: drawTestFeedRunning(editValue, editField, status.currentMA); break;
     }
 }
 
@@ -232,11 +235,12 @@ void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
         "Discharge Rate", 
         "Set Real Clock", 
         "Start Feeding", 
+        "Diagnostics",
         "Network Info", 
         "Power Monitor"
     };
     
-    int totalItems = 9;
+    int totalItems = 10;
     if (isRunning) totalItems += 2;
     
     int startIdx = (menuCursor / 4) * 4;
@@ -513,5 +517,67 @@ void LCDDisplay::drawPowerInfo(const SystemStatus& status) {
     lcd->setCursor(0, 3);
     snprintf(buf, sizeof(buf), " Power:   %5.0f mW  ", status.powerMW);
     lcd->print(buf);
+}
+
+void LCDDisplay::drawDiagMenu(int diagCursor) {
+    const char* diagItems[] = {
+        "Test Feed (30-120s)",
+        "Test Spreader (2s)",
+        "Test Loader (2s)",
+        "Test Hooter (1s)",
+        "Ping Gateway",
+        "< Back to Menu"
+    };
+    int totalItems = 6;
+    int startIdx = (diagCursor / 4) * 4;
+    
+    for (int i = 0; i < 4; i++) {
+        lcd->setCursor(0, i);
+        int itemIdx = startIdx + i;
+        if (itemIdx < totalItems) {
+            char buf[21];
+            if (itemIdx == diagCursor) {
+                snprintf(buf, sizeof(buf), "> %-18s", diagItems[itemIdx]);
+            } else {
+                snprintf(buf, sizeof(buf), "  %-18s", diagItems[itemIdx]);
+            }
+            lcd->print(buf);
+        } else {
+            lcd->print("                    ");
+        }
+    }
+}
+
+void LCDDisplay::drawTestFeedSelect(int durationSec) {
+    lcd->setCursor(0, 0);
+    lcd->print("==== TEST FEED =====");
+    
+    lcd->setCursor(0, 1);
+    lcd->print(" Select Duration:   ");
+    
+    char buf[21];
+    lcd->setCursor(0, 2);
+    snprintf(buf, sizeof(buf), "   [ %3d Seconds ]  ", durationSec);
+    lcd->print(buf);
+    
+    lcd->setCursor(0, 3);
+    lcd->print("\x7E\x7F:Adj  [SEL]:Start ");
+}
+
+void LCDDisplay::drawTestFeedRunning(int remSec, int totalSec, float currentMA) {
+    lcd->setCursor(0, 0);
+    lcd->print("== TEST DISPENSING =");
+    
+    char buf[21];
+    lcd->setCursor(0, 1);
+    snprintf(buf, sizeof(buf), "Time Rem:  %3ds /%3ds", remSec, totalSec);
+    lcd->print(buf);
+    
+    lcd->setCursor(0, 2);
+    snprintf(buf, sizeof(buf), "Current:   %4.0f mA ", currentMA);
+    lcd->print(buf);
+    
+    lcd->setCursor(0, 3);
+    lcd->print("Press [SEL] to Stop ");
 }
 

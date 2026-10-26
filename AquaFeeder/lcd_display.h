@@ -51,6 +51,9 @@ private:
     void drawFinished(const SystemStatus& status);
     void drawNetworkInfo(const SystemStatus& status);
     void drawPowerInfo(const SystemStatus& status);
+    void drawDiagMenu(int diagCursor);
+    void drawTestFeedSelect(int durationSec);
+    void drawTestFeedRunning(int remSec, int totalSec, float currentMA);
     
     const char* getConnStatusStr(ConnStatus s);
 };
