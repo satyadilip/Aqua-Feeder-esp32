@@ -41,8 +41,9 @@ void CloudManager::loop() {
     } else if (_status->feedActive) {
         interval = 60000;
     } else {
+        // User-configurable telemetry interval setting (default 300s / 5m if unconfigured)
         unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;
-        interval = (cfgInterval >= 5000 && cfgInterval <= 60000) ? cfgInterval : 20000UL; // 20s responsive standby check
+        interval = (cfgInterval >= 5000) ? cfgInterval : 300000UL;
     }
     
     if (nowMs - _lastSendAttemptMs < interval) return;
