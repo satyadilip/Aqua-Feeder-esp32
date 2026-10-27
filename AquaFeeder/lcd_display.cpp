@@ -227,19 +227,19 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
     lcd->print(buf);
 }
 
-void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
-    const char* items[] = {
-        "Feed Quantity", 
-        "Feed Per Event", 
-        "Start Time", 
-        "End Time", 
-        "Discharge Rate", 
-        "Set Real Clock", 
-        isRunning ? "Stop Feeding" : "Start Feeding",
-        "Diagnostics",
-        "Check Tray",
-        "Network Info", 
-        "Power Monitor"
+void LCDDisplay::drawMenuList(int menuCursor, bool isRunning) {
+    const char* items[] = {
+        "Check Tray",
+        isRunning ? "Stop Feeding" : "Start Feeding",
+        "Feed Quantity",
+        "Feed Per Event",
+        "Start Time",
+        "End Time",
+        "Discharge Rate",
+        "Diagnostics",
+        "Set Real Clock",
+        "Network Info",
+        "Power Monitor"
     };
     
     int totalItems = 11;
