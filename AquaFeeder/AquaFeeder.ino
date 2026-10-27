@@ -801,10 +801,8 @@ void updateSystemStatus() {
     // Proximity
     sysStatus.proximityTriggered = hal.isProximityTriggered();
 
-    // RTC
-    if (sysStatus.rtcOK) {
-        sysStatus.currentEpoch = rtcMgr.getEpoch();
-    }
+    // RTC (Software or Hardware)
+    sysStatus.currentEpoch = rtcMgr.getEpoch();
 
     // Network status
     sysStatus.wifiStatus = wifiMgr.getStatus();
@@ -1286,7 +1284,7 @@ void loop() {
     }
 
     // ── 6. Feed Engine State Machine ──
-    uint32_t epoch = sysStatus.rtcOK ? rtcMgr.getEpoch() : 0;
+    uint32_t epoch = rtcMgr.getEpoch();
     bool wasFeedActive = sysStatus.feedActive;
     feedEng.update(nowMs, epoch);
 

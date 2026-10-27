@@ -21,4 +21,6 @@ public:
 private:
     RTC_DS3231 rtc;
     bool statusOK;
+    uint32_t softBaseEpoch;
+    unsigned long softBaseMs;
 };

@@ -177,7 +177,7 @@ void LCDDisplay::drawMainStatus(const SystemStatus& status) {
     
     // Line 1: AquaFeeder + Live Formatted RTC Date & Time
     lcd->setCursor(0, 0);
-    if (status.rtcOK && status.currentEpoch > 100000) {
+    if (status.currentEpoch > 100000) {
         uint32_t secs = status.currentEpoch % 86400;
         int hh = secs / 3600;
         int mm = (secs % 3600) / 60;

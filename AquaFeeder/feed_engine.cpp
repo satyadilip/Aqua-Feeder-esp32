@@ -190,10 +190,13 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
                     if (_saveState) _saveState();
                 } else {
-                    _status->nextFeedEpoch = nowEpoch + (_status->intervalMs / 1000);
+                    _status->nextFeedEpoch = (nowEpoch > 0) ? (nowEpoch + (_status->intervalMs / 1000)) : ((nowMs / 1000) + (_status->intervalMs / 1000));
+                    _fcTimer = nowMs;
                     _fcState = FeedCycleState::FC_WAIT;
                     _fcEntered = false;
                     if (_saveState) _saveState();
+                    Serial.printf("[FEED] Event %d complete. Next in %lu s (Gap interval: %lu ms)\n", 
+                                  _status->currentEvent, (_status->intervalMs / 1000), _status->intervalMs);
                 }
             }
             break;
@@ -203,9 +206,11 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 _status->state = SystemState::FEED_WAIT_NEXT;
                 _fcEntered = true;
             }
-            if (nowEpoch >= _status->nextFeedEpoch) {
+            if ((nowEpoch > 0 && _status->nextFeedEpoch > 0 && nowEpoch >= _status->nextFeedEpoch) || 
+                (nowMs - _fcTimer >= _status->intervalMs)) {
                 _fcState = FeedCycleState::FC_IDLE;
                 _fcEntered = false;
+                Serial.println("[FEED] Gap elapsed. Beginning next feed cycle.");
             }
             break;
     }
