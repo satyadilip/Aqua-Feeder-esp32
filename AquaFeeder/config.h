@@ -105,7 +105,7 @@
 #define INA219_SAMPLE_MS     50     // Sample current every 50ms during dispense
 
 // ── BUTTON DEBOUNCE ─────────────────────────────────────────────────────────
-#define BUTTON_DEBOUNCE_MS  50      // Debounce interval
+#define BUTTON_DEBOUNCE_MS  20      // Debounce interval
 #define BUTTON_POLL_MS      20      // Button scan interval
 
 // ── TELEMETRY ───────────────────────────────────────────────────────────────
