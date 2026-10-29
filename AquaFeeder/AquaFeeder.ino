@@ -105,11 +105,14 @@ void cbOnFeedStart() {
         config.hasBeenRun = true;
         cfgMgr.saveConfig(config); // Save the flag so it persists
     }
-    feedEng.calcSchedule();
+    uint32_t epoch = rtcMgr.getEpoch();
+    feedEng.calcSchedule(epoch);
     if (sysStatus.scheduleValid) {
         feedEng.startFeed();
         currentMenu = MenuState::RUNNING;
         Serial.println("[MAIN] Feed started via web/button!");
+    } else {
+        Serial.printf("[MAIN] Feed start blocked: %s\n", sysStatus.schedError);
     }
 }
 
@@ -451,14 +454,15 @@ void handleButtonNavigation() {
                             Serial.println("[!] FEED STOPPED via menu!");
                             lcd.showMessage("Feeding Stopped", "Motors Turned OFF", 1500);
                         } else {
-                            feedEng.calcSchedule();
+                            uint32_t epoch = rtcMgr.getEpoch();
+                            feedEng.calcSchedule(epoch);
                             if (sysStatus.scheduleValid) {
                                 feedEng.startFeed();
                                 currentMenu = MenuState::RUNNING;
                                 telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
                                 lcd.showMessage("Feeding Started", "Cycle Active", 1500);
                             } else {
-                                lcd.showMessage("Schedule Invalid", "Check Start/End", 2000);
+                                lcd.showMessage("Feed Blocked", sysStatus.schedError, 2000);
                             }
                         }
                         break;
@@ -1350,10 +1354,13 @@ void loop() {
     // ── 7. Auto-Start Scheduled Feed ──
     if (sysStatus.rtcOK && !sysStatus.feedActive && currentMenu != MenuState::PAUSED) {
         if (feedEng.shouldAutoStart(epoch)) {
-            feedEng.startFeed();
-            currentMenu = MenuState::RUNNING;
-            telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
-            Serial.println("[SCHED] Auto-start triggered!");
+            feedEng.calcSchedule(epoch);
+            if (sysStatus.scheduleValid) {
+                feedEng.startFeed();
+                currentMenu = MenuState::RUNNING;
+                telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
+                Serial.println("[SCHED] Auto-start triggered!");
+            }
         }
     }
 

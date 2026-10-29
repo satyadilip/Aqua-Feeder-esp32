@@ -5,7 +5,7 @@
 class FeedEngine {
 public:
     void begin(SystemStatus* status, DeviceConfig* cfg);
-    bool calcSchedule();
+    bool calcSchedule(uint32_t nowEpoch = 0);
     void startFeed();
     void stopFeed();
     void pauseFeed();

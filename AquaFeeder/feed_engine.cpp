@@ -16,7 +16,7 @@ void FeedEngine::begin(SystemStatus* status, DeviceConfig* cfg) {
     _saveState = nullptr;
 }
 
-bool FeedEngine::calcSchedule() {
+bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     if (!_status || !_cfg) return false;
     
     _status->scheduleValid = false;
@@ -54,21 +54,53 @@ bool FeedEngine::calcSchedule() {
     _status->motorTimeMs = motorTime_ms;
     
     unsigned long totalMotor_ms = _status->totalEvents * motorTime_ms;
-    unsigned long feedTime_ms = (endMins - startMins) * 60UL * 1000UL;
+    unsigned long availableTime_ms = 0;
+
+    if (nowEpoch > 0) {
+        uint32_t secSinceMidnight = nowEpoch % 86400;
+        int currentMins = secSinceMidnight / 60;
+        uint32_t midnightEpoch = nowEpoch - secSinceMidnight;
+        uint32_t startEpochToday = midnightEpoch + ((uint32_t)startMins * 60UL);
+        uint32_t endEpochToday   = midnightEpoch + ((uint32_t)endMins * 60UL);
+
+        if (currentMins >= endMins) {
+            strncpy(_status->schedError, "Past 6 PM Window", sizeof(_status->schedError)-1);
+            _status->nextFeedEpoch = startEpochToday + 86400UL; // Schedule next run for tomorrow 06:00
+            Serial.printf("[SCHED] Current time %02d:%02d is past OP window end %02d:%02d. Feeding blocked until tomorrow.\n",
+                          currentMins / 60, currentMins % 60, endMins / 60, endMins % 60);
+            return false;
+        } else if (currentMins >= startMins) {
+            // Mid-day start! Dynamically calculate remaining time until endHour:endMinute (18:00)
+            uint32_t endSecToday = (uint32_t)endMins * 60UL;
+            if (endSecToday > secSinceMidnight) {
+                availableTime_ms = (endSecToday - secSinceMidnight) * 1000UL;
+            } else {
+                availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
+            }
+            if (_status->currentEvent == 0) {
+                _status->nextFeedEpoch = nowEpoch;
+            }
+            Serial.printf("[SCHED] Mid-day start at %02d:%02d. Remaining window: %lu s until %02d:%02d\n",
+                          currentMins / 60, currentMins % 60, (availableTime_ms / 1000UL), endMins / 60, endMins % 60);
+        } else {
+            // Early morning before start time (e.g. 05:30 AM before 06:00 AM)
+            availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
+            _status->nextFeedEpoch = startEpochToday;
+        }
+    } else {
+        // Fallback if no RTC epoch available (e.g. test bench)
+        availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
+    }
     
-    if (totalMotor_ms >= feedTime_ms) {
+    if (totalMotor_ms >= availableTime_ms) {
         strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
+        Serial.println("[SCHED] Error: Remaining operational window is shorter than required motor run time!");
         return false;
     }
     
-    _status->intervalMs = (feedTime_ms - totalMotor_ms) / _status->totalEvents;
-    
-    // Calculate nextFeedEpoch - just an example implementation logic, 
-    // real implementation depends on current epoch and start hour
-    if (_status->rtcOK) {
-        // We set nextFeedEpoch to today's start hour or tomorrow's if already passed
-        // For simplicity we assume it's calculated correctly here based on rtc logic.
-    }
+    _status->intervalMs = (availableTime_ms - totalMotor_ms) / _status->totalEvents;
+    Serial.printf("[SCHED] Schedule OK: %d events, motorTime: %lu ms, gap interval: %lu s (%lu ms)\n",
+                  _status->totalEvents, _status->motorTimeMs, (_status->intervalMs / 1000UL), _status->intervalMs);
     
     _status->scheduleValid = true;
     return true;
@@ -224,7 +256,7 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     float remaining_g = totalTarget_g - _status->dispensedQuantity_g;
     
     if (remaining_g <= 0) {
-        // We've already dispensed the new target
+        // We've already dispensed the target
         stopFeed();
         _status->state = SystemState::FEED_FINISHED;
         return;
@@ -245,19 +277,18 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     _status->motorTimeMs = motorTime_ms;
     
     // Calculate remaining time
-    if (!_status->rtcOK) return;
+    if (!_status->rtcOK || nowEpoch == 0) return;
     
-    // Get current time from RTC epoch
-    uint32_t midnightEpoch = nowEpoch - (nowEpoch % 86400);
-    uint32_t endEpoch = midnightEpoch + (_cfg->endHour * 3600) + (_cfg->endMinute * 60);
+    uint32_t secSinceMidnight = nowEpoch % 86400;
+    uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
     
-    if (endEpoch <= nowEpoch) {
+    if (endSecToday <= secSinceMidnight) {
         // We are already past end time! Feed as fast as possible.
         _status->intervalMs = 0;
         return;
     }
     
-    unsigned long remainingTimeMs = (endEpoch - nowEpoch) * 1000UL;
+    unsigned long remainingTimeMs = (endSecToday - secSinceMidnight) * 1000UL;
     unsigned long remainingMotorMs = remainingEvents * motorTime_ms;
     
     if (remainingMotorMs >= remainingTimeMs) {
@@ -265,6 +296,8 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     } else {
         _status->intervalMs = (remainingTimeMs - remainingMotorMs) / remainingEvents;
     }
+    Serial.printf("[SCHED] Recalculated dynamic: %ld events remaining, gap interval: %lu s (%lu ms)\n",
+                  remainingEvents, (_status->intervalMs / 1000UL), _status->intervalMs);
 }
 
 bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
@@ -272,10 +305,15 @@ bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
     if (!_status->rtcOK || _status->feedActive || !_status->scheduleValid) return false;
     if (!_cfg->hasBeenRun) return false;
     
-    // Check if within OP window
-    // (Needs proper RTC hour checking, for now assuming nextFeedEpoch is accurate)
-    if (nowEpoch >= _status->nextFeedEpoch && _status->currentEvent == 0) {
-        return true;
+    uint32_t secSinceMidnight = nowEpoch % 86400;
+    int currentMins = secSinceMidnight / 60;
+    int startMins = _cfg->startHour * 60 + _cfg->startMinute;
+    
+    // Only auto-start during the morning start window (within 30 minutes of scheduled start time)
+    if (currentMins >= startMins && currentMins < (startMins + 30) && _status->currentEvent == 0) {
+        if (nowEpoch >= _status->nextFeedEpoch) {
+            return true;
+        }
     }
     return false;
 }
