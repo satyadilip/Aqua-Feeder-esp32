@@ -209,7 +209,10 @@ enum class CommandMsgType : uint8_t {
     CMD_SET_SETTINGS = 0xA0,
     CMD_POLL_DATA    = 0xA1,
     CMD_TEST_MOTOR   = 0xA2,
-    CMD_SYNC_TIME    = 0xA3
+    CMD_SYNC_TIME    = 0xA3,
+    CMD_START_FEED   = 0xA4,
+    CMD_STOP_FEED    = 0xA5,
+    CMD_RESUME_FEED  = 0xA6
 };
 
 // Connection status for each channel
@@ -272,6 +275,9 @@ struct DeviceConfig {
 
     // Telemetry
     uint32_t telemetryIntervalS; // Periodic uplink interval in seconds
+
+    // Proximity sensor polarity (true = empty when HIGH, false = empty when LOW)
+    bool     proxAlarmHigh;
 
     // Cloud uplink
     UplinkMode uplinkMode;

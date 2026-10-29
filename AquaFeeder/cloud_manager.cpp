@@ -39,7 +39,13 @@ void CloudManager::loop() {
     } else if (hasPendingEvents) {
         interval = 2000;
     } else if (_status->feedActive) {
-        interval = 60000;
+        if (_status->feedState == FeedCycleState::FC_WAIT) {
+            // During wait gap: poll every 120s (2 min) instead of 60s.
+            // Prevents excessive airtime while keeping Class A downlink listen window open
+            interval = 120000UL;
+        } else {
+            interval = 60000UL;
+        }
     } else {
         // User-configurable telemetry interval setting (default 300s / 5m if unconfigured)
         unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;

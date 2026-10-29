@@ -361,6 +361,11 @@ def lambda_handler(event, context):
             print(f"Executing command '{cmd}' for device '{device_id}'")
             
             if cmd in ['START', 'FEED']:
+                # Real LoRaWAN Downlink: CMD_START_FEED (0xA4)
+                downlink_bytes = struct.pack('<B11s', 0xA4, b'\x00' * 11)
+                dl_success, dl_msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                print(f"[DOWNLINK] Queued CMD_START_FEED for {device_id}: {dl_success} ({dl_msg})")
+
                 # User pressed start feed: counted as ONE EVENT DONE in the entire feed cycle
                 cur_ev = int(body.get('currentEvent', 0))
                 disp_kg = Decimal(str(body.get('dispensedKg', '0.0')))
@@ -473,13 +478,32 @@ def lambda_handler(event, context):
                 })
 
             elif cmd == 'STOP':
+                # Real LoRaWAN Downlink: CMD_STOP_FEED (0xA5)
+                downlink_bytes = struct.pack('<B11s', 0xA5, b'\x00' * 11)
+                dl_success, dl_msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                print(f"[DOWNLINK] Queued CMD_STOP_FEED for {device_id}: {dl_success} ({dl_msg})")
+
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
                     UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls',
                     ExpressionAttributeNames={'#st': 'Status'},
                     ExpressionAttributeValues={':st': 'STANDBY', ':fa': False, ':ls': now_ts}
                 )
-                return build_response(200, {'status': 'success', 'message': f'Feeder paused on {device_id}', 'state': 'STANDBY'})
+                return build_response(200, {'status': 'success', 'message': f'Feeder stop queued on {device_id}', 'downlinkQueued': dl_success, 'state': 'STANDBY'})
+
+            elif cmd == 'RESUME':
+                # Real LoRaWAN Downlink: CMD_RESUME_FEED (0xA6)
+                downlink_bytes = struct.pack('<B11s', 0xA6, b'\x00' * 11)
+                dl_success, dl_msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
+                print(f"[DOWNLINK] Queued CMD_RESUME_FEED for {device_id}: {dl_success} ({dl_msg})")
+
+                devices_table.update_item(
+                    Key={'DeviceId': device_id},
+                    UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls, FeedAvailable = :fa_avail',
+                    ExpressionAttributeNames={'#st': 'Status'},
+                    ExpressionAttributeValues={':st': 'FEEDING', ':fa': True, ':ls': now_ts, ':fa_avail': True}
+                )
+                return build_response(200, {'status': 'success', 'message': f'Feeder resume queued on {device_id}', 'downlinkQueued': dl_success, 'state': 'FEEDING'})
             else:
                 return build_response(400, {'error': f'Unsupported command {cmd}'})
 

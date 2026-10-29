@@ -154,8 +154,32 @@ ButtonState& HardwareLayer::btnDown() { return m_btnDown; }
 ButtonState& HardwareLayer::btnSelect() { return m_btnSelect; }
 ButtonState& HardwareLayer::btnConfig() { return m_btnConfig; }
 
+void HardwareLayer::setProxAlarmHigh(bool alarmHigh) {
+    m_proxAlarmHigh = alarmHigh;
+}
+
+bool HardwareLayer::readRawProximity() const {
+    return digitalRead(PIN_PROXIMITY);
+}
+
 bool HardwareLayer::isProximityTriggered() {
-    return digitalRead(PIN_PROXIMITY) == LOW;
+    // Proximity switch detects feed pellets in hopper.
+    // When pellets are present, sensor conducts to GND (PIN_PROXIMITY == LOW -> Feed Present, Normal).
+    // When hopper is empty, sensor is unobstructed and pin is pulled HIGH by 10k resistor (PIN_PROXIMITY == HIGH -> FEED EMPTY Alarm).
+    bool raw = digitalRead(PIN_PROXIMITY);
+    bool triggered = m_proxAlarmHigh ? (raw == HIGH) : (raw == LOW);
+    
+    // 100ms continuous detection debounce to filter out transient motor electrical noise
+    static unsigned long triggerStart = 0;
+    if (triggered) {
+        if (triggerStart == 0) triggerStart = millis();
+        if ((millis() - triggerStart) >= 100) {
+            return true;
+        }
+    } else {
+        triggerStart = 0;
+    }
+    return false;
 }
 
 void HardwareLayer::updateStatusLed(SystemState state, bool hasError) {

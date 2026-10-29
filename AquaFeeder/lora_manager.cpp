@@ -195,7 +195,7 @@ bool LoRaManager::send(const uint8_t* data, uint8_t len, uint8_t port) {
             if (downLen == sizeof(LoRaDownlinkPayload) && _downlinkCb != nullptr) {
                 LoRaDownlinkPayload dl;
                 memcpy(&dl, downData, downLen);
-                if (dl.msgType == (uint8_t)CommandMsgType::CMD_SET_SETTINGS || dl.msgType == (uint8_t)CommandMsgType::CMD_POLL_DATA || dl.msgType == (uint8_t)CommandMsgType::CMD_TEST_MOTOR || dl.msgType == (uint8_t)CommandMsgType::CMD_SYNC_TIME) {
+                if (dl.msgType == (uint8_t)CommandMsgType::CMD_SET_SETTINGS || dl.msgType == (uint8_t)CommandMsgType::CMD_POLL_DATA || dl.msgType == (uint8_t)CommandMsgType::CMD_TEST_MOTOR || dl.msgType == (uint8_t)CommandMsgType::CMD_SYNC_TIME || dl.msgType == (uint8_t)CommandMsgType::CMD_START_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_STOP_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED) {
                     _downlinkCb(dl);
                 } else {
                     Serial.println("[LORA] Unknown Downlink MsgType ignored");

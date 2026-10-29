@@ -110,11 +110,11 @@ void FeedEngine::pauseFeed() {
 
 void FeedEngine::resumeFeed() {
     if (_status && _status->state == SystemState::FEED_PAUSED) {
-        if (!_status->proximityTriggered) {
-            _fcState = _prePauseFCState;
-            _fcEntered = false; // re-enter the state to restart timers/relays
-            if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_RESUMED);
-        }
+        _status->proximityTriggered = false;
+        _fcState = _prePauseFCState;
+        _fcEntered = false; // re-enter the state to restart timers/relays
+        _status->state = (_fcState == FeedCycleState::FC_WAIT) ? SystemState::FEED_WAIT_NEXT : SystemState::FEED_DISPENSING;
+        if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_RESUMED);
     }
 }
 

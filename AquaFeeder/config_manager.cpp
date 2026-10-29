@@ -21,6 +21,7 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     cfg.dischargeRate = prefs.getInt("drate", FEED_RATE_DEFAULT);
     
     cfg.telemetryIntervalS = prefs.getUInt("txIntv", TELEMETRY_INTERVAL_DEFAULT_S);
+    cfg.proxAlarmHigh = prefs.getBool("proxHigh", true);
     cfg.uplinkMode = (UplinkMode)prefs.getUChar("uplnk", (uint8_t)UplinkMode::AUTO_FAILOVER);
     
     const uint8_t defaultAppEUI[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
@@ -81,6 +82,7 @@ void ConfigManager::saveConfig(const DeviceConfig& cfg) {
     
     prefs.begin(NVS_NAMESPACE, false);
     prefs.putUInt("txIntv", cfg.telemetryIntervalS);
+    prefs.putBool("proxHigh", cfg.proxAlarmHigh);
     prefs.putUChar("uplnk", (uint8_t)cfg.uplinkMode);
     
     prefs.putBytes("devEUI", cfg.loraDevEUI, 8);
@@ -139,6 +141,7 @@ void ConfigManager::resetToDefaults(DeviceConfig& cfg) {
     cfg.dischargeRate = FEED_RATE_DEFAULT;
     
     cfg.telemetryIntervalS = TELEMETRY_INTERVAL_DEFAULT_S;
+    cfg.proxAlarmHigh = true;
     cfg.uplinkMode = UplinkMode::AUTO_FAILOVER;
     
     const uint8_t defaultDevEUI[8] = { 0xE0, 0x72, 0xA1, 0xF6, 0x24, 0x9C, 0x00, 0x01 };

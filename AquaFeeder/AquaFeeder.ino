@@ -192,6 +192,40 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         telMgr.queueEvent(confirmEv);
         Serial.println("[MAIN] Queued DIAG_CONFIRMATION telemetry to Cloud!");
     }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_START_FEED) {
+        Serial.println("[MAIN] [DOWNLINK] Received CMD_START_FEED from Cloud!");
+        if (!feedEng.isActive()) {
+            cbOnFeedStart();
+            currentMenu = MenuState::RUNNING;
+            telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
+            Serial.println("[MAIN] Feed started successfully via Cloud Downlink!");
+        } else {
+            Serial.println("[MAIN] Feed is already active, ignoring start downlink.");
+        }
+    }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_STOP_FEED) {
+        Serial.println("[MAIN] [DOWNLINK] Received CMD_STOP_FEED from Cloud!");
+        if (feedEng.isActive() || currentMenu == MenuState::RUNNING || currentMenu == MenuState::PAUSED) {
+            cbOnFeedStop();
+            currentMenu = MenuState::MAIN_STATUS;
+            telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
+            Serial.println("[MAIN] Feed stopped successfully via Cloud Downlink!");
+        }
+    }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED) {
+        Serial.println("[MAIN] [DOWNLINK] Received CMD_RESUME_FEED from Cloud!");
+        if (sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
+            if (!hal.isProximityTriggered()) {
+                sysStatus.proximityTriggered = false;
+                hal.setHooter(false);
+                feedEng.resumeFeed();
+                currentMenu = MenuState::RUNNING;
+                Serial.println("[MAIN] Feed resumed successfully via Cloud Downlink!");
+            } else {
+                Serial.println("[MAIN] Cannot resume feed: Proximity sensor still triggered (empty/blocked)!");
+            }
+        }
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -333,7 +367,7 @@ const char* menuLabels[] = {
 const int MENU_ITEM_COUNT = 11;
 
 static int diagCursorIdx = 0;
-static const int DIAG_ITEM_COUNT = 6;
+static const int DIAG_ITEM_COUNT = 7;
 static const int testFeedDurations[] = { 30, 60, 90, 120 };
 static int testFeedDurationIdx = 0;
 static unsigned long testFeedStartMs = 0;
@@ -602,14 +636,17 @@ void handleButtonNavigation() {
             if (sel.risingEdge) {
                 // Check if proximity is clear before resuming
                 if (!hal.isProximityTriggered()) {
+                    sysStatus.proximityTriggered = false;
                     hal.setHooter(false); // Stop hooter when resumed
                     feedEng.resumeFeed();
                     currentMenu = MenuState::RUNNING;
+                    Serial.println("[RESUME] Feed successfully resumed by user pressing SELECT.");
                 } else {
-                    // Flash red LED to indicate still blocked
+                    // Flash red LED to indicate still blocked or empty
                     hal.setLedRed(true);
                     delay(200);
                     hal.setLedRed(false);
+                    Serial.println("[RESUME] Cannot resume: proximity sensor still reports empty/blocked.");
                 }
             }
             break;
@@ -708,11 +745,20 @@ void handleButtonNavigation() {
                         hal.setHooter(false);
                         lcd.showMessage("Hooter Test OK!", "Sounder Verified", 1500);
                         break;
-                    case 4: // Ping Gateway
+                    case 4: { // Check Proximity
+                        bool raw = hal.readRawProximity();
+                        char msg1[21];
+                        char msg2[21];
+                        snprintf(msg1, sizeof(msg1), "Pin 16: %s (%s)", raw == HIGH ? "HIGH" : "LOW", raw == HIGH ? "3.3V" : "0V");
+                        snprintf(msg2, sizeof(msg2), "Feed: %s", raw == LOW ? "DETECTED (OK)" : "EMPTY (ALARM)");
+                        lcd.showMessage(msg1, msg2, 2500);
+                        break;
+                    }
+                    case 5: // Ping Gateway
                         telMgr.queueEvent(TelemetryMsgType::PERIODIC_HEARTBEAT);
                         lcd.showMessage("Ping Queued!", "Uplink to Cloud", 1500);
                         break;
-                    case 5: // Back to Menu
+                    case 6: // Back to Menu
                         currentMenu = MenuState::MENU_LIST;
                         menuCursorIdx = 7;
                         break;
@@ -975,6 +1021,7 @@ void setup() {
     cfgMgr.begin();
     bool firstBoot = cfgMgr.isFirstBoot();
     cfgMgr.loadConfig(config);
+    hal.setProxAlarmHigh(config.proxAlarmHigh);
     if (firstBoot) {
         Serial.println("[CFG]  First boot — defaults loaded.");
         // Generate a random device ID

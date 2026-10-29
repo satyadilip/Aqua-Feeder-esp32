@@ -1700,6 +1700,26 @@ async function triggerRemoteAction(action) {
     return;
   }
 
+  if (action === 'RESUME' || (action === 'START' && (dev.status === 'PAUSED' || dev.feedAvailable === false))) {
+    const confirmMsg = `Resume feeding for ${dev.name}?`;
+    if (!confirm(confirmMsg)) return;
+
+    dev.status = 'FEEDING';
+    dev.feedAvailable = true;
+    showToast(`▶ Feeder resumed: ${dev.name}`);
+    saveDataToStorage();
+    loadSelectedDeviceToUI();
+
+    try {
+      await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: 'RESUME' })
+      });
+    } catch (e) {}
+    return;
+  }
+
   if (action === 'START') {
     const fpeGrams = dev.fpeGrams || 100;
     const confirmMsg = `Trigger feed burst for ${dev.name}?\n\n• ${fpeGrams}g feed will be dispensed immediately.\n• This will be counted as 1 completed feed event in today's cycle.`;
