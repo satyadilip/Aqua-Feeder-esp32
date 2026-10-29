@@ -750,7 +750,7 @@ void handleButtonNavigation() {
                         char msg1[21];
                         char msg2[21];
                         snprintf(msg1, sizeof(msg1), "Pin 16: %s (%s)", raw == HIGH ? "HIGH" : "LOW", raw == HIGH ? "3.3V" : "0V");
-                        snprintf(msg2, sizeof(msg2), "Feed: %s", raw == LOW ? "DETECTED (OK)" : "EMPTY (ALARM)");
+                        snprintf(msg2, sizeof(msg2), "Feed: %s", raw == HIGH ? "DETECTED (OK)" : "EMPTY (ALARM)");
                         lcd.showMessage(msg1, msg2, 2500);
                         break;
                     }

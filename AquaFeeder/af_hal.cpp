@@ -164,8 +164,8 @@ bool HardwareLayer::readRawProximity() const {
 
 bool HardwareLayer::isProximityTriggered() {
     // Proximity switch detects feed pellets in hopper.
-    // When pellets are present, sensor conducts to GND (PIN_PROXIMITY == LOW -> Feed Present, Normal).
-    // When hopper is empty, sensor is unobstructed and pin is pulled HIGH by 10k resistor (PIN_PROXIMITY == HIGH -> FEED EMPTY Alarm).
+    // When pellets are present: PIN_PROXIMITY == HIGH -> Feed Present (OK, Normal).
+    // When hopper is empty: PIN_PROXIMITY == LOW -> FEED EMPTY (Alarm, Triggered).
     bool raw = digitalRead(PIN_PROXIMITY);
     bool triggered = m_proxAlarmHigh ? (raw == HIGH) : (raw == LOW);
     

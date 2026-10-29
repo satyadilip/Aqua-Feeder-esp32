@@ -30,7 +30,7 @@ private:
     ButtonState m_btnDown;
     ButtonState m_btnSelect;
     ButtonState m_btnConfig;
-    bool m_proxAlarmHigh = true;
+    bool m_proxAlarmHigh = false;
 
     void initButton(ButtonState& btn, uint8_t pin);
     void processButton(ButtonState& btn);
