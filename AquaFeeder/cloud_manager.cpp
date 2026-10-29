@@ -92,10 +92,11 @@ void CloudManager::loop() {
         if (_status->proximityTriggered) flags |= (1 << 0);
         if (_status->state == SystemState::ERROR_FATAL) flags |= (1 << 1);
         if (!_status->rtcOK) flags |= (1 << 2);
-        if (!_status->sdCardOK) flags |= (1 << 3);
-        if (_status->loraStatus == ConnStatus::CONNECTED) flags |= (1 << 4);
-        if (_status->wifiStatus == ConnStatus::CONNECTED) flags |= (1 << 5);
-        if (_status->gsmStatus == ConnStatus::CONNECTED) flags |= (1 << 6);
+        if (_status->state == SystemState::FEED_PAUSED && _status->proximityTriggered) flags |= (1 << 3); // Feed Empty alarm (0x08)
+        if (_status->state == SystemState::FEED_PAUSED) flags |= (1 << 4); // Feeder Paused (0x10)
+        if (!_status->sdCardOK) flags |= (1 << 5); // SD fault (0x20)
+        if (_status->wifiStatus == ConnStatus::CONNECTED) flags |= (1 << 6);
+        if (_status->gsmStatus == ConnStatus::CONNECTED) flags |= (1 << 7);
         heartBeatEvent.statusFlags = flags;
         event = &heartBeatEvent;
     }

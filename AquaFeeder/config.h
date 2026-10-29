@@ -377,13 +377,14 @@ struct TelemetryEvent {
     uint8_t          currentEvent;
     uint8_t          totalEvents;
     uint8_t          statusFlags;
-    // Bit 0: Proximity triggered
-    // Bit 1: Overcurrent fault
-    // Bit 2: RTC fault
-    // Bit 3: SD card fault
-    // Bit 4: LoRa connected
-    // Bit 5: WiFi connected
-    // Bit 6: GSM connected
+    // Bit 0: Proximity triggered (0x01)
+    // Bit 1: Overcurrent fault / fatal error (0x02)
+    // Bit 2: RTC fault (0x04)
+    // Bit 3: Feed Hopper Empty alarm (0x08)
+    // Bit 4: Feeder Paused (0x10)
+    // Bit 5: SD card fault (0x20)
+    // Bit 6: WiFi connected (0x40)
+    // Bit 7: GSM connected (0x80)
     bool             sent;              // Has been successfully sent
     uint8_t          retries;           // Transmission retry count
 };
