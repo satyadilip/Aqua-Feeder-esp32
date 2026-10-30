@@ -64,25 +64,25 @@ const defaultDevices = [
     scheduleValid: true
   },
   {
-    id: 'aquaCON-Feeder-03',
+    id: 'e072a1fffef64134',
     name: 'aquaCON Feeder 03',
     pondId: 'P-02',
-    status: 'NOT CONNECTED',
-    connected: false,
-    feedAvailable: false,
+    status: 'IDLE',
+    connected: true,
+    feedAvailable: true,
     dispensedKg: 0.0,
-    targetKg: 0.0,
+    targetKg: 15.0,
     currentEvent: 0,
-    totalEvents: 0,
+    totalEvents: 150,
     fpeGrams: 100,
     dischargeRateGs: 100,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 0,
-    motorTimeSec: 0,
-    scheduleValid: false
+    intervalMin: 4.7,
+    motorTimeSec: 1.0,
+    scheduleValid: true
   }
 ];
 
@@ -177,6 +177,42 @@ function loadDataFromStorage() {
         }
         return d;
       });
+      // Ensure e072a1fffef64134 is present and mapped to Feeder 03
+      const f64134Idx = parsed.findIndex(d => d.id === 'e072a1fffef64134');
+      if (f64134Idx === -1) {
+        const dummy03Idx = parsed.findIndex(d => d.id === 'aquaCON-Feeder-03');
+        if (dummy03Idx !== -1) {
+          parsed[dummy03Idx].id = 'e072a1fffef64134';
+          parsed[dummy03Idx].name = 'aquaCON Feeder 03';
+          parsed[dummy03Idx].pondId = 'P-02';
+          parsed[dummy03Idx].connected = true;
+          parsed[dummy03Idx].status = 'IDLE';
+          parsed[dummy03Idx].feedAvailable = true;
+        } else {
+          parsed.push({
+            id: 'e072a1fffef64134',
+            name: 'aquaCON Feeder 03',
+            pondId: 'P-02',
+            status: 'IDLE',
+            connected: true,
+            feedAvailable: true,
+            dispensedKg: 0.0,
+            targetKg: 15.0,
+            currentEvent: 0,
+            totalEvents: 150,
+            fpeGrams: 100,
+            dischargeRateGs: 100,
+            startHour: 6,
+            startMin: 0,
+            endHour: 18,
+            endMin: 0,
+            intervalMin: 4.7,
+            motorTimeSec: 1.0,
+            scheduleValid: true
+          });
+        }
+      }
+
       // Ensure e072a1fffef5ba08 is present and mapped to Feeder 02
       const ba08Idx = parsed.findIndex(d => d.id === 'e072a1fffef5ba08');
       if (ba08Idx === -1) {
@@ -853,14 +889,34 @@ function loadSelectedDeviceToUI() {
     statusText = 'FEEDING';
     badgeClass = 'b-run';
     const intervalMin = dev.intervalMin || 3.1;
-    const nextMin = nowTotalMin + Math.round(intervalMin);
-    const nH = Math.floor(nextMin / 60) % 24;
-    const nM = nextMin % 60;
-    const ampm = nH >= 12 ? 'PM' : 'AM';
-    const dispH = nH % 12 === 0 ? 12 : nH % 12;
-    nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
-    nextSubText = `Interval: ${intervalMin} min`;
-    eventSubText = 'Events today';
+    let nextMin;
+    if (dev.lastEventTime) {
+      try {
+        const lastD = new Date(dev.lastEventTime.replace('Z', ''));
+        if (!isNaN(lastD.getTime())) {
+          const lastMin = lastD.getHours() * 60 + lastD.getMinutes();
+          nextMin = lastMin + Math.round(intervalMin);
+        }
+      } catch (e) {}
+    }
+    if (!nextMin) {
+      nextMin = nowTotalMin + Math.round(intervalMin);
+    }
+    if (nextMin >= endTotalMin) {
+      statusText = 'COMPLETED';
+      badgeClass = 'b-done';
+      nextTimestamp = '06:00 AM';
+      nextSubText = 'Daylight schedule completed';
+      eventSubText = 'Finished for today';
+    } else {
+      const nH = Math.floor(nextMin / 60) % 24;
+      const nM = nextMin % 60;
+      const ampm = nH >= 12 ? 'PM' : 'AM';
+      const dispH = nH % 12 === 0 ? 12 : nH % 12;
+      nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
+      nextSubText = `Interval: ${intervalMin} min`;
+      eventSubText = 'Events today';
+    }
   } else {
     statusText = 'ACTIVE';
     badgeClass = 'b-run';
@@ -1288,24 +1344,53 @@ function renderEventsLog(dev, metrics) {
   }
 
   let html = '';
-  for (let i = startEvent; i >= endEvent; i--) {
-    const eventMinFromStart = Math.round((i - 1) * (dev.intervalMin || 2.8));
-    const eventTotalMin = (dev.startHour || 6) * 60 + (dev.startMin || 0) + eventMinFromStart;
-    const h = Math.floor(eventTotalMin / 60) % 24;
-    const m = eventTotalMin % 60;
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const displayH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
-    const t = `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
-
-    html += `
-      <div class="event-log-item">
-        <div>
-          <span class="event-log-time">${t}</span>
-          <div class="event-log-desc">Feed Event #${i} • ${fpe}g dispensed</div>
+  if (dev.eventsLog && dev.eventsLog.length > 0) {
+    const displayed = dev.eventsLog.slice(0, maxToDisplay);
+    displayed.forEach(ev => {
+      html += `
+        <div class="event-log-item">
+          <div>
+            <span class="event-log-time">${ev.time}</span>
+            <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed ${ev.isManual ? '• Manual' : ''}</div>
+          </div>
+          <span class="event-log-tag tag-completed">DISPENSED</span>
         </div>
-        <span class="event-log-tag tag-completed">DISPENSED</span>
-      </div>
-    `;
+      `;
+    });
+  } else {
+    let anchorMin = null;
+    if (dev.lastEventTime) {
+      try {
+        const lastD = new Date(dev.lastEventTime.replace('Z', ''));
+        if (!isNaN(lastD.getTime())) {
+          anchorMin = lastD.getHours() * 60 + lastD.getMinutes();
+        }
+      } catch (e) {}
+    }
+    if (anchorMin === null) {
+      anchorMin = (dev.startHour || 6) * 60 + (dev.startMin || 0) + Math.round((startEvent - 1) * (dev.intervalMin || 2.8));
+    }
+
+    for (let i = startEvent; i >= endEvent; i--) {
+      const offsetMin = Math.round((startEvent - i) * (dev.intervalMin || 2.8));
+      let eventTotalMin = anchorMin - offsetMin;
+      if (eventTotalMin < 0) eventTotalMin += 1440;
+      const h = Math.floor(eventTotalMin / 60) % 24;
+      const m = eventTotalMin % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const displayH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+      const t = `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+
+      html += `
+        <div class="event-log-item">
+          <div>
+            <span class="event-log-time">${t}</span>
+            <div class="event-log-desc">Feed Event #${i} • ${fpe}g dispensed</div>
+          </div>
+          <span class="event-log-tag tag-completed">DISPENSED</span>
+        </div>
+      `;
+    }
   }
 
   container.innerHTML = html;
@@ -1635,29 +1720,57 @@ function recalculateSchedule() {
 
   // Total Events = (Qty * 1000) / FPE
   const totalEvents = Math.floor((qty * 1000) / fpe);
-  const motorTimeSec = Math.max(1.0, fpe / 100); // 100 g/s default calibration
-  const windowSec = ((eHour * 60 + eMin) - (sHour * 60 + sMin)) * 60;
-  const intervalMin = parseFloat(((windowSec - (totalEvents * motorTimeSec)) / (totalEvents * 60)).toFixed(1));
+  const rate = dev?.dischargeRateGs || 100;
+  const motorTimeSec = Math.max(1.0, fpe / rate); // actual discharge rate calibration
+  const singleEventSec = motorTimeSec + 6.0; // 3s pre-run warmup + motorTime + 3s post-run chute clear
+  const totalCyclesSec = totalEvents * singleEventSec;
+  const startMins = sHour * 60 + sMin;
+  const endMins = eHour * 60 + eMin;
+  const windowSec = (endMins - startMins) * 60;
+
+  let isValid = true;
+  let errorMsg = '';
+  let intervalMin = 0.0;
+
+  if (sHour < 6 || eHour > 18 || (eHour === 18 && eMin > 0)) {
+    isValid = false;
+    errorMsg = 'OUT OF 6AM-6PM WINDOW';
+  } else if (endMins <= startMins) {
+    isValid = false;
+    errorMsg = 'END <= START TIME';
+  } else if (totalCyclesSec >= windowSec) {
+    isValid = false;
+    errorMsg = 'TIME TOO SHORT';
+  } else {
+    intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+  }
 
   if (totalEventsEl) totalEventsEl.textContent = `${totalEvents}`;
   if (intervalEl) intervalEl.textContent = `${intervalMin} min`;
   if (motorTimeEl) motorTimeEl.textContent = `${motorTimeSec.toFixed(1)} s`;
 
   if (validBadge) {
-    validBadge.textContent = intervalMin >= 0.16 ? 'SCHEDULE OK' : 'WINDOW TOO TIGHT';
-    validBadge.className = intervalMin >= 0.16 ? 'badge-valid' : 'badge-invalid';
+    validBadge.textContent = isValid ? 'SCHEDULE OK' : errorMsg;
+    validBadge.className = isValid ? 'badge-valid' : 'badge-invalid';
   }
 
   if (dev) {
     dev.totalEvents = totalEvents;
     dev.intervalMin = intervalMin;
     dev.motorTimeSec = motorTimeSec;
+    dev.scheduleValid = isValid;
+    dev.scheduleError = errorMsg;
   }
 }
 
 async function saveSettingsToFeeder() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
+
+  if (dev.scheduleValid === false) {
+    showToast(`Cannot save: ${dev.scheduleError || 'Schedule violates 6 AM - 6 PM operational limit'}`);
+    return;
+  }
 
   const btnText = document.getElementById('save-btn-text');
   if (btnText) btnText.textContent = 'Saving to Feeder...';
@@ -2309,6 +2422,12 @@ function startTelemetryLoop() {
                 dummy02.id = 'e072a1fffef5ba08';
                 localDev = dummy02;
               }
+            } else if (cloudDev.DeviceId === 'e072a1fffef64134') {
+              const dummy03 = appState.devices.find(d => d.id === 'aquaCON-Feeder-03');
+              if (dummy03) {
+                dummy03.id = 'e072a1fffef64134';
+                localDev = dummy03;
+              }
             }
             if (!localDev) {
               localDev = {
@@ -2330,6 +2449,8 @@ function startTelemetryLoop() {
             if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
             if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);
             if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
+            if (cloudDev.LastEventTime !== undefined) localDev.lastEventTime = cloudDev.LastEventTime;
+            if (cloudDev.LastSeenEpoch !== undefined) localDev.lastSeenEpoch = Number(cloudDev.LastSeenEpoch);
             if (cloudDev.StartHour !== undefined) localDev.startHour = Number(cloudDev.StartHour);
             if (cloudDev.EndHour !== undefined) localDev.endHour = Number(cloudDev.EndHour);
             if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);

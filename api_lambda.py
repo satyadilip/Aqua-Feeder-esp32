@@ -20,6 +20,7 @@ iw_client = boto3.client('iotwireless', region_name='us-east-1')
 DEVEUI_TO_WIRELESS_ID = {
     'e072a1fffef5ba08': '9cd8879c-4265-4ddf-bda1-ab71e80a90a3',
     'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
+    'e072a1fffef64134': '144c9bac-2316-4b35-8262-aa297d03805d',
     'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f',
     'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
     'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
@@ -222,10 +223,18 @@ def lambda_handler(event, context):
                         calc_status = 'SCHEDULED'
 
                     now_epoch = int(datetime.utcnow().timestamp())
-                    if dev_id in ['e072a1fffef6249c', 'e072a1fffef5ba08']:
-                        feeder_name = 'aquaCON Feeder 01' if dev_id == 'e072a1fffef6249c' else 'aquaCON Feeder 02'
+                    if dev_id in ['e072a1fffef6249c', 'e072a1fffef5ba08', 'e072a1fffef64134']:
+                        if dev_id == 'e072a1fffef6249c':
+                            feeder_name = 'aquaCON Feeder 01'
+                            pond_name = 'P-01'
+                        elif dev_id == 'e072a1fffef5ba08':
+                            feeder_name = 'aquaCON Feeder 02'
+                            pond_name = 'P-01'
+                        else:
+                            feeder_name = 'aquaCON Feeder 03'
+                            pond_name = 'P-02'
                         d['DeviceName'] = feeder_name
-                        d['PondId'] = 'P-01'
+                        d['PondId'] = pond_name
                         is_online = (now_epoch - int(d.get('LastSeenEpoch', 0))) < 900
                         d['Connected'] = is_online
 
@@ -589,23 +598,29 @@ def lambda_handler(event, context):
                 # Calculate feed schedule math
                 total_events = int((float(feed_qty) * 1000.0) / float(feed_burst))
                 motor_time_s = round(float(feed_burst) / float(rate), 2)
+                single_event_s = motor_time_s + 6.0  # 3s PRE warmup + motor + 3s POST clearance
+                total_cycle_s = total_events * single_event_s
                 
                 start_mins = int(shour) * 60 + int(smin)
                 end_mins = int(ehour) * 60 + int(emin)
                 feed_window_s = (end_mins - start_mins) * 60
-                total_motor_s = total_events * motor_time_s
                 
                 interval_min = 0.0
                 valid = True
                 err = ""
-                if end_mins <= start_mins:
+                
+                # Check 1: 06:00 to 18:00 operational window limit
+                if int(shour) < 6 or int(ehour) > 18 or (int(ehour) == 18 and int(emin) > 0):
+                    valid = False
+                    err = "Operational daylight window is strictly 06:00 to 18:00 (cannot exceed 18:00)"
+                elif end_mins <= start_mins:
                     valid = False
                     err = "End time must be after start time"
-                elif total_motor_s >= feed_window_s:
+                elif total_cycle_s >= feed_window_s:
                     valid = False
-                    err = "Feed window too short for requested events"
+                    err = "Feed window too short for requested events and chute clearing duration"
                 else:
-                    interval_min = round((feed_window_s - total_motor_s) / (total_events * 60.0), 1)
+                    interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1)
                 
                 now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
                 

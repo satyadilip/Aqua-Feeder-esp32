@@ -86,11 +86,12 @@ def lambda_handler(event, context):
 
                 total_events = int((float(feed_qty_kg) * 1000.0) / float(fpe_g)) if float(fpe_g) > 0 else 250
                 motor_time_s = round(float(fpe_g) / float(rate_gs), 2) if float(rate_gs) > 0 else 1.0
+                single_event_s = motor_time_s + 6.0  # 3s PRE warmup + motor + 3s POST clearance
                 start_mins = int(shour) * 60 + int(smin)
                 end_mins = int(ehour) * 60 + int(emin)
                 feed_window_s = (end_mins - start_mins) * 60
-                total_motor_s = total_events * motor_time_s
-                interval_min = round((feed_window_s - total_motor_s) / (total_events * 60.0), 1) if (total_events > 0 and feed_window_s > total_motor_s) else 2.9
+                total_cycle_s = total_events * single_event_s
+                interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1) if (total_events > 0 and feed_window_s > total_cycle_s) else 2.8
                 
                 settings_table.put_item(
                     Item={
@@ -308,6 +309,12 @@ def lambda_handler(event, context):
             if dev_eui == 'e072a1fffef6249c':
                 dev_item['DeviceName'] = 'aquaCON Feeder 01 (Live AF_9C2472E0)'
                 dev_item['PondId'] = 'P-01'
+            elif dev_eui == 'e072a1fffef5ba08':
+                dev_item['DeviceName'] = 'aquaCON Feeder 02'
+                dev_item['PondId'] = 'P-01'
+            elif dev_eui == 'e072a1fffef64134':
+                dev_item['DeviceName'] = 'aquaCON Feeder 03 (Live AF_344172E0)'
+                dev_item['PondId'] = 'P-02'
             else:
                 dev_item['DeviceName'] = 'aquaCON Feeder ' + dev_eui[-4:]
                 dev_item['PondId'] = 'P-01'
