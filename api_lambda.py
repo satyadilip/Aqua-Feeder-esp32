@@ -294,30 +294,7 @@ def lambda_handler(event, context):
                         if 'MotorTimeSec' not in d: d['MotorTimeSec'] = 1.0
                         d['ScheduleValid'] = True
                         devices.append(d)
-                    elif dev_id == 'aquaCON-Feeder-02' and not any(x.get('DeviceId') == 'e072a1fffef5ba08' for x in raw_devices):
-                        d['DeviceName'] = 'aquaCON Feeder 02'
-                        d['PondId'] = 'P-01'
-                        d['Status'] = 'NOT CONNECTED'
-                        d['Connected'] = False
-                        d['FeedAvailable'] = False
-                        d['DispensedFeed_kg'] = 0.0
-                        d['CurrentEvent'] = 0
-                        d['TotalEvents'] = 0
-                        d['FeedQuantity_kg'] = 0.0
-                        d['NextFeed'] = '--'
-                        devices.append(d)
-                    elif dev_id == 'aquaCON-Feeder-03':
-                        d['DeviceName'] = 'aquaCON Feeder 03'
-                        d['PondId'] = 'P-02'
-                        d['Status'] = 'NOT CONNECTED'
-                        d['Connected'] = False
-                        d['FeedAvailable'] = False
-                        d['DispensedFeed_kg'] = 0.0
-                        d['CurrentEvent'] = 0
-                        d['TotalEvents'] = 0
-                        d['FeedQuantity_kg'] = 0.0
-                        d['NextFeed'] = '--'
-                        devices.append(d)
+
             except Exception as e:
                 print("Devices scan error:", e)
             devices.sort(key=lambda x: str(x.get('LastSeen', 0)), reverse=True)

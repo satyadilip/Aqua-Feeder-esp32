@@ -177,53 +177,36 @@ function loadDataFromStorage() {
         }
         return d;
       });
-      // Ensure e072a1fffef64134 is present and mapped to Feeder 03
-      const f64134Idx = parsed.findIndex(d => d.id === 'e072a1fffef64134');
-      if (f64134Idx === -1) {
-        const dummy03Idx = parsed.findIndex(d => d.id === 'aquaCON-Feeder-03');
-        if (dummy03Idx !== -1) {
-          parsed[dummy03Idx].id = 'e072a1fffef64134';
-          parsed[dummy03Idx].name = 'aquaCON Feeder 03';
-          parsed[dummy03Idx].pondId = 'P-02';
-          parsed[dummy03Idx].connected = true;
-          parsed[dummy03Idx].status = 'IDLE';
-          parsed[dummy03Idx].feedAvailable = true;
-        } else {
-          parsed.push({
-            id: 'e072a1fffef64134',
-            name: 'aquaCON Feeder 03',
-            pondId: 'P-02',
-            status: 'IDLE',
-            connected: true,
-            feedAvailable: true,
-            dispensedKg: 0.0,
-            targetKg: 15.0,
-            currentEvent: 0,
-            totalEvents: 150,
-            fpeGrams: 100,
-            dischargeRateGs: 100,
-            startHour: 6,
-            startMin: 0,
-            endHour: 18,
-            endMin: 0,
-            intervalMin: 4.7,
-            motorTimeSec: 1.0,
-            scheduleValid: true
-          });
-        }
+
+      // 1. Purge ALL obsolete dummy devices completely from storage
+      parsed = parsed.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02' && d.id !== 'aquaCON-AGV1-01');
+
+      // 2. Ensure Feeder 03 (e072a1fffef64134) exists
+      if (!parsed.some(d => d.id === 'e072a1fffef64134')) {
+        parsed.push({ ...defaultDevices[2] });
       }
 
-      // Ensure e072a1fffef5ba08 is present and mapped to Feeder 02
-      const ba08Idx = parsed.findIndex(d => d.id === 'e072a1fffef5ba08');
-      if (ba08Idx === -1) {
-        const dummy02Idx = parsed.findIndex(d => d.id === 'aquaCON-Feeder-02');
-        if (dummy02Idx !== -1) {
-          parsed[dummy02Idx] = { ...defaultDevices[1] };
-        } else {
-          parsed.push({ ...defaultDevices[1] });
-        }
+      // 3. Ensure Feeder 02 (e072a1fffef5ba08) exists
+      if (!parsed.some(d => d.id === 'e072a1fffef5ba08')) {
+        parsed.push({ ...defaultDevices[1] });
       }
+
+      // 4. Ensure Feeder 01 (e072a1fffef6249c) exists
+      if (!parsed.some(d => d.id === 'e072a1fffef6249c')) {
+        parsed.push({ ...defaultDevices[0] });
+      }
+
+      // 5. De-duplicate any multiple instances by device ID
+      const seen = new Set();
+      parsed = parsed.filter(d => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      });
+
       appState.devices = parsed;
+      // Persist the clean list back to localStorage immediately
+      localStorage.setItem('aquacon_devices', JSON.stringify(appState.devices));
     } catch(e) {
       appState.devices = [...defaultDevices];
     }
@@ -2413,6 +2396,8 @@ function startTelemetryLoop() {
       const data = await res.json();
 
       if (data && data.devices) {
+        // Scrub any legacy dummy feeder from state
+        appState.devices = appState.devices.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02');
         data.devices.forEach(cloudDev => {
           let localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
           if (!localDev) {
