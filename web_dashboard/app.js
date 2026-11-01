@@ -1325,7 +1325,9 @@ function renderEventsLog(dev, metrics) {
   const logLabel = document.getElementById('log-date-label');
   const now = new Date();
   const currentTotalMin = now.getHours() * 60 + now.getMinutes();
-  const startTotalMin = (dev.startHour || 6) * 60 + (dev.startMin || 0);
+  const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
+  const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
+  const startTotalMin = sHour * 60 + sMin;
   const isBeforeSchedule = currentTotalMin < startTotalMin;
 
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
@@ -1380,9 +1382,6 @@ function renderEventsLog(dev, metrics) {
     return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
-  const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
-  const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
-  const startTotalMin = sHour * 60 + sMin;
   const intervalMin = parseFloat(dev.intervalMin || dev.IntervalMin || 4.8);
 
   if (dev.eventsLog && dev.eventsLog.length > 0) {
