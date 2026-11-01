@@ -521,6 +521,9 @@ void handleButtonNavigation() {
                 cfgMgr.saveFeedParams(config);
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
+                if (!sysStatus.scheduleValid) {
+                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 2;
             }
@@ -534,6 +537,9 @@ void handleButtonNavigation() {
                 cfgMgr.saveFeedParams(config);
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
+                if (!sysStatus.scheduleValid) {
+                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 3;
             }
@@ -556,6 +562,9 @@ void handleButtonNavigation() {
                     cfgMgr.saveFeedParams(config);
                     if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                     else feedEng.calcSchedule();
+                    if (!sysStatus.scheduleValid) {
+                        lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                    }
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                     menuCursorIdx = 4;
                     editFld = 0;
@@ -580,6 +589,9 @@ void handleButtonNavigation() {
                     cfgMgr.saveFeedParams(config);
                     if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                     else feedEng.calcSchedule();
+                    if (!sysStatus.scheduleValid) {
+                        lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                    }
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                     menuCursorIdx = 5;
                     editFld = 0;
@@ -595,6 +607,9 @@ void handleButtonNavigation() {
                 cfgMgr.saveFeedParams(config);
                 if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
                 else feedEng.calcSchedule();
+                if (!sysStatus.scheduleValid) {
+                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 6;
             }

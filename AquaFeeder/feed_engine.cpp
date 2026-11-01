@@ -22,7 +22,8 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     _status->scheduleValid = false;
     memset(_status->schedError, 0, sizeof(_status->schedError));
     
-    if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR) {
+    // Check 1: 06:00 to 18:00 Operational Window hard limit (cannot exceed 18:00)
+    if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR || (_cfg->endHour == OP_END_HOUR && _cfg->endMinute > 0)) {
         strncpy(_status->schedError, "Out of OP Window", sizeof(_status->schedError)-1);
         return false;
     }
@@ -53,8 +54,19 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     if (motorTime_ms < MOTOR_MIN_RUN_MS) motorTime_ms = MOTOR_MIN_RUN_MS;
     _status->motorTimeMs = motorTime_ms;
     
-    unsigned long totalMotor_ms = _status->totalEvents * motorTime_ms;
-    unsigned long availableTime_ms = 0;
+    // Each event includes Pre-Warmup (3s) + Dispense (motorTime_ms) + Post-Clearance (3s)
+    unsigned long singleEvent_ms = MOTOR_PRE_RUN_MS + motorTime_ms + MOTOR_POST_RUN_MS;
+    unsigned long totalEventsDuration_ms = _status->totalEvents * singleEvent_ms;
+    unsigned long fullWindow_ms = (endMins - startMins) * 60UL * 1000UL;
+
+    // Check 4: Can the requested quantity physically fit within the operational daylight window?
+    if (totalEventsDuration_ms >= fullWindow_ms) {
+        strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
+        Serial.println("[SCHED] Error: Configured feed parameters cannot fit before 6 PM window!");
+        return false;
+    }
+
+    unsigned long availableTime_ms = fullWindow_ms;
 
     if (nowEpoch > 0) {
         uint32_t secSinceMidnight = nowEpoch % 86400;
@@ -74,8 +86,6 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
             uint32_t endSecToday = (uint32_t)endMins * 60UL;
             if (endSecToday > secSinceMidnight) {
                 availableTime_ms = (endSecToday - secSinceMidnight) * 1000UL;
-            } else {
-                availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
             }
             if (_status->currentEvent == 0) {
                 _status->nextFeedEpoch = nowEpoch;
@@ -84,21 +94,19 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
                           currentMins / 60, currentMins % 60, (availableTime_ms / 1000UL), endMins / 60, endMins % 60);
         } else {
             // Early morning before start time (e.g. 05:30 AM before 06:00 AM)
-            availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
+            availableTime_ms = fullWindow_ms;
             _status->nextFeedEpoch = startEpochToday;
         }
-    } else {
-        // Fallback if no RTC epoch available (e.g. test bench)
-        availableTime_ms = (endMins - startMins) * 60UL * 1000UL;
+
+        // Check 5: For mid-day start, can it finish in the remaining time today?
+        if (totalEventsDuration_ms >= availableTime_ms) {
+            strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
+            Serial.println("[SCHED] Error: Remaining operational window is shorter than required total cycle time!");
+            return false;
+        }
     }
     
-    if (totalMotor_ms >= availableTime_ms) {
-        strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
-        Serial.println("[SCHED] Error: Remaining operational window is shorter than required motor run time!");
-        return false;
-    }
-    
-    _status->intervalMs = (availableTime_ms - totalMotor_ms) / _status->totalEvents;
+    _status->intervalMs = (availableTime_ms - totalEventsDuration_ms) / _status->totalEvents;
     Serial.printf("[SCHED] Schedule OK: %d events, motorTime: %lu ms, gap interval: %lu s (%lu ms)\n",
                   _status->totalEvents, _status->motorTimeMs, (_status->intervalMs / 1000UL), _status->intervalMs);
     
@@ -215,10 +223,24 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 _status->currentEvent++;
                 _status->dispensedQuantity_g += _cfg->feedPerEvent;
                 
-                if (_status->currentEvent >= _status->totalEvents || _status->dispensedQuantity_g >= (_cfg->feedQuantity * 1000.0f)) {
+                bool windowExpired = false;
+                if (nowEpoch > 0) {
+                    uint32_t secSinceMidnight = nowEpoch % 86400;
+                    uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
+                    if (secSinceMidnight >= endSecToday) {
+                        windowExpired = true;
+                    }
+                }
+
+                if (_status->currentEvent >= _status->totalEvents || 
+                    _status->dispensedQuantity_g >= (_cfg->feedQuantity * 1000.0f) ||
+                    windowExpired) {
                     _status->state = SystemState::FEED_FINISHED;
                     _status->feedActive = false;
                     _fcState = FeedCycleState::FC_IDLE;
+                    if (windowExpired) {
+                        Serial.println("[FEED] 6:00 PM operational window reached. Feeding concluded for today.");
+                    }
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
                     if (_saveState) _saveState();
                 } else {
@@ -237,6 +259,21 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
             if (!_fcEntered) {
                 _status->state = SystemState::FEED_WAIT_NEXT;
                 _fcEntered = true;
+            }
+            // Check if 6:00 PM window has arrived while waiting in gap
+            if (nowEpoch > 0) {
+                uint32_t secSinceMidnight = nowEpoch % 86400;
+                uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
+                if (secSinceMidnight >= endSecToday) {
+                    if (_motorsOff) _motorsOff();
+                    _status->state = SystemState::FEED_FINISHED;
+                    _status->feedActive = false;
+                    _fcState = FeedCycleState::FC_IDLE;
+                    Serial.println("[FEED] 6:00 PM operational window reached during gap wait. Feeding concluded for today.");
+                    if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
+                    if (_saveState) _saveState();
+                    break;
+                }
             }
             if ((nowEpoch > 0 && _status->nextFeedEpoch > 0 && nowEpoch >= _status->nextFeedEpoch) || 
                 (nowMs - _fcTimer >= _status->intervalMs)) {
@@ -283,18 +320,20 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
     
     if (endSecToday <= secSinceMidnight) {
-        // We are already past end time! Feed as fast as possible.
-        _status->intervalMs = 0;
+        // Already past 6:00 PM operational window! Conclude feed cleanly.
+        stopFeed();
+        _status->state = SystemState::FEED_FINISHED;
         return;
     }
     
     unsigned long remainingTimeMs = (endSecToday - secSinceMidnight) * 1000UL;
-    unsigned long remainingMotorMs = remainingEvents * motorTime_ms;
+    unsigned long singleEvent_ms = MOTOR_PRE_RUN_MS + motorTime_ms + MOTOR_POST_RUN_MS;
+    unsigned long remainingEventsDurationMs = remainingEvents * singleEvent_ms;
     
-    if (remainingMotorMs >= remainingTimeMs) {
-        _status->intervalMs = 0; // No gap time left, run continuously
+    if (remainingEventsDurationMs >= remainingTimeMs) {
+        _status->intervalMs = 0; // No gap time left, run continuously until 6 PM cutoff
     } else {
-        _status->intervalMs = (remainingTimeMs - remainingMotorMs) / remainingEvents;
+        _status->intervalMs = (remainingTimeMs - remainingEventsDurationMs) / remainingEvents;
     }
     Serial.printf("[SCHED] Recalculated dynamic: %ld events remaining, gap interval: %lu s (%lu ms)\n",
                   remainingEvents, (_status->intervalMs / 1000UL), _status->intervalMs);
@@ -340,6 +379,18 @@ void FeedEngine::resumeFromPowerFailure(uint32_t nowEpoch) {
         stopFeed();
         _status->state = SystemState::FEED_FINISHED;
         return;
+    }
+
+    // Check if operational window has already passed
+    if (nowEpoch > 0) {
+        uint32_t secSinceMidnight = nowEpoch % 86400;
+        uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
+        if (secSinceMidnight >= endSecToday) {
+            stopFeed();
+            _status->state = SystemState::FEED_FINISHED;
+            Serial.println("[SCHED] Power recovered after 6:00 PM window. Feeding concluded.");
+            return;
+        }
     }
     
     // Recalculate parameters for the remaining time
