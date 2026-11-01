@@ -280,6 +280,46 @@ function renderActiveFeeder() {
   const eventsEl = document.getElementById('hero-events-progress');
   if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
 
+  // Next Dispense Pulse Time
+  const nextPulseEl = document.getElementById('hero-next-pulse');
+  if (nextPulseEl) {
+    const sH = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
+    const sM = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
+    const eH = parseInt(dev.endHour !== undefined ? dev.endHour : (dev.EndHour !== undefined ? dev.EndHour : 18), 10);
+    const eM = parseInt(dev.endMin !== undefined ? dev.endMin : (dev.EndMinute !== undefined ? dev.EndMinute : 0), 10);
+    const intervalM = parseFloat(dev.intervalMin || dev.IntervalMin || 4.8);
+
+    function formatTimeAmPm(h, m) {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+      return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+    }
+
+    const now = new Date();
+    const nowIstMin = ((now.getUTCHours() * 60 + now.getUTCMinutes() + 330) % 1440);
+    const startM = sH * 60 + sM;
+    const endM = eH * 60 + eM;
+
+    let nextStr = formatTimeAmPm(sH, sM);
+    if (dev.isPaused) {
+      nextStr = '--';
+    } else if (nowIstMin < startM) {
+      nextStr = formatTimeAmPm(sH, sM);
+    } else if (nowIstMin >= endM || (dev.currentEvent >= dev.totalEvents && dev.totalEvents > 0)) {
+      nextStr = formatTimeAmPm(sH, sM);
+    } else {
+      let nextM = nowIstMin + Math.round(intervalM);
+      if (nextM >= endM) {
+        nextStr = formatTimeAmPm(sH, sM);
+      } else {
+        const nh = Math.floor(nextM / 60) % 24;
+        const nm = nextM % 60;
+        nextStr = formatTimeAmPm(nh, nm);
+      }
+    }
+    nextPulseEl.textContent = nextStr;
+  }
+
   // Pause Button
   const pauseLabel = document.getElementById('btn-pause-label');
   if (pauseLabel) {
@@ -469,14 +509,35 @@ function recalculateSchedule() {
 
   let windowMinutes = 720;
   if (startEl && endEl && startEl.value && endEl.value) {
-    const [sh, sm] = startEl.value.split(':').map(Number);
-    const [eh, em] = endEl.value.split(':').map(Number);
+    let [sh, sm] = startEl.value.split(':').map(Number);
+    let [eh, em] = endEl.value.split(':').map(Number);
+
+    // Operational daylight window hard limits: 06:00 to 18:00
+    if (sh < 6) { sh = 6; sm = 0; startEl.value = '06:00'; }
+    if (eh > 18 || (eh === 18 && em > 0)) { eh = 18; em = 0; endEl.value = '18:00'; }
+
     const startM = sh * 60 + sm;
     const endM = eh * 60 + em;
-    if (endM > startM) windowMinutes = endM - startM;
+    if (endM > startM) {
+      windowMinutes = endM - startM;
+      dev.startHour = sh;
+      dev.startMin = sm;
+      dev.endHour = eh;
+      dev.endMin = em;
+    }
   }
 
-  const intervalMin = (windowMinutes / totalEvents).toFixed(1);
+  const rate = dev.dischargeRateGs || 100;
+  const singleEventSec = (dev.fpeGrams / rate) + 6.0;
+  const totalCyclesSec = totalEvents * singleEventSec;
+  const windowSec = windowMinutes * 60;
+
+  let intervalMin = 0.0;
+  if (windowSec > totalCyclesSec && totalEvents > 0) {
+    intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+  } else {
+    intervalMin = parseFloat((windowMinutes / totalEvents).toFixed(1));
+  }
   dev.intervalMin = intervalMin;
 
   const pulsesEl = document.getElementById('proto-calc-pulses');
@@ -524,15 +585,31 @@ async function sendDownlinkCommand(deviceId, commandType, payload = {}) {
 // ============================================================================
 async function fetchLiveTelemetry() {
   try {
-    const res = await fetch(`${API_BASE_URL}/telemetry?limit=10`);
+    const res = await fetch(`${API_BASE_URL}/api/devices?_t=${Date.now()}`);
     if (res.ok) {
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        processLatestUplinks(data);
+      if (data && data.devices) {
+        data.devices.forEach(cloudDev => {
+          const match = appState.devices.find(d => d.id.toLowerCase() === cloudDev.DeviceId.toLowerCase());
+          if (match) {
+            if (cloudDev.DispensedFeed_kg !== undefined) match.dispensedKg = Number(cloudDev.DispensedFeed_kg);
+            if (cloudDev.CurrentEvent !== undefined) match.currentEvent = Number(cloudDev.CurrentEvent);
+            if (cloudDev.TotalEvents !== undefined) match.totalEvents = Number(cloudDev.TotalEvents);
+            if (cloudDev.FeedQuantity_kg !== undefined) match.targetKg = Number(cloudDev.FeedQuantity_kg);
+            if (cloudDev.StartHour !== undefined) match.startHour = Number(cloudDev.StartHour);
+            if (cloudDev.StartMinute !== undefined) match.startMin = Number(cloudDev.StartMinute);
+            if (cloudDev.EndHour !== undefined) match.endHour = Number(cloudDev.EndHour);
+            if (cloudDev.EndMinute !== undefined) match.endMin = Number(cloudDev.EndMinute);
+            if (cloudDev.IntervalMin !== undefined) match.intervalMin = Number(cloudDev.IntervalMin);
+            if (cloudDev.Connected !== undefined) match.connected = Boolean(cloudDev.Connected);
+            if (cloudDev.Status) match.status = cloudDev.Status;
+          }
+        });
+        renderActiveFeeder();
       }
     }
   } catch (err) {
-    console.log('Background polling fallback');
+    console.log('Live polling fallback');
   }
 }
 

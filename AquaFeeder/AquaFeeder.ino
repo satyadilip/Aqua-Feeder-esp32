@@ -108,11 +108,12 @@ void cbOnFeedStart() {
     uint32_t epoch = rtcMgr.getEpoch();
     feedEng.calcSchedule(epoch);
     if (sysStatus.scheduleValid) {
-        feedEng.startFeed();
+        feedEng.startFeed(epoch);
         currentMenu = MenuState::RUNNING;
         Serial.println("[MAIN] Feed started via web/button!");
     } else {
         Serial.printf("[MAIN] Feed start blocked: %s\n", sysStatus.schedError);
+        lcd.showMessage("Cannot Start", sysStatus.schedError, 2500);
     }
 }
 
@@ -123,10 +124,19 @@ void cbOnFeedStop() {
 }
 
 void cbOnSaveConfig(const DeviceConfig& newCfg) {
+    DeviceConfig oldCfg = config;
     config = newCfg;
-    cfgMgr.saveFeedParams(config);
-    feedEng.calcSchedule();
-    Serial.println("[MAIN] Config saved via web.");
+    uint32_t epoch = rtcMgr.getEpoch();
+    bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+    if (!valid) {
+        Serial.printf("[MAIN] [REJECT] Web settings invalid or cannot fit: %s\n", sysStatus.schedError);
+        config = oldCfg;
+        if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+        else feedEng.calcSchedule(epoch);
+    } else {
+        cfgMgr.saveFeedParams(config);
+        Serial.println("[MAIN] Config saved via web.");
+    }
     telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
 }
 
@@ -140,6 +150,7 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
     if (dl.msgType == (uint8_t)CommandMsgType::CMD_SET_SETTINGS) {
         Serial.println("[MAIN] Received SET_SETTINGS Downlink!");
         
+        DeviceConfig oldCfg = config;
         config.feedQuantity = dl.feedQuantity / 10.0f;
         config.feedPerEvent = dl.feedPerEvent;
         config.startHour = dl.startHour;
@@ -148,9 +159,17 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         config.endMinute = dl.endMinute;
         config.dischargeRate = dl.dischargeRate;
         
-        cfgMgr.saveFeedParams(config);
-        feedEng.calcSchedule();
-        Serial.println("[MAIN] Settings applied from Downlink!");
+        uint32_t epoch = rtcMgr.getEpoch();
+        bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+        if (!valid) {
+            Serial.printf("[MAIN] [REJECT] Downlink settings invalid or cannot fit: %s\n", sysStatus.schedError);
+            config = oldCfg;
+            if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+            else feedEng.calcSchedule(epoch);
+        } else {
+            cfgMgr.saveFeedParams(config);
+            Serial.println("[MAIN] Settings applied from Downlink!");
+        }
         
         // Transmit confirmation report
         telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
@@ -517,12 +536,17 @@ void handleButtonNavigation() {
             if (up.repeatEvent)   editVal = constrain(editVal + 5, 5, 1200);  // x10
             if (dn.repeatEvent)   editVal = constrain(editVal - 5, 5, 1200);
             if (sel.risingEdge) {
+                DeviceConfig oldCfg = config;
                 config.feedQuantity = editVal / 10.0f;
-                cfgMgr.saveFeedParams(config);
-                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
-                else feedEng.calcSchedule();
-                if (!sysStatus.scheduleValid) {
-                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                uint32_t epoch = rtcMgr.getEpoch();
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                if (!ok) {
+                    config = oldCfg;
+                    if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                    else feedEng.calcSchedule(epoch);
+                    lcd.showMessage("Config Error", sysStatus.schedError, 2000);
+                } else {
+                    cfgMgr.saveFeedParams(config);
                 }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 2;
@@ -533,12 +557,17 @@ void handleButtonNavigation() {
             if (up.repeatEvent)   editVal = constrain(editVal + FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
             if (dn.repeatEvent)   editVal = constrain(editVal - FEED_FPE_STEP, FEED_FPE_MIN, FEED_FPE_MAX);
             if (sel.risingEdge) {
+                DeviceConfig oldCfg = config;
                 config.feedPerEvent = editVal;
-                cfgMgr.saveFeedParams(config);
-                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
-                else feedEng.calcSchedule();
-                if (!sysStatus.scheduleValid) {
-                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                uint32_t epoch = rtcMgr.getEpoch();
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                if (!ok) {
+                    config = oldCfg;
+                    if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                    else feedEng.calcSchedule(epoch);
+                    lcd.showMessage("Config Error", sysStatus.schedError, 2000);
+                } else {
+                    cfgMgr.saveFeedParams(config);
                 }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 3;
@@ -546,24 +575,39 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_END_TIME:
-            if (editFld == 0) {  // Editing hour
-                if (up.repeatEvent)   editVal = (editVal + 1) % 24;
-                if (dn.repeatEvent)   editVal = (editVal + 23) % 24;
+            if (editFld == 0) {  // Editing hour strictly in [OP_START_HOUR, OP_END_HOUR]
+                if (up.repeatEvent) {
+                    editVal++;
+                    if (editVal > OP_END_HOUR) editVal = OP_START_HOUR;
+                }
+                if (dn.repeatEvent) {
+                    editVal--;
+                    if (editVal < OP_START_HOUR) editVal = OP_END_HOUR;
+                }
                 if (sel.risingEdge) {
                     config.endHour = editVal;
-                    editVal = config.endMinute;
+                    editVal = (config.endHour == OP_END_HOUR) ? 0 : config.endMinute;
                     editFld = 1;  // Switch to minute
                 }
             } else {  // Editing minute
-                if (up.repeatEvent)   editVal = (editVal + 1) % 60;
-                if (dn.repeatEvent)   editVal = (editVal + 59) % 60;
+                if (config.endHour == OP_END_HOUR) {
+                    editVal = 0; // Strict limit: cannot exceed 18:00
+                } else {
+                    if (up.repeatEvent)   editVal = (editVal + 1) % 60;
+                    if (dn.repeatEvent)   editVal = (editVal + 59) % 60;
+                }
                 if (sel.risingEdge) {
+                    DeviceConfig oldCfg = config;
                     config.endMinute = editVal;
-                    cfgMgr.saveFeedParams(config);
-                    if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
-                    else feedEng.calcSchedule();
-                    if (!sysStatus.scheduleValid) {
-                        lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                    uint32_t epoch = rtcMgr.getEpoch();
+                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    if (!ok) {
+                        config = oldCfg;
+                        if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                        else feedEng.calcSchedule(epoch);
+                        lcd.showMessage("Config Error", sysStatus.schedError, 2000);
+                    } else {
+                        cfgMgr.saveFeedParams(config);
                     }
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                     menuCursorIdx = 4;
@@ -573,9 +617,15 @@ void handleButtonNavigation() {
             break;
 
         case MenuState::EDIT_START_TIME:
-            if (editFld == 0) {  // Editing hour
-                if (up.repeatEvent)   editVal = (editVal + 1) % 24;
-                if (dn.repeatEvent)   editVal = (editVal + 23) % 24;
+            if (editFld == 0) {  // Editing hour strictly in [OP_START_HOUR, OP_END_HOUR - 1]
+                if (up.repeatEvent) {
+                    editVal++;
+                    if (editVal > (OP_END_HOUR - 1)) editVal = OP_START_HOUR;
+                }
+                if (dn.repeatEvent) {
+                    editVal--;
+                    if (editVal < OP_START_HOUR) editVal = OP_END_HOUR - 1;
+                }
                 if (sel.risingEdge) {
                     config.startHour = editVal;
                     editVal = config.startMinute;
@@ -585,12 +635,17 @@ void handleButtonNavigation() {
                 if (up.repeatEvent)   editVal = (editVal + 1) % 60;
                 if (dn.repeatEvent)   editVal = (editVal + 59) % 60;
                 if (sel.risingEdge) {
+                    DeviceConfig oldCfg = config;
                     config.startMinute = editVal;
-                    cfgMgr.saveFeedParams(config);
-                    if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
-                    else feedEng.calcSchedule();
-                    if (!sysStatus.scheduleValid) {
-                        lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                    uint32_t epoch = rtcMgr.getEpoch();
+                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    if (!ok) {
+                        config = oldCfg;
+                        if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                        else feedEng.calcSchedule(epoch);
+                        lcd.showMessage("Config Error", sysStatus.schedError, 2000);
+                    } else {
+                        cfgMgr.saveFeedParams(config);
                     }
                     currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                     menuCursorIdx = 5;
@@ -603,12 +658,17 @@ void handleButtonNavigation() {
             if (up.repeatEvent)   editVal = constrain(editVal + 1, FEED_RATE_MIN, FEED_RATE_MAX);
             if (dn.repeatEvent)   editVal = constrain(editVal - 1, FEED_RATE_MIN, FEED_RATE_MAX);
             if (sel.risingEdge) {
+                DeviceConfig oldCfg = config;
                 config.dischargeRate = editVal;
-                cfgMgr.saveFeedParams(config);
-                if (feedEng.isActive()) feedEng.recalcDynamic(rtcMgr.getEpoch());
-                else feedEng.calcSchedule();
-                if (!sysStatus.scheduleValid) {
-                    lcd.showMessage("Invalid Schedule", sysStatus.schedError, 2000);
+                uint32_t epoch = rtcMgr.getEpoch();
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                if (!ok) {
+                    config = oldCfg;
+                    if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                    else feedEng.calcSchedule(epoch);
+                    lcd.showMessage("Config Error", sysStatus.schedError, 2000);
+                } else {
+                    cfgMgr.saveFeedParams(config);
                 }
                 currentMenu = feedEng.isActive() ? MenuState::RUNNING : MenuState::MENU_LIST;
                 menuCursorIdx = 6;

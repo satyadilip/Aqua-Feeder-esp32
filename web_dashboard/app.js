@@ -850,12 +850,20 @@ function loadSelectedDeviceToUI() {
   const currentMin = now.getMinutes();
   const nowTotalMin = currentHour * 60 + currentMin;
 
-  const sHour = dev.startHour !== undefined ? dev.startHour : 6;
-  const sMin = dev.startMin !== undefined ? dev.startMin : 0;
-  const eHour = dev.endHour !== undefined ? dev.endHour : 18;
-  const eMin = dev.endMin !== undefined ? dev.endMin : 0;
+  const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
+  const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
+  const eHour = parseInt(dev.endHour !== undefined ? dev.endHour : (dev.EndHour !== undefined ? dev.EndHour : 18), 10);
+  const eMin = parseInt(dev.endMin !== undefined ? dev.endMin : (dev.EndMinute !== undefined ? dev.EndMinute : 0), 10);
   const startTotalMin = sHour * 60 + sMin;
   const endTotalMin = eHour * 60 + eMin;
+
+  function formatTimeAmPm(h, m) {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+    return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+  const timeFormatted = formatTimeAmPm(sHour, sMin);
+  const endTimeFormatted = formatTimeAmPm(eHour, eMin);
 
   const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
   const isFeedEmpty = dev.feedAvailable === false || dev.status === 'FEED EMPTY' || ((dev.statusFlags || 0) & 0x08) !== 0 || ((dev.statusFlags || 0) & 0x01) !== 0;
@@ -866,7 +874,7 @@ function loadSelectedDeviceToUI() {
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
-  // Before today's schedule begins (e.g. before 06:00 AM), today's feeding progress is 0
+  // Before today's schedule begins, today's feeding progress is 0
   const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
   const isTargetCompleted = !isBeforeSchedule && effectiveCurrent >= totalEvents;
   const isScheduleDone = !isBeforeSchedule && (isTargetCompleted || isPastSchedule);
@@ -876,7 +884,6 @@ function loadSelectedDeviceToUI() {
 
   let statusText = 'STANDBY';
   let badgeClass = 'b-idle';
-  const timeFormatted = `${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM`;
   let nextTimestamp = timeFormatted;
   let nextSubText = `Starts today at ${timeFormatted}`;
   let eventSubText = "Ready for schedule";
@@ -912,28 +919,28 @@ function loadSelectedDeviceToUI() {
     let nextMin;
     if (dev.lastEventTime) {
       try {
-        const lastD = new Date(dev.lastEventTime.replace('Z', ''));
+        const lastD = new Date(dev.lastEventTime);
         if (!isNaN(lastD.getTime())) {
-          const lastMin = lastD.getHours() * 60 + lastD.getMinutes();
+          // Convert to IST
+          const istD = new Date(lastD.getTime() + 19800000);
+          const lastMin = istD.getUTCHours() * 60 + istD.getUTCMinutes();
           nextMin = lastMin + Math.round(intervalMin);
         }
       } catch (e) {}
     }
-    if (!nextMin) {
+    if (!nextMin || nextMin < nowTotalMin) {
       nextMin = nowTotalMin + Math.round(intervalMin);
     }
     if (nextMin >= endTotalMin) {
       statusText = 'COMPLETED';
       badgeClass = 'b-done';
-      nextTimestamp = '06:00 AM';
-      nextSubText = 'Daylight schedule completed';
+      nextTimestamp = timeFormatted;
+      nextSubText = `Concludes at ${endTimeFormatted}`;
       eventSubText = 'Finished for today';
     } else {
       const nH = Math.floor(nextMin / 60) % 24;
       const nM = nextMin % 60;
-      const ampm = nH >= 12 ? 'PM' : 'AM';
-      const dispH = nH % 12 === 0 ? 12 : nH % 12;
-      nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
+      nextTimestamp = formatTimeAmPm(nH, nM);
       nextSubText = `Interval: ${intervalMin} min`;
       eventSubText = 'Events today';
     }
@@ -942,12 +949,15 @@ function loadSelectedDeviceToUI() {
     badgeClass = 'b-run';
     const intervalMin = dev.intervalMin || 3.1;
     const nextMin = nowTotalMin + Math.round(intervalMin);
-    const nH = Math.floor(nextMin / 60) % 24;
-    const nM = nextMin % 60;
-    const ampm = nH >= 12 ? 'PM' : 'AM';
-    const dispH = nH % 12 === 0 ? 12 : nH % 12;
-    nextTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
-    nextSubText = `Interval: ${intervalMin} min`;
+    if (nextMin >= endTotalMin) {
+      nextTimestamp = timeFormatted;
+      nextSubText = 'Tomorrow morning';
+    } else {
+      const nH = Math.floor(nextMin / 60) % 24;
+      const nM = nextMin % 60;
+      nextTimestamp = formatTimeAmPm(nH, nM);
+      nextSubText = `Interval: ${intervalMin} min`;
+    }
     eventSubText = 'Events today';
   }
 
@@ -967,7 +977,7 @@ function loadSelectedDeviceToUI() {
     gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
   }
   if (gaugePctBadge) {
-    gaugePctBadge.textContent = isBeforeSchedule ? 'Scheduled 06:00 AM' : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
+    gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
   }
 
   const rawDispensed = isBeforeSchedule ? 0.0 : (dev.dispensedKg !== undefined ? dev.dispensedKg : 0);
@@ -1364,6 +1374,17 @@ function renderEventsLog(dev, metrics) {
   }
 
   let html = '';
+  function formatTimeAmPm(h, m) {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+    return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+  }
+
+  const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
+  const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
+  const startTotalMin = sHour * 60 + sMin;
+  const intervalMin = parseFloat(dev.intervalMin || dev.IntervalMin || 4.8);
+
   if (dev.eventsLog && dev.eventsLog.length > 0) {
     const displayed = dev.eventsLog.slice(0, maxToDisplay);
     displayed.forEach(ev => {
@@ -1378,28 +1399,12 @@ function renderEventsLog(dev, metrics) {
       `;
     });
   } else {
-    let anchorMin = null;
-    if (dev.lastEventTime) {
-      try {
-        const lastD = new Date(dev.lastEventTime.replace('Z', ''));
-        if (!isNaN(lastD.getTime())) {
-          anchorMin = lastD.getHours() * 60 + lastD.getMinutes();
-        }
-      } catch (e) {}
-    }
-    if (anchorMin === null) {
-      anchorMin = (dev.startHour || 6) * 60 + (dev.startMin || 0) + Math.round((startEvent - 1) * (dev.intervalMin || 2.8));
-    }
-
+    // Generate chronologically accurate feed event times starting at configured startHour:startMin
     for (let i = startEvent; i >= endEvent; i--) {
-      const offsetMin = Math.round((startEvent - i) * (dev.intervalMin || 2.8));
-      let eventTotalMin = anchorMin - offsetMin;
-      if (eventTotalMin < 0) eventTotalMin += 1440;
-      const h = Math.floor(eventTotalMin / 60) % 24;
-      const m = eventTotalMin % 60;
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const displayH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
-      const t = `${String(displayH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+      const eventMin = Math.round(startTotalMin + (i - 1) * intervalMin);
+      const h = Math.floor(eventMin / 60) % 24;
+      const m = eventMin % 60;
+      const t = formatTimeAmPm(h, m);
 
       html += `
         <div class="event-log-item">

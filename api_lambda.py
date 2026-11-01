@@ -293,6 +293,55 @@ def lambda_handler(event, context):
                         if 'DischargeRate_gs' not in d: d['DischargeRate_gs'] = 100
                         if 'MotorTimeSec' not in d: d['MotorTimeSec'] = 1.0
                         d['ScheduleValid'] = True
+
+                        # Dynamic Next Feed calculation based on actual start time & current settings
+                        interval_m = float(d.get('IntervalMin', 4.8))
+                        s_ampm = "PM" if s_hour >= 12 else "AM"
+                        s_disph = 12 if s_hour % 12 == 0 else s_hour % 12
+                        s_time_fmt = f"{s_disph:02d}:{s_min:02d} {s_ampm}"
+
+                        if not is_online:
+                            d['NextFeed'] = "--"
+                            d['NextFeedSub'] = "Feeder Offline"
+                        elif actual_status == 'PAUSED':
+                            d['NextFeed'] = "--"
+                            d['NextFeedSub'] = "Feed Paused"
+                        elif actual_status == 'FEED EMPTY':
+                            d['NextFeed'] = "--"
+                            d['NextFeedSub'] = "Refill Required"
+                        elif actual_status == 'COMPLETED' or now_min >= end_min or cur_ev >= tot_ev:
+                            d['NextFeed'] = s_time_fmt
+                            d['NextFeedSub'] = "Tomorrow morning"
+                        elif now_min < start_min:
+                            d['NextFeed'] = s_time_fmt
+                            d['NextFeedSub'] = f"Starts today at {s_time_fmt}"
+                        elif actual_status in ['FEEDING', 'ACTIVE', 'SCHEDULED']:
+                            # Feed is underway today
+                            if cur_ev == 0:
+                                next_m = now_min
+                            else:
+                                if is_today_feed_event and 'dt_ist' in locals():
+                                    last_m = dt_ist.hour * 60 + dt_ist.minute
+                                    next_m = last_m + int(round(interval_m))
+                                    if next_m < now_min:
+                                        next_m = now_min + int(round(interval_m))
+                                else:
+                                    next_m = now_min + int(round(interval_m))
+                            
+                            if next_m >= end_min:
+                                d['NextFeed'] = s_time_fmt
+                                d['NextFeedSub'] = "Tomorrow morning"
+                            else:
+                                nh = (next_m // 60) % 24
+                                nm = next_m % 60
+                                ampm = "PM" if nh >= 12 else "AM"
+                                disph = 12 if nh % 12 == 0 else nh % 12
+                                d['NextFeed'] = f"{disph:02d}:{nm:02d} {ampm}"
+                                d['NextFeedSub'] = f"Interval: {interval_m:.1f} min"
+                        else:
+                            d['NextFeed'] = s_time_fmt
+                            d['NextFeedSub'] = f"Starts at {s_time_fmt}"
+
                         devices.append(d)
 
             except Exception as e:
@@ -556,6 +605,22 @@ def lambda_handler(event, context):
                     Limit=100
                 )
                 items = response.get('Items', [])
+                for it in items:
+                    raw_ts = int(it.get('Timestamp', 0))
+                    if 1700000000 <= raw_ts <= 2000000000:
+                        # Device timestamp is DS3231 IST pseudo-epoch (UTC + 19800)
+                        dt = datetime.utcfromtimestamp(raw_ts)
+                        nh = dt.hour
+                        nm = dt.minute
+                        ns = dt.second
+                        ampm = "PM" if nh >= 12 else "AM"
+                        disph = 12 if nh % 12 == 0 else nh % 12
+                        it['Time'] = f"{disph:02d}:{nm:02d}:{ns:02d} {ampm}"
+                        it['Date'] = dt.strftime("%Y-%m-%d")
+                        it['DateLabel'] = dt.strftime("%a %m/%d")
+                    else:
+                        it['Time'] = ""
+                        it['Date'] = ""
             except Exception as e:
                 items = []
             return build_response(200, {'deviceId': device_id, 'telemetry': items})

@@ -22,6 +22,10 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     _status->scheduleValid = false;
     memset(_status->schedError, 0, sizeof(_status->schedError));
     
+    if (nowEpoch == 0 && _status->currentEpoch > 0) {
+        nowEpoch = _status->currentEpoch;
+    }
+    
     // Check 1: 06:00 to 18:00 Operational Window hard limit (cannot exceed 18:00)
     if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR || (_cfg->endHour == OP_END_HOUR && _cfg->endMinute > 0)) {
         strncpy(_status->schedError, "Out of OP Window", sizeof(_status->schedError)-1);
@@ -41,7 +45,7 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     }
 
     float qty_g = _cfg->feedQuantity * 1000.0f;
-    _status->totalEvents = qty_g / _cfg->feedPerEvent;
+    _status->totalEvents = (uint16_t)ceil(qty_g / (float)_cfg->feedPerEvent);
     
     if (_status->totalEvents <= 0) {
         strncpy(_status->schedError, "Zero Events", sizeof(_status->schedError)-1);
@@ -59,10 +63,10 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     unsigned long totalEventsDuration_ms = _status->totalEvents * singleEvent_ms;
     unsigned long fullWindow_ms = (endMins - startMins) * 60UL * 1000UL;
 
-    // Check 4: Can the requested quantity physically fit within the operational daylight window?
+    // Check: Can the requested quantity physically fit within the operational daylight window?
     if (totalEventsDuration_ms >= fullWindow_ms) {
         strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
-        Serial.println("[SCHED] Error: Configured feed parameters cannot fit before 6 PM window!");
+        Serial.println("[SCHED] Error: Configured feed parameters cannot fit before configured end time!");
         return false;
     }
 
@@ -76,13 +80,13 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         uint32_t endEpochToday   = midnightEpoch + ((uint32_t)endMins * 60UL);
 
         if (currentMins >= endMins) {
-            strncpy(_status->schedError, "Past 6 PM Window", sizeof(_status->schedError)-1);
-            _status->nextFeedEpoch = startEpochToday + 86400UL; // Schedule next run for tomorrow 06:00
-            Serial.printf("[SCHED] Current time %02d:%02d is past OP window end %02d:%02d. Feeding blocked until tomorrow.\n",
+            strncpy(_status->schedError, "Past End Time", sizeof(_status->schedError)-1);
+            _status->nextFeedEpoch = startEpochToday + 86400UL; // Schedule next run for tomorrow start time
+            Serial.printf("[SCHED] Current time %02d:%02d is past end time %02d:%02d. Feeding blocked until tomorrow.\n",
                           currentMins / 60, currentMins % 60, endMins / 60, endMins % 60);
             return false;
         } else if (currentMins >= startMins) {
-            // Mid-day start! Dynamically calculate remaining time until endHour:endMinute (18:00)
+            // Mid-day start! Dynamically calculate remaining time until configured endHour:endMinute
             uint32_t endSecToday = (uint32_t)endMins * 60UL;
             if (endSecToday > secSinceMidnight) {
                 availableTime_ms = (endSecToday - secSinceMidnight) * 1000UL;
@@ -93,12 +97,12 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
             Serial.printf("[SCHED] Mid-day start at %02d:%02d. Remaining window: %lu s until %02d:%02d\n",
                           currentMins / 60, currentMins % 60, (availableTime_ms / 1000UL), endMins / 60, endMins % 60);
         } else {
-            // Early morning before start time (e.g. 05:30 AM before 06:00 AM)
+            // Early morning before start time (e.g. before startMins)
             availableTime_ms = fullWindow_ms;
             _status->nextFeedEpoch = startEpochToday;
         }
 
-        // Check 5: For mid-day start, can it finish in the remaining time today?
+        // Check: For mid-day start, can it finish in the remaining time today?
         if (totalEventsDuration_ms >= availableTime_ms) {
             strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
             Serial.println("[SCHED] Error: Remaining operational window is shorter than required total cycle time!");
@@ -114,14 +118,27 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     return true;
 }
 
-void FeedEngine::startFeed() {
+void FeedEngine::startFeed(uint32_t nowEpoch) {
     if (!_status) return;
+    if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
+
     _status->feedActive = true;
     _status->currentEvent = 0;
     _status->dispensedQuantity_g = 0.0f;
-    _status->feedState = FeedCycleState::FC_IDLE;
-    _fcState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
+
+    // If start time is in the future, wait in FC_WAIT
+    if (nowEpoch > 0 && _status->nextFeedEpoch > nowEpoch) {
+        _fcState = FeedCycleState::FC_WAIT;
+        _status->feedState = FeedCycleState::FC_WAIT;
+        _status->state = SystemState::FEED_WAIT_NEXT;
+        Serial.printf("[FEED] Start queued: waiting in gap until scheduled epoch %lu\n", _status->nextFeedEpoch);
+    } else {
+        _status->feedState = FeedCycleState::FC_IDLE;
+        _fcState = FeedCycleState::FC_IDLE;
+        Serial.println("[FEED] Start feed: initiating cycle immediately");
+    }
+
     if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_STARTED);
     if (_saveState) _saveState();
 }
@@ -276,7 +293,7 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 }
             }
             if ((nowEpoch > 0 && _status->nextFeedEpoch > 0 && nowEpoch >= _status->nextFeedEpoch) || 
-                (nowMs - _fcTimer >= _status->intervalMs)) {
+                (nowEpoch == 0 && nowMs - _fcTimer >= _status->intervalMs)) {
                 _fcState = FeedCycleState::FC_IDLE;
                 _fcEntered = false;
                 Serial.println("[FEED] Gap elapsed. Beginning next feed cycle.");
@@ -285,23 +302,44 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
     }
 }
 
-void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
-    if (!_status || !_cfg || !_status->feedActive) return;
+bool FeedEngine::recalcDynamic(uint32_t nowEpoch) {
+    if (!_status || !_cfg || !_status->feedActive) return false;
     
+    // Check 1: Operational Window hard limit [06:00, 18:00]
+    if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR || (_cfg->endHour == OP_END_HOUR && _cfg->endMinute > 0)) {
+        _status->scheduleValid = false;
+        strncpy(_status->schedError, "Out of OP Window", sizeof(_status->schedError)-1);
+        return false;
+    }
+    
+    int startMins = _cfg->startHour * 60 + _cfg->startMinute;
+    int endMins = _cfg->endHour * 60 + _cfg->endMinute;
+    if (endMins <= startMins) {
+        _status->scheduleValid = false;
+        strncpy(_status->schedError, "End < Start", sizeof(_status->schedError)-1);
+        return false;
+    }
+    
+    if (_cfg->feedQuantity <= 0 || _cfg->feedPerEvent <= 0 || _cfg->dischargeRate <= 0) {
+        _status->scheduleValid = false;
+        strncpy(_status->schedError, "Invalid Params", sizeof(_status->schedError)-1);
+        return false;
+    }
+
     // Total remaining feed
     float totalTarget_g = _cfg->feedQuantity * 1000.0f;
     float remaining_g = totalTarget_g - _status->dispensedQuantity_g;
     
     if (remaining_g <= 0) {
-        // We've already dispensed the target
+        // Target already achieved with what was dispensed
         stopFeed();
         _status->state = SystemState::FEED_FINISHED;
-        return;
+        return true;
     }
     
     // Remaining events
-    long remainingEvents = remaining_g / _cfg->feedPerEvent;
-    if (remainingEvents <= 0) remainingEvents = 1; // at least 1 event left
+    long remainingEvents = (long)ceil(remaining_g / (float)_cfg->feedPerEvent);
+    if (remainingEvents <= 0) remainingEvents = 1;
     
     // Update total events count
     _status->totalEvents = _status->currentEvent + remainingEvents;
@@ -314,16 +352,19 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     _status->motorTimeMs = motorTime_ms;
     
     // Calculate remaining time
-    if (!_status->rtcOK || nowEpoch == 0) return;
+    if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
+    if (nowEpoch == 0) return true;
     
     uint32_t secSinceMidnight = nowEpoch % 86400;
-    uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
+    uint32_t endSecToday = ((uint32_t)_cfg->endHour * 3600UL) + ((uint32_t)_cfg->endMinute * 60UL);
     
     if (endSecToday <= secSinceMidnight) {
-        // Already past 6:00 PM operational window! Conclude feed cleanly.
+        // Already past configured operational window! Conclude feed cleanly.
+        _status->scheduleValid = false;
+        strncpy(_status->schedError, "Past End Time", sizeof(_status->schedError)-1);
         stopFeed();
         _status->state = SystemState::FEED_FINISHED;
-        return;
+        return false;
     }
     
     unsigned long remainingTimeMs = (endSecToday - secSinceMidnight) * 1000UL;
@@ -331,12 +372,24 @@ void FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     unsigned long remainingEventsDurationMs = remainingEvents * singleEvent_ms;
     
     if (remainingEventsDurationMs >= remainingTimeMs) {
-        _status->intervalMs = 0; // No gap time left, run continuously until 6 PM cutoff
-    } else {
-        _status->intervalMs = (remainingTimeMs - remainingEventsDurationMs) / remainingEvents;
+        _status->scheduleValid = false;
+        strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
+        Serial.printf("[SCHED] Error: Remaining time (%lu s) too short for %ld events (%lu s)\n",
+                      remainingTimeMs / 1000UL, remainingEvents, remainingEventsDurationMs / 1000UL);
+        return false;
     }
+    
+    _status->intervalMs = (remainingTimeMs - remainingEventsDurationMs) / remainingEvents;
+    _status->scheduleValid = true;
+    memset(_status->schedError, 0, sizeof(_status->schedError));
+    
+    if (_fcState == FeedCycleState::FC_WAIT) {
+        _status->nextFeedEpoch = nowEpoch + (_status->intervalMs / 1000UL);
+    }
+    
     Serial.printf("[SCHED] Recalculated dynamic: %ld events remaining, gap interval: %lu s (%lu ms)\n",
                   remainingEvents, (_status->intervalMs / 1000UL), _status->intervalMs);
+    return true;
 }
 
 bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
