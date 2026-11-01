@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AquaFeeder Pro — Automated Aquaculture Telemetry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=6.0">
+</head>
+<body class="theme-light">
+
+  <!-- Aquatic Pond Mist Ambient Background -->
+  <div class="aquatic-canvas-backdrop">
+    <div class="water-sheen-radial"></div>
+    <div class="sunlight-caustic-layer"></div>
+  </div>
+
+  <!-- Mobile Viewport Shell -->
+  <div class="feeder-shell">
+
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+      <div class="header-brand-box">
+        <!-- Authentic Feeder Machine Vector Icon -->
+        <svg class="feeder-brand-icon" width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <!-- Silo Dome & Funnel -->
+          <path d="M7 8h18l-3 12h-12l-3-12z" fill="#0284C7" stroke="#0369A1" stroke-width="1.8"/>
+          <path d="M10 8c0-3 12-3 12 0" stroke="#0369A1" stroke-width="1.8"/>
+          <!-- Tripod Legs -->
+          <line x1="8" y1="20" x2="4" y2="30" stroke="#64748B" stroke-width="2" stroke-linecap="round"/>
+          <line x1="24" y1="20" x2="28" y2="30" stroke="#64748B" stroke-width="2" stroke-linecap="round"/>
+          <line x1="16" y1="20" x2="16" y2="28" stroke="#475569" stroke-width="2" stroke-linecap="round"/>
+          <!-- Spreader Disk -->
+          <ellipse cx="16" cy="22" rx="6" ry="2" fill="#0EA5E9" stroke="#0284C7" stroke-width="1.2"/>
+        </svg>
+
+        <div class="brand-text-stack">
+          <span class="brand-main-title">AQUAFEEDER <span class="brand-badge-pro">PRO</span></span>
+          <span class="brand-sub-spec">AUTOMATED AQUACULTURE DISPENSER</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Theme Switcher (Light Mode is Default) -->
+        <button class="mode-toggle-pill" id="theme-btn" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+          <svg class="theme-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+        </button>
+
+        <!-- Pond Switcher Dropdown Pill -->
+        <div class="pond-selector-bubble">
+          <svg class="pond-wave-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M2 12c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"></path>
+            <path d="M2 17c2.5-2.5 5.5-2.5 8 0s5.5 2.5 8 0 5.5-2.5 8 0"></path>
+          </svg>
+          <select id="pond-select" class="native-select" onchange="handlePondChange(this.value)">
+            <option value="P-02" selected>Pond P-02 (2.2 Ac)</option>
+            <option value="P-01">Pond P-01 (1.8 Ac)</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Pond Feeder Unit Selector Pills -->
+    <div class="feeder-nav-rail">
+      <div class="feeder-pills-row" id="feeder-pills-container">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+
+    <!-- Main Screens Container -->
+    <main class="feeder-view-container">
+
+      <!-- ==================================================== -->
+      <!-- SCREEN 1: FEEDER TELEMETRY & DISPENSING MACHINE     -->
+      <!-- ==================================================== -->
+      <section id="tab-telemetry" class="view-screen active-screen">
+
+        <!-- HERO CARD: LIVE FEEDER MACHINE SIMULATION -->
+        <div class="clean-card hero-feeder-unit-card">
+          <div class="hero-top-bar">
+            <div>
+              <span class="eyebrow-tag">STANDBY &bull; AUTO SCHEDULE</span>
+              <h2 class="feeder-head-title" id="hero-feeder-name">Feeder 03</h2>
+              <span class="jetty-tag" id="hero-pond-name">Pond P-02 &bull; South Jetty</span>
+            </div>
+            
+            <div class="status-chip-live online" id="hero-status-pill">
+              <span class="status-beacon-dot"></span>
+              <span id="hero-status-text">SCHEDULE READY</span>
+            </div>
+          </div>
+
+          <!-- THE FEEDER MACHINE VISUALIZER (Animates while dispensing!) -->
+          <div class="feeder-stage-wrapper" id="feeder-stage">
+            <svg class="feeder-machine-svg" id="feeder-machine-svg" viewBox="0 0 280 205">
+              <defs>
+                <!-- Gradients for realistic hardware finish -->
+                <linearGradient id="siloMetalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#0284C7"/>
+                  <stop offset="35%" stop-color="#38BDF8"/>
+                  <stop offset="70%" stop-color="#0284C7"/>
+                  <stop offset="100%" stop-color="#0369A1"/>
+                </linearGradient>
+
+                <linearGradient id="hopperConeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#0369A1"/>
+                  <stop offset="50%" stop-color="#0284C7"/>
+                  <stop offset="100%" stop-color="#075985"/>
+                </linearGradient>
+
+                <radialGradient id="waterRippleGrad" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#0284C7" stop-opacity="0.4"/>
+                  <stop offset="100%" stop-color="#0284C7" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+
+              <!-- Pond Water Surface Baseline -->
+              <path class="water-surface-line" d="M10 186 Q 70 182, 140 186 T 270 186" stroke="#0284C7" stroke-width="2" fill="none" opacity="0.4"/>
+
+              <!-- Splash Ripples (Animated during discharge) -->
+              <ellipse class="water-splash-ripple ripple-left" id="ripple-left" cx="58" cy="186" rx="24" ry="5"/>
+              <ellipse class="water-splash-ripple ripple-right" id="ripple-right" cx="222" cy="186" rx="24" ry="5"/>
+
+              <!-- Heavy-Duty Tripod Support Stand -->
+              <line x1="88" y1="116" x2="52" y2="188" stroke="#64748B" stroke-width="4" stroke-linecap="round"/>
+              <line x1="192" y1="116" x2="228" y2="188" stroke="#64748B" stroke-width="4" stroke-linecap="round"/>
+              <line x1="140" y1="126" x2="140" y2="188" stroke="#475569" stroke-width="3.5" stroke-linecap="round"/>
+              <!-- Cross Struts -->
+              <line x1="66" y1="162" x2="214" y2="162" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/>
+
+              <!-- Solar PV Panel on Mounting Arm -->
+              <line x1="175" y1="52" x2="212" y2="35" stroke="#64748B" stroke-width="3" stroke-linecap="round"/>
+              <rect x="210" y="24" width="36" height="20" rx="3" transform="rotate(-15 210 24)" fill="#0F172A" stroke="#0284C7" stroke-width="1.8"/>
+              <line x1="216" y1="33" x2="242" y2="26" stroke="#38BDF8" stroke-width="1.2" opacity="0.8"/>
+
+              <!-- LoRaWAN Antenna Mast -->
+              <line x1="104" y1="26" x2="84" y2="4" stroke="#64748B" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="84" cy="4" r="3" fill="#10B981"/>
+              <circle class="antenna-rf-wave" id="antenna-wave" cx="84" cy="4" r="8"/>
+
+              <!-- FEEDER MACHINE BODY -->
+              <!-- Top Dome Weatherproof Lid -->
+              <path d="M102 26 C102 18, 178 18, 178 26 L184 38 L96 38 Z" fill="#0284C7" stroke="#0369A1" stroke-width="2"/>
+              <circle cx="140" cy="18" r="3" fill="#38BDF8"/>
+
+              <!-- Cylindrical Hopper Silo Body -->
+              <rect x="96" y="38" width="88" height="42" rx="3" fill="url(#siloMetalGrad)" stroke="#0369A1" stroke-width="2"/>
+
+              <!-- Feed Inspection Sight Window -->
+              <rect x="124" y="44" width="32" height="30" rx="6" fill="#0F172A" stroke="#38BDF8" stroke-width="1.6"/>
+              <!-- Dry Feed Pellets inside viewport -->
+              <g class="hopper-pellets-inside">
+                <circle cx="132" cy="65" r="2.4" fill="#38BDF8"/>
+                <circle cx="139" cy="67" r="2.4" fill="#0284C7"/>
+                <circle cx="147" cy="65" r="2.4" fill="#38BDF8"/>
+                <circle cx="135" cy="59" r="2.4" fill="#0284C7"/>
+                <circle cx="143" cy="60" r="2.4" fill="#38BDF8"/>
+                <circle cx="140" cy="53" r="2.4" fill="#38BDF8"/>
+              </g>
+
+              <!-- Conical Tapered Funnel -->
+              <path d="M96 80 L123 118 L157 118 L184 80 Z" fill="url(#hopperConeGrad)" stroke="#0369A1" stroke-width="2"/>
+
+              <!-- Rotary Auger Drive Mechanism Housing -->
+              <rect x="123" y="118" width="34" height="18" rx="3" fill="#1E293B" stroke="#0284C7" stroke-width="2"/>
+
+              <!-- Rotating Helical Auger Thread (Animates while dispensing!) -->
+              <g class="auger-helix-anim" id="auger-helix">
+                <line x1="126" y1="127" x2="154" y2="127" stroke="#38BDF8" stroke-width="2.5"/>
+                <path class="helix-thread" d="M128 123 L132 131 M135 123 L139 131 M142 123 L146 131 M149 123 L153 131" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+              </g>
+
+              <!-- Rotary Spreader Flinger Disk (Spins high-speed when dispensing!) -->
+              <g class="spreader-flinger-assembly" id="spreader-assembly">
+                <ellipse cx="140" cy="144" rx="26" ry="6.5" fill="#0369A1" stroke="#38BDF8" stroke-width="2"/>
+                <line class="flinger-blade blade-1" x1="118" y1="144" x2="162" y2="144" stroke="#FFFFFF" stroke-width="2"/>
+                <line class="flinger-blade blade-2" x1="140" y1="139" x2="140" y2="149" stroke="#FFFFFF" stroke-width="2"/>
+                <circle cx="140" cy="144" r="4.5" fill="#38BDF8"/>
+              </g>
+
+              <!-- DYNAMIC PELLET STREAMS FLINGING INTO POND (Visible during dispense!) -->
+              <g class="feed-discharge-spray" id="feed-spray-left">
+                <path class="spray-path" d="M120 144 Q 85 152, 58 184" stroke="#0284C7" stroke-width="2" stroke-dasharray="4,6" fill="none"/>
+                <circle class="flying-pellet pellet-1" cx="108" cy="148" r="2.8" fill="#0284C7"/>
+                <circle class="flying-pellet pellet-2" cx="86" cy="160" r="2.6" fill="#0284C7"/>
+                <circle class="flying-pellet pellet-3" cx="64" cy="178" r="2.4" fill="#0284C7"/>
+              </g>
+
+              <g class="feed-discharge-spray" id="feed-spray-right">
+                <path class="spray-path" d="M160 144 Q 195 152, 222 184" stroke="#0284C7" stroke-width="2" stroke-dasharray="4,6" fill="none"/>
+                <circle class="flying-pellet pellet-4" cx="172" cy="148" r="2.8" fill="#0284C7"/>
+                <circle class="flying-pellet pellet-5" cx="194" cy="160" r="2.6" fill="#0284C7"/>
+                <circle class="flying-pellet pellet-6" cx="216" cy="178" r="2.4" fill="#0284C7"/>
+              </g>
+
+            </svg>
+
+            <!-- Dispenser Throw Arc Tag -->
+            <div class="throw-spec-chip">
+              <span class="chip-pulse-dot"></span>
+              <span>12m Radial Impeller Broadcast</span>
+            </div>
+          </div>
+
+          <!-- PRIMARY FEED TELEMETRY READOUT -->
+          <div class="feed-tally-container">
+            <div class="counter-num-box">
+              <span class="large-tally-val" id="hero-dispensed-kg">0.00</span>
+              <span class="tally-unit-label">kg</span>
+            </div>
+            <p class="tally-quota-desc">Dispensed of <strong id="hero-target-kg">15.0</strong> kg Daily Allocation</p>
+
+            <!-- Precision Progress Rail -->
+            <div class="quota-progress-track">
+              <div class="quota-progress-fill" id="feed-progress-bar" style="width: 0%;"></div>
+            </div>
+            <div class="quota-milestone-row">
+              <span id="hero-progress-percent">0% Completed</span>
+              <span id="hero-remaining-kg">15.00 kg Remaining</span>
+            </div>
+          </div>
+
+          <!-- Schedule Metrics Strip -->
+          <div class="feeder-stats-strip">
+            <div class="stat-cell">
+              <span class="cell-label">NEXT DISPENSE</span>
+              <div class="cell-value-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span class="cell-val marine-highlight" id="hero-next-pulse">06:00 AM</span>
+              </div>
+            </div>
+            <div class="stat-cell-divider"></div>
+            <div class="stat-cell">
+              <span class="cell-label">FEED / PULSE</span>
+              <div class="cell-value-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2.5">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                <span class="cell-val" id="hero-fpe">100 g</span>
+              </div>
+            </div>
+            <div class="stat-cell-divider"></div>
+            <div class="stat-cell">
+              <span class="cell-label">PULSES TODAY</span>
+              <div class="cell-value-wrap">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2.5">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                </svg>
+                <span class="cell-val" id="hero-events-progress">0 / 150</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Primary Control Buttons -->
+          <div class="hero-control-buttons">
+            <button class="btn-marine-action btn-discharge" id="btn-manual-feed" onclick="handleQuickFeed()">
+              <div class="btn-marine-shimmer"></div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Discharge Feed Pulse (100g)</span>
+            </button>
+
+            <button class="btn-marine-action btn-pause-outline" id="btn-pause-cycle" onclick="handleTogglePause()">
+              <svg id="pause-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+              <span id="btn-pause-label">Pause</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- BENTO TELEMETRY GRID (4 Feeder Hardware Modules) -->
+        <div class="bento-modules-section">
+          <div class="bento-title-row">
+            <span class="bento-title-tag">HARDWARE SENSORS & TELEMETRY</span>
+            <span class="link-beacon-status">
+              <span class="pulse-emerald-dot"></span> SX1262 LoRaWAN Active
+            </span>
+          </div>
+
+          <div class="modules-grid">
+
+            <!-- MODULE 1: CONICAL HOPPER SILO -->
+            <div class="clean-card module-card">
+              <div class="module-card-top">
+                <div class="module-id-group">
+                  <svg class="module-icon icon-marine" width="18" height="18" viewBox="0 0 32 32" fill="none">
+                    <path d="M7 8h18l-3 12h-12l-3-12z" stroke="currentColor" stroke-width="2.2"/>
+                    <path d="M10 8c0-3 12-3 12 0" stroke="currentColor" stroke-width="2.2"/>
+                    <line x1="8" y1="20" x2="4" y2="30" stroke="currentColor" stroke-width="2"/>
+                    <line x1="24" y1="20" x2="28" y2="30" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                  <span class="module-label">HOPPER SILO</span>
+                </div>
+                <span class="chip-status chip-teal" id="tile-hopper-status">Normal</span>
+              </div>
+              <div class="module-data-row">
+                <span class="data-num" id="tile-hopper-percent">85%</span>
+                <span class="data-unit">Full</span>
+              </div>
+              <p class="module-sub-text" id="tile-hopper-kg">~42.5 kg dry feed remaining</p>
+              
+              <!-- Feed Level Track -->
+              <div class="clean-level-rail">
+                <div class="clean-level-fill fill-marine" id="hopper-fill-bar" style="width: 85%;"></div>
+              </div>
+              <span class="sensor-caption">Proximity Sensor: Clear</span>
+            </div>
+
+            <!-- MODULE 2: SOLAR PV & LiFePO4 POWER -->
+            <div class="clean-card module-card">
+              <div class="module-card-top">
+                <div class="module-id-group">
+                  <svg class="module-icon icon-emerald" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="11" rx="2"></rect>
+                    <line x1="12" y1="3" x2="12" y2="14"></line>
+                    <line x1="2" y1="8.5" x2="22" y2="8.5"></line>
+                    <path d="M6 19h12M12 14v5"></path>
+                  </svg>
+                  <span class="module-label">SOLAR & LiFePO4</span>
+                </div>
+                <span class="chip-status chip-emerald" id="tile-solar-status">+340mA</span>
+              </div>
+              <div class="module-data-row">
+                <span class="data-num" id="tile-battery-volt">12.8</span>
+                <span class="data-unit">V</span>
+              </div>
+              <p class="module-sub-text" id="tile-solar-sub">PV Array: 18.2V &bull; Floating</p>
+              
+              <!-- Battery Track -->
+              <div class="clean-level-rail">
+                <div class="clean-level-fill fill-emerald" style="width: 92%;"></div>
+              </div>
+              <span class="sensor-caption">Pack Health: Optimal (92%)</span>
+            </div>
+
+            <!-- MODULE 3: AUGER & DISPENSER MOTOR -->
+            <div class="clean-card module-card">
+              <div class="module-card-top">
+                <div class="module-id-group">
+                  <svg class="module-icon icon-marine" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                  <span class="module-label">AUGER MOTOR</span>
+                </div>
+                <span class="chip-status chip-teal" id="auger-status-badge">Standby</span>
+              </div>
+              <div class="module-data-row">
+                <span class="data-num" id="tile-motor-amp">0.88</span>
+                <span class="data-unit">A Load</span>
+              </div>
+              <p class="module-sub-text">Calibrated: 100g / sec</p>
+              
+              <!-- Motor Load Track -->
+              <div class="clean-level-rail">
+                <div class="clean-level-fill fill-teal" style="width: 28%;"></div>
+              </div>
+              <span class="sensor-caption">Overcurrent Interlock: Armed</span>
+            </div>
+
+            <!-- MODULE 4: LORAWAN LINK -->
+            <div class="clean-card module-card">
+              <div class="module-card-top">
+                <div class="module-id-group">
+                  <svg class="module-icon icon-emerald" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"></path>
+                    <circle cx="12" cy="9" r="2.5"></circle>
+                  </svg>
+                  <span class="module-label">LORAWAN LINK</span>
+                </div>
+                <span class="chip-status chip-emerald">IN865</span>
+              </div>
+              <div class="module-data-row">
+                <span class="data-num" id="tile-rssi">-84</span>
+                <span class="data-unit">dBm</span>
+              </div>
+              <p class="module-sub-text" id="tile-snr-sub">SNR: +9.2 dB &bull; 0 Drops</p>
+              
+              <!-- Signal Bars -->
+              <div class="clean-signal-bars">
+                <div class="bar-pip on"></div>
+                <div class="bar-pip on"></div>
+                <div class="bar-pip on"></div>
+                <div class="bar-pip on"></div>
+              </div>
+              <span class="sensor-caption">GW: SenseCAP Outdoor</span>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- SCREEN 2: FEED PROTOCOL & DIURNAL CONFIG            -->
+      <!-- ==================================================== -->
+      <section id="tab-schedule" class="view-screen">
+        <div class="screen-meta-header">
+          <span class="eyebrow-tag">SCHEDULE & WEIGHT ENGINE</span>
+          <h2 class="view-title">Dispense Protocol</h2>
+          <p class="view-sub">Configure daily target rations, pulse duration, and active diurnal cycles for <strong id="proto-feeder-name">Feeder 03</strong>.</p>
+        </div>
+
+        <div class="clean-card form-container-card">
+          <!-- Daily Target Ration Stepper -->
+          <div class="stepper-field-group">
+            <div class="field-label-row">
+              <span class="field-label">DAILY FEED TARGET RATION</span>
+              <span class="field-tag">Daily Quota</span>
+            </div>
+            <div class="stepper-widget-box">
+              <button class="step-btn" onclick="adjustTarget(-1.0)">-</button>
+              <div class="step-readout">
+                <span class="step-number" id="proto-target-val">15.0</span>
+                <span class="step-unit">kg / day</span>
+              </div>
+              <button class="step-btn" onclick="adjustTarget(1.0)">+</button>
+            </div>
+            <p class="field-hint">Optimized for shrimp density in Pond P-02.</p>
+          </div>
+
+          <!-- Diurnal Hours -->
+          <div class="stepper-field-group">
+            <div class="field-label-row">
+              <span class="field-label">DIURNAL FEEDING WINDOW</span>
+              <span class="field-tag">12 Hours</span>
+            </div>
+            <div class="time-range-wrap">
+              <div class="time-box">
+                <span class="time-title">FIRST FEED</span>
+                <input type="time" id="proto-start-time" value="06:00" class="time-input" onchange="recalculateSchedule()">
+              </div>
+              <div class="time-separator">&rarr;</div>
+              <div class="time-box">
+                <span class="time-title">LAST FEED</span>
+                <input type="time" id="proto-end-time" value="18:00" class="time-input" onchange="recalculateSchedule()">
+              </div>
+            </div>
+            <p class="field-hint">Daylight feeding aligned with solar aerator operation.</p>
+          </div>
+
+          <!-- Feed Per Pulse Stepper -->
+          <div class="stepper-field-group">
+            <div class="field-label-row">
+              <span class="field-label">FEED PER EVENT (FPE)</span>
+              <span class="field-tag">Auger Dose</span>
+            </div>
+            <div class="stepper-widget-box">
+              <button class="step-btn" onclick="adjustFpe(-25)">-</button>
+              <div class="step-readout">
+                <span class="step-number" id="proto-fpe-val">100</span>
+                <span class="step-unit">grams</span>
+              </div>
+              <button class="step-btn" onclick="adjustFpe(25)">+</button>
+            </div>
+            <p class="field-hint">100g = 1.00s auger run time at 100g/s calibrated discharge.</p>
+          </div>
+
+          <!-- Protocol Calculation Box -->
+          <div class="calculation-summary-card">
+            <div class="calc-line">
+              <span class="calc-label">Calculated Daily Events:</span>
+              <span class="calc-val marine-highlight" id="proto-calc-pulses">150 Pulses</span>
+            </div>
+            <div class="calc-line">
+              <span class="calc-label">Feed Cycle Interval:</span>
+              <span class="calc-val marine-highlight" id="proto-calc-interval">Every 4.8 minutes</span>
+            </div>
+          </div>
+
+          <!-- Downlink Save Button -->
+          <button class="btn-marine-action btn-full-width" id="btn-save-protocol" onclick="saveProtocolToDevice()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            <span>Transmit Protocol to Feeder via LoRaWAN</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- SCREEN 3: CONSUMPTION ANALYTICS & LOGS              -->
+      <!-- ==================================================== -->
+      <section id="tab-analytics" class="view-screen">
+        <div class="screen-meta-header">
+          <span class="eyebrow-tag">HISTORICAL FEED LOGS</span>
+          <h2 class="view-title">Feed Consumption</h2>
+          <p class="view-sub">Weekly consumption accumulation and verified LoRaWAN packet trail.</p>
+        </div>
+
+        <!-- 7-Day Feed Consumption Bar Chart -->
+        <div class="clean-card analytics-chart-card">
+          <div class="chart-title-split">
+            <span class="chart-eyebrow">7-DAY FEED DISPENSED (KG)</span>
+            <span class="chart-sum-stat">98.4 kg Total</span>
+          </div>
+
+          <div class="bars-container">
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 65%;"></div>
+              <span class="col-day">Mon</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 80%;"></div>
+              <span class="col-day">Tue</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 75%;"></div>
+              <span class="col-day">Wed</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 90%;"></div>
+              <span class="col-day">Thu</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 85%;"></div>
+              <span class="col-day">Fri</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem" style="--bar-h: 95%;"></div>
+              <span class="col-day">Sat</span>
+            </div>
+            <div class="chart-column">
+              <div class="bar-stem today-bar" style="--bar-h: 15%;"></div>
+              <span class="col-day today-text">Today</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verified Uplink Packets List -->
+        <div class="clean-card log-container-card">
+          <div class="log-header-bar">
+            <span class="chart-eyebrow">LIVE LORAWAN AUDIT TRAIL</span>
+            <button class="btn-refresh-log" onclick="fetchLiveTelemetry()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+              </svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+          <div class="uplink-stream-list" id="telemetry-log-list">
+            <!-- Injected via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- SCREEN 4: POND SPATIAL GRID MAP                     -->
+      <!-- ==================================================== -->
+      <section id="tab-map" class="view-screen">
+        <div class="screen-meta-header">
+          <span class="eyebrow-tag">POND SPATIAL RADAR</span>
+          <h2 class="view-title">Pond Feeder Grid</h2>
+          <p class="view-sub">Dispenser coordinates and SenseCAP outdoor gateway coverage.</p>
+        </div>
+
+        <div class="clean-card map-view-card">
+          <div class="pond-radar-canvas">
+            <div class="grid-mesh-lines"></div>
+
+            <!-- Pond 1 Poly -->
+            <div class="pond-boundary-box pond-one-zone">
+              <span class="pond-name-label">Pond P-01 (1.8 Ac)</span>
+              <div class="map-feeder-node node-standby" style="top: 40%; left: 35%;">
+                <span class="node-pip"></span>
+                <span class="node-title">F-01</span>
+              </div>
+              <div class="map-feeder-node node-standby" style="top: 65%; left: 65%;">
+                <span class="node-pip"></span>
+                <span class="node-title">F-02</span>
+              </div>
+            </div>
+
+            <!-- Pond 2 Poly (Active) -->
+            <div class="pond-boundary-box pond-two-zone active-pond-zone">
+              <span class="pond-name-label">Pond P-02 (2.2 Ac)</span>
+              <div class="map-feeder-node node-active" style="top: 50%; left: 50%;">
+                <span class="throw-perimeter-ring"></span>
+                <span class="node-pip pip-live"></span>
+                <span class="node-title title-live">Feeder 03 (Live)</span>
+              </div>
+            </div>
+
+            <!-- Gateway Pin -->
+            <div class="map-feeder-node node-gateway" style="bottom: 12%; right: 14%;">
+              <span class="node-pip pip-gw"></span>
+              <span class="node-title">SenseCAP Gateway</span>
+            </div>
+          </div>
+
+          <div class="map-legend-bar">
+            <div class="legend-chip"><span class="chip-color color-live"></span> Active Feeder</div>
+            <div class="legend-chip"><span class="chip-color color-standby"></span> Standby</div>
+            <div class="legend-chip"><span class="chip-color color-gw"></span> LoRaWAN Gateway</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Floating Capsule Bottom Navigation Dock -->
+    <nav class="feeder-dock">
+      <div class="dock-active-pill" id="dock-pill"></div>
+
+      <button class="dock-item-btn active" data-tab="tab-telemetry" onclick="switchNavTab('tab-telemetry', this)">
+        <!-- Feeder Silo Icon -->
+        <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+          <path d="M7 8h18l-3 12h-12l-3-12z" stroke="currentColor" stroke-width="2.2"/>
+          <path d="M10 8c0-3 12-3 12 0" stroke="currentColor" stroke-width="2.2"/>
+          <line x1="8" y1="20" x2="4" y2="30" stroke="currentColor" stroke-width="2"/>
+          <line x1="24" y1="20" x2="28" y2="30" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        <span>Feeder</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="tab-schedule" onclick="switchNavTab('tab-schedule', this)">
+        <!-- Schedule Clock Icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        <span>Protocol</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="tab-analytics" onclick="switchNavTab('tab-analytics', this)">
+        <!-- Bar Graph Icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+        </svg>
+        <span>Records</span>
+      </button>
+
+      <button class="dock-item-btn" data-tab="tab-map" onclick="switchNavTab('tab-map', this)">
+        <!-- Pond Map Icon -->
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+          <line x1="8" y1="2" x2="8" y2="18"></line>
+          <line x1="16" y1="6" x2="16" y2="22"></line>
+        </svg>
+        <span>Pond Grid</span>
+      </button>
+    </nav>
+
+    <!-- Haptic Notification Toast -->
+    <div id="toast-container" class="toast-pill-msg hidden">
+      <span id="toast-message">LoRaWAN packet confirmed</span>
+    </div>
+
+  </div>
+
+  <script src="app.js?v=6.0"></script>
+</body>
+</html>
