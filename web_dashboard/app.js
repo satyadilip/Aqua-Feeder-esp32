@@ -214,24 +214,44 @@ function loadDataFromStorage() {
     appState.devices = [...defaultDevices];
   }
 
-  // Restore user's saved device selection across page refreshes
+  // 1. Restore saved pond selection if valid
+  const savedSelectedPond = localStorage.getItem('aquacon_selected_pond');
+  if (savedSelectedPond && appState.ponds.some(p => p.id === savedSelectedPond)) {
+    appState.selectedPondId = savedSelectedPond;
+  }
+
+  // 2. Restore user's saved device selection across page refreshes
   const savedSelectedDev = localStorage.getItem('aquacon_selected_device');
   if (savedSelectedDev && appState.devices.some(d => d.id === savedSelectedDev)) {
     appState.selectedDeviceId = savedSelectedDev;
+    const dev = appState.devices.find(d => d.id === savedSelectedDev);
+    if (dev && dev.pondId) {
+      if (!savedSelectedPond || !appState.devices.filter(d => d.pondId === appState.selectedPondId).some(d => d.id === savedSelectedDev)) {
+        appState.selectedPondId = dev.pondId;
+        localStorage.setItem('aquacon_selected_pond', dev.pondId);
+      }
+    }
   } else {
-    // If no prior user selection saved, prefer the online device or the first device
-    const liveDev = appState.devices.find(d => isDeviceConnected(d));
+    // If no prior user device saved or invalid, pick an appropriate device in the selected pond
+    const pondDevices = appState.devices.filter(d => d.pondId === appState.selectedPondId);
+    const liveDev = pondDevices.find(d => isDeviceConnected(d));
     if (liveDev) {
       appState.selectedDeviceId = liveDev.id;
+    } else if (pondDevices.length > 0) {
+      appState.selectedDeviceId = pondDevices[0].id;
     } else if (appState.devices.length > 0) {
       appState.selectedDeviceId = appState.devices[0].id;
     }
+    if (appState.selectedDeviceId) {
+      localStorage.setItem('aquacon_selected_device', appState.selectedDeviceId);
+    }
   }
 
-  // Synchronize pond context with the selected feeder
+  // Ensure pond and device remain 100% consistent
   const currentDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (currentDev && currentDev.pondId) {
     appState.selectedPondId = currentDev.pondId;
+    localStorage.setItem('aquacon_selected_pond', currentDev.pondId);
   }
 
   const savedContacts = localStorage.getItem('aquacon_contacts');
@@ -278,6 +298,7 @@ function revealAuthGate(instant = false) {
   const mainShell = document.getElementById('main-app-shell');
 
   if (instant) {
+    document.documentElement.classList.remove('user-authenticated');
     if (authScreen) {
       authScreen.style.display = 'flex';
       authScreen.classList.remove('fade-out');
@@ -292,6 +313,7 @@ function revealAuthGate(instant = false) {
   if (mainShell) {
     mainShell.classList.add('fade-out');
     setTimeout(() => {
+      document.documentElement.classList.remove('user-authenticated');
       mainShell.style.display = 'none';
       mainShell.classList.remove('fade-out');
       if (authScreen) {
@@ -301,6 +323,7 @@ function revealAuthGate(instant = false) {
       }
     }, 200);
   } else if (authScreen) {
+    document.documentElement.classList.remove('user-authenticated');
     authScreen.style.display = 'flex';
   }
 }
@@ -322,10 +345,17 @@ function revealMainApp(instant = false) {
     // Populate Ponds & Devices UI
     refreshPondsDropdown();
     updatePondContextBar();
+    loadSelectedDeviceToUI();
     renderPondsDirectory();
     renderAlertContacts();
     renderHistoryView();
     renderTrayChecksView();
+
+    // Restore active tab if previously saved
+    const savedTab = localStorage.getItem('aquacon_active_tab');
+    if (savedTab && savedTab !== 'tab-status') {
+      navigateToTab(savedTab);
+    }
 
     // Initialize Map
     setTimeout(() => {
@@ -334,6 +364,7 @@ function revealMainApp(instant = false) {
   };
 
   if (instant) {
+    document.documentElement.classList.add('user-authenticated');
     if (authScreen) {
       authScreen.style.display = 'none';
       authScreen.classList.remove('fade-in');
@@ -349,6 +380,7 @@ function revealMainApp(instant = false) {
   if (authScreen) {
     authScreen.classList.add('fade-out');
     setTimeout(() => {
+      document.documentElement.classList.add('user-authenticated');
       authScreen.style.display = 'none';
       authScreen.classList.remove('fade-out');
       if (mainShell) {
@@ -359,6 +391,7 @@ function revealMainApp(instant = false) {
       }
     }, 200);
   } else if (mainShell) {
+    document.documentElement.classList.add('user-authenticated');
     mainShell.style.display = 'flex';
     populateUserData();
   }
@@ -505,6 +538,7 @@ function showAuthAlert(msg, type) {
 function handleLogout() {
   if (confirm('Sign out from aquaCON?')) {
     localStorage.removeItem('aquacon_session_user');
+    document.documentElement.classList.remove('user-authenticated');
     const phoneInput = document.getElementById('auth-phone-input');
     const pwInput = document.getElementById('auth-pw-input');
     if (phoneInput) phoneInput.value = '';
@@ -535,6 +569,7 @@ function refreshPondsDropdown() {
 
 function switchActivePond(pondId) {
   appState.selectedPondId = pondId;
+  localStorage.setItem('aquacon_selected_pond', pondId);
   const pond = appState.ponds.find(p => p.id === pondId);
   if (!pond) return;
 
@@ -548,6 +583,7 @@ function switchActivePond(pondId) {
     }
   }
 
+  refreshPondsDropdown();
   updatePondContextBar();
   loadSelectedDeviceToUI();
   renderHistoryView();
@@ -631,6 +667,7 @@ function switchActiveDevice(deviceId) {
   if (dev && dev.pondId) {
     appState.selectedPondId = dev.pondId;
     localStorage.setItem('aquacon_selected_pond', dev.pondId);
+    refreshPondsDropdown();
   }
   updatePondContextBar();
   loadSelectedDeviceToUI();
@@ -1521,6 +1558,7 @@ function resetMapView() {
 function navigateToTab(tabId) {
   const currentTab = appState.activeTab;
   appState.activeTab = tabId;
+  localStorage.setItem('aquacon_active_tab', tabId);
 
   document.querySelectorAll('.nav-tab').forEach(btn => {
     btn.classList.toggle('active', btn.id === `tab-btn-${tabId.replace('tab-', '')}`);

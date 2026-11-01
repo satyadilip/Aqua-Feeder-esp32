@@ -120,6 +120,14 @@ svg {
 /* ==========================================================================
    SCREEN 0: AUTHENTICATION GATE
    ========================================================================== */
+/* Immediate FOUC elimination for authenticated users */
+html.user-authenticated #screen-auth {
+  display: none !important;
+}
+html.user-authenticated #main-app-shell {
+  display: flex !important;
+}
+
 .auth-viewport {
   min-height: 100vh;
   display: flex;
