@@ -110,7 +110,9 @@ void cbOnFeedStart() {
     if (sysStatus.scheduleValid) {
         feedEng.startFeed(epoch);
         currentMenu = MenuState::RUNNING;
-        Serial.println("[MAIN] Feed started via web/button!");
+        telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
+        telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+        Serial.println("[MAIN] Feed started via web/button! Transmitted FEED_STARTED & SETTINGS_REPORT.");
     } else {
         Serial.printf("[MAIN] Feed start blocked: %s\n", sysStatus.schedError);
         lcd.showMessage("Cannot Start", sysStatus.schedError, 2500);
@@ -218,8 +220,6 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         Serial.println("[MAIN] [DOWNLINK] Received CMD_START_FEED from Cloud!");
         if (!feedEng.isActive()) {
             cbOnFeedStart();
-            currentMenu = MenuState::RUNNING;
-            telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
             Serial.println("[MAIN] Feed started successfully via Cloud Downlink!");
         } else {
             Serial.println("[MAIN] Feed is already active, ignoring start downlink.");

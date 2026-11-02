@@ -80,11 +80,11 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         uint32_t endEpochToday   = midnightEpoch + ((uint32_t)endMins * 60UL);
 
         if (currentMins >= endMins) {
-            strncpy(_status->schedError, "Past End Time", sizeof(_status->schedError)-1);
-            _status->nextFeedEpoch = startEpochToday + 86400UL; // Schedule next run for tomorrow start time
-            Serial.printf("[SCHED] Current time %02d:%02d is past end time %02d:%02d. Feeding blocked until tomorrow.\n",
-                          currentMins / 60, currentMins % 60, endMins / 60, endMins % 60);
-            return false;
+            // Out of feeding hours (evening/night after end time) -> Arm/schedule for tomorrow's start time!
+            availableTime_ms = fullWindow_ms;
+            _status->nextFeedEpoch = startEpochToday + 86400UL;
+            Serial.printf("[SCHED] Evening/night start at %02d:%02d: Feeding scheduled for tomorrow at %02d:%02d.\n",
+                          currentMins / 60, currentMins % 60, startMins / 60, startMins % 60);
         } else if (currentMins >= startMins) {
             // Mid-day start! Dynamically calculate remaining time until configured endHour:endMinute
             uint32_t endSecToday = (uint32_t)endMins * 60UL;
@@ -97,9 +97,11 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
             Serial.printf("[SCHED] Mid-day start at %02d:%02d. Remaining window: %lu s until %02d:%02d\n",
                           currentMins / 60, currentMins % 60, (availableTime_ms / 1000UL), endMins / 60, endMins % 60);
         } else {
-            // Early morning before start time (e.g. before startMins)
+            // Out of feeding hours (early morning before start time) -> Arm/schedule for today's start time!
             availableTime_ms = fullWindow_ms;
             _status->nextFeedEpoch = startEpochToday;
+            Serial.printf("[SCHED] Early morning start at %02d:%02d: Feeding scheduled for today at %02d:%02d.\n",
+                          currentMins / 60, currentMins % 60, startMins / 60, startMins % 60);
         }
 
         // Check: For mid-day start, can it finish in the remaining time today?

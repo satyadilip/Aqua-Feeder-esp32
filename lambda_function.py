@@ -84,14 +84,35 @@ def lambda_handler(event, context):
                 emin = Decimal(str(unpacked[6]))
                 rate_gs = Decimal(str(unpacked[7]))
 
-                total_events = int((float(feed_qty_kg) * 1000.0) / float(fpe_g)) if float(fpe_g) > 0 else 250
+                total_events = int(math.ceil((float(feed_qty_kg) * 1000.0) / float(fpe_g))) if float(fpe_g) > 0 else 250
                 motor_time_s = round(float(fpe_g) / float(rate_gs), 2) if float(rate_gs) > 0 else 1.0
                 single_event_s = motor_time_s + 6.0  # 3s PRE warmup + motor + 3s POST clearance
                 start_mins = int(shour) * 60 + int(smin)
                 end_mins = int(ehour) * 60 + int(emin)
-                feed_window_s = (end_mins - start_mins) * 60
+                full_window_s = (end_mins - start_mins) * 60
                 total_cycle_s = total_events * single_event_s
-                interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1) if (total_events > 0 and feed_window_s > total_cycle_s) else 2.8
+
+                # Device RTC is in IST (UTC + 19800)
+                ist_epoch = now_epoch + 19800
+                sec_since_midnight = ist_epoch % 86400
+                cur_mins = sec_since_midnight // 60
+
+                if cur_mins >= end_mins:
+                    # After end time: scheduled for tomorrow
+                    available_s = full_window_s
+                elif cur_mins >= start_mins:
+                    # Mid-day active window
+                    end_sec_today = end_mins * 60
+                    available_s = (end_sec_today - sec_since_midnight) if end_sec_today > sec_since_midnight else full_window_s
+                else:
+                    # Early morning before start time: scheduled for today
+                    available_s = full_window_s
+
+                if total_events > 0 and available_s > total_cycle_s:
+                    interval_s = (available_s - total_cycle_s) / float(total_events)
+                    interval_min = round(interval_s / 60.0, 1)
+                else:
+                    interval_min = 2.8
                 
                 settings_table.put_item(
                     Item={
@@ -110,7 +131,29 @@ def lambda_handler(event, context):
                         'LastUpdated': date_str
                     }
                 )
-                print(f"Stored valid Settings from SETTINGS_REPORT for {dev_eui}: {feed_qty_kg}kg, {shour}:{smin} to {ehour}:{emin}")
+                
+                # Also synchronize live devices table immediately
+                try:
+                    devices_table.update_item(
+                        Key={'DeviceId': dev_eui},
+                        UpdateExpression="SET FeedQuantity_kg=:q, FeedPerEvent_g=:f, StartHour=:sh, StartMinute=:sm, EndHour=:eh, EndMinute=:em, DischargeRate_gs=:r, TotalEvents=:te, IntervalMin=:im, ScheduleValid=:sv",
+                        ExpressionAttributeValues={
+                            ':q': feed_qty_kg,
+                            ':f': fpe_g,
+                            ':sh': shour,
+                            ':sm': smin,
+                            ':eh': ehour,
+                            ':em': emin,
+                            ':r': rate_gs,
+                            ':te': Decimal(str(total_events)),
+                            ':im': Decimal(str(interval_min)),
+                            ':sv': True
+                        }
+                    )
+                except Exception as sync_err:
+                    print("Devices table sync error:", sync_err)
+
+                print(f"Stored valid Settings from SETTINGS_REPORT for {dev_eui}: {feed_qty_kg}kg, {shour}:{smin} to {ehour}:{emin}, interval {interval_min}m")
             else:
                 print(f"Payload too small for SETTINGS_REPORT: {len(payload_bytes)}")
                 
@@ -252,6 +295,11 @@ def lambda_handler(event, context):
                 status_str = 'COMPLETED'
                 feed_available = True
                 effective_flags = status_flags
+            elif msg_type == 0x03:
+                # Explicit FEED_STARTED message
+                status_str = 'FEEDING'
+                feed_available = True
+                effective_flags = status_flags
             elif not is_inside_schedule:
                 status_str = 'STANDBY'
                 feed_available = True
@@ -270,6 +318,8 @@ def lambda_handler(event, context):
                 'LastSeen': Decimal(str(timestamp)),
                 'LastSeenEpoch': Decimal(str(now_epoch)),
                 'LastEventTime': now_iso,
+                'CycleStartEpoch': Decimal(str(timestamp if (timestamp > 1700000000 and msg_type == 0x03) else existing_dev.get('CycleStartEpoch', now_epoch))),
+                'FeedStartTime': now_iso if msg_type == 0x03 else existing_dev.get('FeedStartTime', now_iso),
                 'LastVoltage_mV': Decimal(str(voltage)),
                 'LastCurrent_mA': Decimal(str(current)),
                 'LastFeed_g': Decimal(str(feed_disp)),

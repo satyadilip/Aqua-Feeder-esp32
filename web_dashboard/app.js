@@ -1398,9 +1398,27 @@ function renderEventsLog(dev, metrics) {
       `;
     });
   } else {
-    // Generate chronologically accurate feed event times starting at configured startHour:startMin
+    // Generate chronologically accurate feed event times anchoring to actual feed start or last event
+    let baseMin = startTotalMin;
+    if (dev.lastEventTime && effectiveCurrent > 0) {
+      try {
+        const lastD = new Date(dev.lastEventTime);
+        if (!isNaN(lastD.getTime())) {
+          const istD = new Date(lastD.getTime() + 19800000);
+          const lastEventMin = istD.getUTCHours() * 60 + istD.getUTCMinutes();
+          baseMin = lastEventMin - Math.round((effectiveCurrent - 1) * intervalMin);
+          if (baseMin < startTotalMin) baseMin = startTotalMin;
+        }
+      } catch (e) {}
+    } else if (dev.CycleStartEpoch) {
+      try {
+        const cD = new Date(Number(dev.CycleStartEpoch) * 1000 + 19800000);
+        baseMin = cD.getUTCHours() * 60 + cD.getUTCMinutes();
+      } catch (e) {}
+    }
+
     for (let i = startEvent; i >= endEvent; i--) {
-      const eventMin = Math.round(startTotalMin + (i - 1) * intervalMin);
+      const eventMin = Math.round(baseMin + (i - 1) * intervalMin);
       const h = Math.floor(eventMin / 60) % 24;
       const m = eventMin % 60;
       const t = formatTimeAmPm(h, m);
