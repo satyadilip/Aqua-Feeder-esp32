@@ -213,6 +213,8 @@ def lambda_handler(event, context):
                             d['DischargeRate_gs'] = int(s_item.get('DischargeRate_gs', d.get('DischargeRate_gs', 100)))
                             d['MotorTimeSec'] = float(s_item.get('MotorTimeSec', d.get('MotorTimeSec', 1.0)))
                             d['ScheduleValid'] = True
+                        d['FirmwareVersion'] = str(d.get('FirmwareVersion', 'v1.0'))
+                        d['FirmwareName'] = str(d.get('FirmwareName', 'AquaFeeder Firmware'))
                     except:
                         pass
 

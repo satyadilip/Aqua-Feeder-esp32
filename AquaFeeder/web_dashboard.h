@@ -95,7 +95,7 @@ font-variant-numeric:tabular-nums;letter-spacing:2px}
 </style></head><body>
 <div class="hdr">
   <h1>🐟 AQUA FEEDER</h1>
-  <div class="sub">AG_V1 • v4.0.0 • http://aquafeeder.local</div>
+  <div class="sub">AquaFeeder • v1.0 • http://aquafeeder.local</div>
 </div>
 
 <div class="tabs" id="tabs">
@@ -274,7 +274,7 @@ font-variant-numeric:tabular-nums;letter-spacing:2px}
     <h2><span class="ico">🛠️</span> Device Info</h2>
     <div class="st-grid">
       <div class="st-item"><div class="lbl">Device ID</div><div class="val" id="sys-devid" style="font-size:12px">--</div></div>
-      <div class="st-item"><div class="lbl">Firmware</div><div class="val" style="font-size:12px">v4.0.0</div></div>
+      <div class="st-item"><div class="lbl">Firmware</div><div class="val" style="font-size:12px">v1.0</div></div>
       <div class="st-item"><div class="lbl">Free Heap</div><div class="val" id="sys-heap">--</div></div>
       <div class="st-item"><div class="lbl">SD Card</div><div class="val" id="sys-sd">--</div></div>
     </div>

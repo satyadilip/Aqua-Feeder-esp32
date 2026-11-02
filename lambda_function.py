@@ -171,6 +171,13 @@ def lambda_handler(event, context):
             cur_ev = unpacked[5]
             tot_ev = unpacked[6]
             status_flags = unpacked[7]
+            reserved_byte = unpacked[8] if len(unpacked) > 8 else 0
+            if reserved_byte > 0:
+                fw_maj = reserved_byte >> 4
+                fw_min = reserved_byte & 0x0F
+                fw_version = f"v{fw_maj}.{fw_min}"
+            else:
+                fw_version = "v1.0"
             
             cur_ev_int = int(cur_ev)
             tot_ev_int = int(tot_ev)
@@ -511,7 +518,9 @@ def lambda_handler(event, context):
                 'TodayFeedDispensed_kg': today_dispensed_kg,
                 'TodayTotalEvents': today_total_ev,
                 'TodayStatus': today_status,
-                'LastTelemetryHeartbeat': Decimal(str(now_epoch if should_store_telemetry else int(existing_dev.get('LastTelemetryHeartbeat', 0))))
+                'LastTelemetryHeartbeat': Decimal(str(now_epoch if should_store_telemetry else int(existing_dev.get('LastTelemetryHeartbeat', 0)))),
+                'FirmwareVersion': fw_version,
+                'FirmwareName': 'AquaFeeder Firmware'
             }
             if msg_type == 0x0A:
                 dev_item['LastTrayCheck'] = now_iso

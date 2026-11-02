@@ -10,10 +10,11 @@
 #include <Arduino.h>
 
 // ── FIRMWARE VERSION ────────────────────────────────────────────────────────
-#define FW_VERSION        "4.0.0"
-#define FW_NAME           "Aqua Feeder AG_V1"
+#define FW_VERSION        "1.0"
+#define FW_NAME           "AquaFeeder Firmware"
 #define FW_BUILD_DATE     __DATE__
 #define FW_BUILD_TIME     __TIME__
+#define FW_VERSION_BYTE   ((1 << 4) | 0) // 0x10 -> v1.0 (Major: 1, Minor: 0)
 
 // ── GPIO PIN DEFINITIONS (AG_V1 Schematic) ──────────────────────────────────
 

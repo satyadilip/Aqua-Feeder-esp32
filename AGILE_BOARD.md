@@ -169,3 +169,31 @@
   2. From 00:00:00 IST until `StartHour:StartMinute` (06:00 AM), `CurrentEvent` shows `0` and `TotalEvents` shows the new day's planned target events.
   3. Status displays `STANDBY` with `Starts today at 06:00 AM`.
   4. At 06:00:00 AM, the first pulse triggers transition to `FEEDING`.
+
+---
+
+### STORY-011: Official Release v1.0 Baseline & Cloud Firmware Version Telemetry
+- **Status:** `CLOSED`
+- **Closed Commit:** `PENDING_COMMIT`
+- **Assigned To:** Embedded Firmware & Cloud Architect
+- **As a:** Farm Hardware Operator & Cloud Manager
+- **I want:** The firmware release version to be standardized to `v1.0` (with branding "AquaFeeder Firmware"), and reported dynamically to the cloud over LoRaWAN telemetry
+- **So that:** All devices in the field report their active software version without incurring extra airtime overhead, and operators are alerted when new versions are available.
+- **Detailed Requirements:**
+  1. Standardize firmware name to `"AquaFeeder Firmware"` across LCD, Web AP, and Serial logs.
+  2. Bump production shipping version to `v1.0` (`0x10`).
+  3. Pack `(Major << 4) | Minor` into byte 14 of the standard 15-byte `LoRaUplinkPayload` (`reserved` field), adding 0 extra bytes to LoRa transmission.
+  4. Telemetry processor Lambda parses byte 14 into `FirmwareVersion` (`v1.0`) and `FirmwareName` (`AquaFeeder Firmware`) and stores into `AquaFeeder_Devices`.
+  5. Cloud API serves `FirmwareVersion` in `GET /api/devices`.
+
+---
+
+### STORY-012: Pure LoRaWAN FUOTA & Daylight Receiver Power Optimization Architecture
+- **Status:** `IN REVIEW / DESIGN SPEC`
+- **Assigned To:** RF Systems & Power Optimization Architect
+- **As a:** Firmware & Field Operations Lead
+- **I want:** An architectural design to perform firmware updates strictly over LoRaWAN and optimize receiver duty cycling during daylight
+- **So that:** Operators can control feeders without 5-minute latency while conserving battery power overnight.
+- **Key Architecture Decisions:**
+  1. **Pure LoRa FUOTA:** Delta binary patching (`bsdiff` / Detools) to shrink 1.15MB ESP32 binary to ~60KB; LoRa Alliance TS005 Multicast distribution; TS003 Fountain / Reed-Solomon forward error correction; Dual-partition A/B flash rollback.
+  2. **Daylight RX / Night Standby:** Continuous Class C listen during 06:00–18:00 IST powered by 12V solar panel (virtually zero battery drain); automatic fall-back to Class A with 15–30 min heartbeat during night hours (18:00–06:00).
