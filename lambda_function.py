@@ -404,11 +404,7 @@ def lambda_handler(event, context):
             s_time_fmt = f"{s_disph:02d}:{smin_val:02d} {s_ampm}"
             
             if status_str == 'FEEDING':
-                last_anchor_epoch = int(timestamp) if timestamp > 1700000000 else now_epoch
-                next_epoch = last_anchor_epoch + dynamic_gap_sec
-                if next_epoch < now_epoch:
-                    next_epoch = now_epoch + dynamic_gap_sec
-                next_ist_dt = datetime.utcfromtimestamp(next_epoch) + timedelta(hours=5, minutes=30)
+                next_ist_dt = now_ist_dt + timedelta(seconds=dynamic_gap_sec)
                 next_feed_str = next_ist_dt.strftime("%I:%M %p")
                 next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m) - {remaining_events} remaining"
             elif status_str == 'COMPLETED' or now_ist_mins >= end_mins:
