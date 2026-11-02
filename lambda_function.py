@@ -180,27 +180,8 @@ def lambda_handler(event, context):
                 fpe_g = 100
             total_dispensed_g = cur_ev_int * fpe_g
             dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
-            target_kg = Decimal(str(round((tot_ev_int * fpe_g) / 1000.0, 1)))
             
-            # Store raw telemetry
-            telemetry_table.put_item(
-                Item={
-                    'DeviceId': dev_eui,
-                    'Timestamp': Decimal(str(timestamp if timestamp > 1700000000 else now_epoch)),
-                    'MsgType': msg_type,
-                    'Voltage_mV': Decimal(str(voltage)),
-                    'Current_mA': Decimal(str(current)),
-                    'FeedDispensed_g': Decimal(str(total_dispensed_g)),
-                    'CurrentEvent': cur_ev,
-                    'TotalEvents': tot_ev,
-                    'StatusFlags': status_flags
-                }
-            )
-            
-            # Auto-check RTC drift & sync
-            auto_sync_rtc_if_needed(dev_eui, int(timestamp), now_epoch)
-            
-            # Fetch existing device record
+            # 1. Fetch existing device record and user-configured settings FIRST
             existing_dev = {}
             try:
                 d_res = devices_table.get_item(Key={'DeviceId': dev_eui})
@@ -236,6 +217,43 @@ def lambda_handler(event, context):
             except Exception:
                 pass
             target_kg = Decimal(str(saved_qty))
+
+            # 2. Calculate exact event grams for this specific pulse (frozen immutably)
+            prev_disp = int(existing_dev.get('LastFeed_g', 0))
+            if cur_ev_int > 0:
+                if cur_ev_int == prev_ev + 1 and int(feed_disp) > prev_disp:
+                    event_grams = int(feed_disp) - prev_disp
+                elif int(feed_disp) > 0:
+                    event_grams = int(round(int(feed_disp) / cur_ev_int))
+                else:
+                    event_grams = int(saved_fpe)
+            else:
+                event_grams = 0
+
+            # 3. Store raw telemetry with 15-day TTL and frozen event settings (STORY-007 & STORY-008)
+            should_store_telemetry = (cur_ev_int > 0) or (status_flags != prev_flags) or (now_epoch - int(existing_dev.get('LastTelemetryHeartbeat', 0)) >= 3600)
+            if should_store_telemetry:
+                ttl_epoch = Decimal(str(now_epoch + (15 * 86400))) # 15 days retention
+                telemetry_table.put_item(
+                    Item={
+                        'DeviceId': dev_eui,
+                        'Timestamp': Decimal(str(timestamp if timestamp > 1700000000 else now_epoch)),
+                        'MsgType': msg_type,
+                        'Voltage_mV': Decimal(str(voltage)),
+                        'Current_mA': Decimal(str(current)),
+                        'FeedDispensed_g': Decimal(str(total_dispensed_g)),
+                        'CurrentEvent': cur_ev,
+                        'TotalEvents': tot_ev,
+                        'StatusFlags': status_flags,
+                        'EventGrams': Decimal(str(event_grams)),
+                        'FeedPerEvent_g': Decimal(str(fpe_g if cur_ev_int > 0 else saved_fpe)),
+                        'Target_kg': target_kg,
+                        'TimeToLive': ttl_epoch
+                    }
+                )
+            
+            # Auto-check RTC drift & sync
+            auto_sync_rtc_if_needed(dev_eui, int(timestamp), now_epoch)
             
             # Handle special message types
             # 1. TRAY_CHECKIN (0x0A = 10)
@@ -364,16 +382,49 @@ def lambda_handler(event, context):
             else:
                 last_event_time = existing_dev.get('LastEventTime', now_iso)
 
-            # Live event progress
+            # Decoupled Today Completed State vs Scheduled State (STORY-009 & STORY-010)
+            prev_today_date = str(existing_dev.get('TodayDate', ''))
+            prev_today_ev = int(existing_dev.get('TodayEventsCompleted', 0))
+            prev_today_kg = Decimal(str(existing_dev.get('TodayFeedDispensed_kg', '0')))
+            prev_today_tot = int(existing_dev.get('TodayTotalEvents', tot_ev_int))
+            prev_today_status = str(existing_dev.get('TodayStatus', 'STANDBY'))
+
+            is_same_day = (prev_today_date == date_str)
+
             if cur_ev_int > 0:
+                # Live feeding is advancing
                 live_cur_ev = Decimal(str(cur_ev_int))
                 live_disp_kg = Decimal(str(round((cur_ev_int * fpe_g) / 1000.0, 2)))
-            elif is_feed_start or existing_is_today:
-                live_cur_ev = Decimal(str(cur_ev_int))
-                live_disp_kg = dispensed_kg
+                today_date = date_str
+                today_completed_ev = Decimal(str(cur_ev_int))
+                today_dispensed_kg = live_disp_kg
+                today_total_ev = Decimal(str(tot_ev_int))
+                today_status = status_str
+            elif is_same_day and prev_today_ev > 0:
+                # After feed completion on the same calendar day, heartbeats report cur_ev == 0
+                # Retain today's completed numbers until midnight!
+                today_date = date_str
+                today_completed_ev = Decimal(str(prev_today_ev))
+                today_dispensed_kg = prev_today_kg
+                today_total_ev = Decimal(str(prev_today_tot))
+                today_status = 'COMPLETED' if (now_ist_mins >= end_mins or prev_today_status == 'COMPLETED') else prev_today_status
+                
+                if now_ist_mins >= end_mins or prev_today_status == 'COMPLETED':
+                    live_cur_ev = today_completed_ev
+                    live_disp_kg = today_dispensed_kg
+                    status_str = 'COMPLETED'
+                else:
+                    live_cur_ev = Decimal(str(cur_ev_int))
+                    live_disp_kg = Decimal('0')
             else:
+                # New calendar day before feed starts (00:00 to 06:00 IST)
                 live_cur_ev = Decimal('0')
                 live_disp_kg = Decimal('0')
+                today_date = date_str
+                today_completed_ev = Decimal('0')
+                today_dispensed_kg = Decimal('0')
+                today_total_ev = Decimal(str(tot_ev_int))
+                today_status = 'STANDBY'
 
             # Dynamic interval calculation matching firmware FeedEngine::calcSchedule / recalcDynamic
             shour_val = int(saved_shour)
@@ -454,7 +505,13 @@ def lambda_handler(event, context):
                 'EndHour': Decimal(str(ehour_val)),
                 'EndMinute': Decimal(str(emin_val)),
                 'FeedAvailable': feed_available,
-                'Status': status_str
+                'Status': status_str,
+                'TodayDate': today_date,
+                'TodayEventsCompleted': today_completed_ev,
+                'TodayFeedDispensed_kg': today_dispensed_kg,
+                'TodayTotalEvents': today_total_ev,
+                'TodayStatus': today_status,
+                'LastTelemetryHeartbeat': Decimal(str(now_epoch if should_store_telemetry else int(existing_dev.get('LastTelemetryHeartbeat', 0))))
             }
             if msg_type == 0x0A:
                 dev_item['LastTrayCheck'] = now_iso
@@ -504,16 +561,19 @@ def lambda_handler(event, context):
                 except Exception:
                     pass
             
-            # Record daily metrics whenever feeding has occurred
-            if cur_ev_int > 0:
+            # Record daily metrics whenever feeding has occurred or completed today (STORY-008)
+            if int(today_completed_ev) > 0:
                 daily_metrics_table.put_item(
                     Item={
                         'DeviceId': dev_eui,
-                        'Date': date_str,
-                        'DailyFeed_g': Decimal(str(total_dispensed_g)),
-                        'DailyFeed_kg': live_disp_kg,
-                        'TotalCycles': Decimal(str(cur_ev_int)),
-                        'Target_kg': target_kg
+                        'Date': today_date,
+                        'DailyFeed_g': Decimal(str(int(float(today_dispensed_kg) * 1000.0))),
+                        'DailyFeed_kg': today_dispensed_kg,
+                        'TotalCycles': today_completed_ev,
+                        'Target_kg': target_kg,
+                        'TargetEvents': today_total_ev,
+                        'Status': today_status,
+                        'LastUpdated': now_iso
                     }
                 )
             print(f"Stored telemetry for {dev_eui}: {live_disp_kg}kg ({cur_ev_int}/{tot_ev}) | Status: {status_str} | FeedAvailable: {feed_available}")

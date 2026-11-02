@@ -879,10 +879,11 @@ function loadSelectedDeviceToUI() {
   // Before today's schedule begins, today's feeding progress is 0
   const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
   const isTargetCompleted = !isBeforeSchedule && effectiveCurrent >= totalEvents;
-  const isScheduleDone = !isBeforeSchedule && (isTargetCompleted || isPastSchedule);
+  const isScheduleDone = !isBeforeSchedule && (isTargetCompleted || isPastSchedule || dev.status === 'COMPLETED');
 
-  const displayCurrent = Math.min(effectiveCurrent, totalEvents);
-  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / totalEvents) * 100));
+  const displayCurrent = isScheduleDone ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
+  const displayTotal = isScheduleDone ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
+  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / displayTotal) * 100));
 
   let statusText = 'STANDBY';
   let badgeClass = 'b-idle';
@@ -981,7 +982,7 @@ function loadSelectedDeviceToUI() {
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
+    gaugeHeroSub.textContent = `/ ${displayTotal} Events Today`;
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
@@ -993,7 +994,7 @@ function loadSelectedDeviceToUI() {
   if (targetText) targetText.textContent = targetKg.toFixed(1);
 
   if (burstCountText) {
-    burstCountText.textContent = `${displayCurrent} / ${totalEvents}`;
+    burstCountText.textContent = `${displayCurrent} / ${displayTotal}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
   if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : (isScheduleDone ? 'Schedule completed' : 'Events today'));
@@ -1319,10 +1320,11 @@ async function renderHistoryView() {
                 timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
               }
             }
+            const eventGrams = Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100);
             cleanEvents.push({
               eventNumber: evNum,
               time: timeStr,
-              grams: dev.fpeGrams || 100,
+              grams: eventGrams,
               cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
               timestamp: Number(item.Timestamp || 0),
               date: item.Date || ''

@@ -280,8 +280,11 @@ function renderActiveFeeder() {
   if (fpeEl) fpeEl.textContent = `${dev.fpeGrams || 100} g`;
 
   const eventsEl = document.getElementById('hero-events-progress');
-  const remEvents = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, (dev.totalEvents || 150) - (dev.currentEvent || 0));
-  if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
+  const isCompletedDev = dev.status === 'COMPLETED' || (dev.currentEvent >= dev.totalEvents && dev.totalEvents > 0);
+  const dispCurrentDev = isCompletedDev ? (dev.currentEvent || 0) : Math.min(dev.currentEvent || 0, dev.totalEvents || 150);
+  const dispTotalDev = isCompletedDev ? Math.max(dev.totalEvents || 150, dispCurrentDev) : (dev.totalEvents || 150);
+  const remEvents = isCompletedDev ? 0 : Math.max(0, dispTotalDev - dispCurrentDev);
+  if (eventsEl) eventsEl.textContent = `${dispCurrentDev} / ${dispTotalDev}`;
 
   // Next Dispense Pulse Time
   const nextPulseEl = document.getElementById('hero-next-pulse');
@@ -670,9 +673,10 @@ async function fetchLiveTelemetry() {
             const ev = Math.round(t.CurrentEvent || 0);
             if (ev > 0 && !seen.has(ev)) {
               seen.add(ev);
+              const burstGrams = Math.round(t.EventGrams || t.FeedPerEvent_g || 100);
               cleanUplinks.push({
                 time: (t.Time || '14:00 IST').replace(/:\d{2}\s/, ' '),
-                event: `Pulse #${ev} (${Math.round(t.FeedDispensed_g || 100)}g)`,
+                event: `Pulse #${ev} (${burstGrams}g)`,
                 batt: `${((t.Voltage_mV || 12800) / 1000.0).toFixed(1)}V`,
                 rssi: '-82 dBm'
               });
