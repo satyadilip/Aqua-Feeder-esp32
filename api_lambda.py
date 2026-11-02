@@ -183,24 +183,31 @@ def lambda_handler(event, context):
                     d['LastSeenEpoch'] = int(d.get('LastSeenEpoch', int(datetime.utcnow().timestamp())))
                     d['LastEventTime'] = str(d.get('LastEventTime', datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")))
                     
+                    # Base values from device record (authoritative live telemetry)
+                    tot_ev = float(d.get('TotalEvents', 200))
+                    cur_ev = float(d.get('CurrentEvent', 0))
+                    fpe = float(d.get('FeedPerEvent_g', 100))
+                    if fpe == 0 and cur_ev > 0 and float(d.get('LastFeed_g', 0)) > 0:
+                        fpe = float(round(float(d.get('LastFeed_g')) / cur_ev))
+                    
+                    target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
+                    dispensed_kg = float(d.get('DispensedFeed_kg', round((cur_ev * fpe) / 1000.0, 2)))
+                    
                     # Merge user-configured settings if present
                     try:
                         s_res = settings_table.get_item(Key={'DeviceId': dev_id})
                         s_item = s_res.get('Item')
                         if s_item:
-                            target_kg = float(s_item.get('FeedQuantity_kg', target_kg))
-                            fpe = float(s_item.get('FeedPerEvent_g', fpe))
-                            tot_ev = float(s_item.get('TotalEvents', tot_ev))
-                            d['FeedQuantity_kg'] = target_kg
-                            d['FeedPerEvent_g'] = int(fpe)
-                            d['TotalEvents'] = int(tot_ev)
-                            d['StartHour'] = int(s_item.get('StartHour', 6))
-                            d['StartMinute'] = int(s_item.get('StartMinute', 0))
-                            d['EndHour'] = int(s_item.get('EndHour', 18))
-                            d['EndMinute'] = int(s_item.get('EndMinute', 0))
-                            d['IntervalMin'] = float(s_item.get('IntervalMin', 2.9))
-                            d['DischargeRate_gs'] = int(s_item.get('DischargeRate_gs', 100))
-                            d['MotorTimeSec'] = float(s_item.get('MotorTimeSec', 1.0))
+                            if cur_ev == 0:
+                                target_kg = float(s_item.get('FeedQuantity_kg', target_kg))
+                                fpe = float(s_item.get('FeedPerEvent_g', fpe))
+                                tot_ev = float(s_item.get('TotalEvents', tot_ev))
+                            d['StartHour'] = int(s_item.get('StartHour', d.get('StartHour', 6)))
+                            d['StartMinute'] = int(s_item.get('StartMinute', d.get('StartMinute', 0)))
+                            d['EndHour'] = int(s_item.get('EndHour', d.get('EndHour', 18)))
+                            d['EndMinute'] = int(s_item.get('EndMinute', d.get('EndMinute', 0)))
+                            d['DischargeRate_gs'] = int(s_item.get('DischargeRate_gs', d.get('DischargeRate_gs', 100)))
+                            d['MotorTimeSec'] = float(s_item.get('MotorTimeSec', d.get('MotorTimeSec', 1.0)))
                             d['ScheduleValid'] = True
                     except:
                         pass
@@ -296,17 +303,39 @@ def lambda_handler(event, context):
                         d['Status'] = actual_status
                         d['StatusFlags'] = status_flags
 
-                        if 'StartHour' not in d: d['StartHour'] = 6
-                        if 'StartMinute' not in d: d['StartMinute'] = 0
-                        if 'EndHour' not in d: d['EndHour'] = 18
-                        if 'EndMinute' not in d: d['EndMinute'] = 0
-                        if 'IntervalMin' not in d: d['IntervalMin'] = 4.8 if dev_id == 'e072a1fffef5ba08' else 2.9
-                        if 'DischargeRate_gs' not in d: d['DischargeRate_gs'] = 100
-                        if 'MotorTimeSec' not in d: d['MotorTimeSec'] = 1.0
+                        # Synchronous dynamic interval calculation matching firmware
+                        tot_ev_int = int(tot_ev)
+                        cur_ev_int = int(cur_ev)
+                        rem_events = max(0, tot_ev_int - cur_ev_int)
+                        
+                        d_rate = float(d.get('DischargeRate_gs', 100))
+                        if d_rate <= 0.1: d_rate = 100.0
+                        m_time_s = round(float(fpe) / d_rate, 2)
+                        single_ev_s = 3.0 + m_time_s + 3.0
+                        
+                        sec_since_midnight = now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second
+                        end_sec_today = e_hour * 3600 + e_min * 60
+                        rem_time_s = max(0, end_sec_today - sec_since_midnight)
+                        rem_calc = max(1, rem_events)
+                        rem_dur_s = rem_calc * single_ev_s
+                        
+                        if rem_time_s > rem_dur_s and rem_events > 0:
+                            gap_s = max(5, int((rem_time_s - rem_dur_s) / rem_calc))
+                        else:
+                            gap_s = int(float(d.get('IntervalMin', 2.9)) * 60.0) if float(d.get('IntervalMin', 2.9)) > 0 else 60
+                            
+                        dyn_interval_m = round(gap_s / 60.0, 1)
+                        
+                        d['TotalEvents'] = tot_ev_int
+                        d['CurrentEvent'] = cur_ev_int
+                        d['TotalEventsRemaining'] = rem_events
+                        d['FeedPerEvent_g'] = int(fpe)
+                        d['FeedQuantity_kg'] = round((tot_ev_int * fpe) / 1000.0, 1)
+                        d['DispensedFeed_kg'] = round((cur_ev_int * fpe) / 1000.0, 2)
+                        d['GapIntervalSec'] = gap_s
+                        d['IntervalMin'] = dyn_interval_m
                         d['ScheduleValid'] = True
 
-                        # Dynamic Next Feed calculation based on actual start time & current settings
-                        interval_m = float(d.get('IntervalMin', 4.8))
                         s_ampm = "PM" if s_hour >= 12 else "AM"
                         s_disph = 12 if s_hour % 12 == 0 else s_hour % 12
                         s_time_fmt = f"{s_disph:02d}:{s_min:02d} {s_ampm}"
@@ -320,35 +349,22 @@ def lambda_handler(event, context):
                         elif actual_status == 'FEED EMPTY':
                             d['NextFeed'] = "--"
                             d['NextFeedSub'] = "Refill Required"
-                        elif actual_status == 'COMPLETED' or now_min >= end_min or (is_today_feed_event and cur_ev >= tot_ev):
+                        elif actual_status == 'COMPLETED' or now_min >= end_min or (is_today_feed_event and cur_ev_int >= tot_ev_int):
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = "Tomorrow morning"
                         elif now_min < start_min:
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = f"Starts today at {s_time_fmt}"
                         elif actual_status in ['FEEDING', 'ACTIVE']:
-                            # Feed is actively underway today
-                            if cur_ev == 0:
-                                next_m = now_min
+                            last_seen_epoch = int(d.get('LastSeenEpoch', 0))
+                            if last_seen_epoch > 0 and (now_epoch - last_seen_epoch) < (gap_s + 30):
+                                next_feed_epoch = last_seen_epoch + gap_s
                             else:
-                                if is_today_feed_event and 'dt_ist' in locals():
-                                    last_m = dt_ist.hour * 60 + dt_ist.minute
-                                    next_m = last_m + int(round(interval_m))
-                                    if next_m < now_min:
-                                        next_m = now_min + int(round(interval_m))
-                                else:
-                                    next_m = now_min + int(round(interval_m))
+                                next_feed_epoch = now_epoch + gap_s
                             
-                            if next_m >= end_min:
-                                d['NextFeed'] = s_time_fmt
-                                d['NextFeedSub'] = "Tomorrow morning"
-                            else:
-                                nh = (next_m // 60) % 24
-                                nm = next_m % 60
-                                ampm = "PM" if nh >= 12 else "AM"
-                                disph = 12 if nh % 12 == 0 else nh % 12
-                                d['NextFeed'] = f"{disph:02d}:{nm:02d} {ampm}"
-                                d['NextFeedSub'] = f"Interval: {interval_m:.1f} min"
+                            next_ist = datetime.utcfromtimestamp(next_feed_epoch) + timedelta(hours=5, minutes=30)
+                            d['NextFeed'] = next_ist.strftime("%I:%M %p")
+                            d['NextFeedSub'] = f"Interval: {dyn_interval_m}m ({gap_s}s) - {rem_events} remaining"
                         else:
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"

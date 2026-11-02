@@ -916,35 +916,39 @@ function loadSelectedDeviceToUI() {
   } else if (dev.status === 'FEEDING' || effectiveCurrent > 0) {
     statusText = 'FEEDING';
     badgeClass = 'b-run';
-    const intervalMin = dev.intervalMin || 3.1;
-    let nextMin;
-    if (dev.lastEventTime) {
-      try {
-        const lastD = new Date(dev.lastEventTime);
-        if (!isNaN(lastD.getTime())) {
-          // Convert to IST
-          const istD = new Date(lastD.getTime() + 19800000);
-          const lastMin = istD.getUTCHours() * 60 + istD.getUTCMinutes();
-          nextMin = lastMin + Math.round(intervalMin);
-        }
-      } catch (e) {}
-    }
-    if (!nextMin || nextMin < nowTotalMin) {
-      nextMin = nowTotalMin + Math.round(intervalMin);
-    }
-    if (nextMin >= endTotalMin) {
-      statusText = 'COMPLETED';
-      badgeClass = 'b-done';
-      nextTimestamp = timeFormatted;
-      nextSubText = `Concludes at ${endTimeFormatted}`;
-      eventSubText = 'Finished for today';
+    const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
+    if (dev.nextFeed) {
+      nextTimestamp = dev.nextFeed;
+      nextSubText = dev.nextFeedSub || `Interval: ${dev.intervalMin || 1.4} min`;
     } else {
-      const nH = Math.floor(nextMin / 60) % 24;
-      const nM = nextMin % 60;
-      nextTimestamp = formatTimeAmPm(nH, nM);
-      nextSubText = `Interval: ${intervalMin} min`;
-      eventSubText = 'Events today';
+      const intervalMin = dev.intervalMin || 1.4;
+      let nextMin;
+      if (dev.lastEventTime) {
+        try {
+          const lastD = new Date(dev.lastEventTime);
+          if (!isNaN(lastD.getTime())) {
+            const istD = new Date(lastD.getTime() + 19800000);
+            const lastMin = istD.getUTCHours() * 60 + istD.getUTCMinutes();
+            nextMin = lastMin + Math.round(intervalMin);
+          }
+        } catch (e) {}
+      }
+      if (!nextMin || nextMin < nowTotalMin) {
+        nextMin = nowTotalMin + Math.round(intervalMin);
+      }
+      if (nextMin >= endTotalMin) {
+        statusText = 'COMPLETED';
+        badgeClass = 'b-done';
+        nextTimestamp = timeFormatted;
+        nextSubText = `Concludes at ${endTimeFormatted}`;
+      } else {
+        const nH = Math.floor(nextMin / 60) % 24;
+        const nM = nextMin % 60;
+        nextTimestamp = formatTimeAmPm(nH, nM);
+        nextSubText = `Interval: ${intervalMin} min`;
+      }
     }
+    eventSubText = `${totalRemaining} remaining today`;
   } else {
     statusText = 'ACTIVE';
     badgeClass = 'b-run';
@@ -974,8 +978,9 @@ function loadSelectedDeviceToUI() {
     gaugeCircle.style.strokeDashoffset = offset;
   }
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
+  const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
+    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today (${totalRemaining} remaining)`;
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
@@ -990,7 +995,7 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${totalEvents}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : eventSubText);
+  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : `${totalRemaining} remaining today`);
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
@@ -2473,6 +2478,10 @@ async function syncDevicesFromCloud() {
           if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
           if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
           if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = Number(cloudDev.TotalEvents);
+          if (cloudDev.TotalEventsRemaining !== undefined) localDev.totalEventsRemaining = Number(cloudDev.TotalEventsRemaining);
+          if (cloudDev.GapIntervalSec !== undefined) localDev.gapIntervalSec = Number(cloudDev.GapIntervalSec);
+          if (cloudDev.NextFeed !== undefined) localDev.nextFeed = cloudDev.NextFeed;
+          if (cloudDev.NextFeedSub !== undefined) localDev.nextFeedSub = cloudDev.NextFeedSub;
           if (cloudDev.FeedPerEvent_g !== undefined) localDev.fpeGrams = Number(cloudDev.FeedPerEvent_g);
           if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
           if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);

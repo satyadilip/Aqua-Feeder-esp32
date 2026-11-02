@@ -278,7 +278,8 @@ function renderActiveFeeder() {
   if (fpeEl) fpeEl.textContent = `${dev.fpeGrams || 100} g`;
 
   const eventsEl = document.getElementById('hero-events-progress');
-  if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
+  const remEvents = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, (dev.totalEvents || 150) - (dev.currentEvent || 0));
+  if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150} (${remEvents} left)`;
 
   // Next Dispense Pulse Time
   const nextPulseEl = document.getElementById('hero-next-pulse');
@@ -303,6 +304,8 @@ function renderActiveFeeder() {
     let nextStr = formatTimeAmPm(sH, sM);
     if (dev.isPaused) {
       nextStr = '--';
+    } else if (dev.nextFeed && (dev.status === 'FEEDING' || dev.status === 'ACTIVE')) {
+      nextStr = dev.nextFeed;
     } else if (nowIstMin < startM) {
       nextStr = formatTimeAmPm(sH, sM);
     } else if (nowIstMin >= endM || (dev.currentEvent >= dev.totalEvents && dev.totalEvents > 0)) {
@@ -595,6 +598,10 @@ async function fetchLiveTelemetry() {
             if (cloudDev.DispensedFeed_kg !== undefined) match.dispensedKg = Number(cloudDev.DispensedFeed_kg);
             if (cloudDev.CurrentEvent !== undefined) match.currentEvent = Number(cloudDev.CurrentEvent);
             if (cloudDev.TotalEvents !== undefined) match.totalEvents = Number(cloudDev.TotalEvents);
+            if (cloudDev.TotalEventsRemaining !== undefined) match.totalEventsRemaining = Number(cloudDev.TotalEventsRemaining);
+            if (cloudDev.GapIntervalSec !== undefined) match.gapIntervalSec = Number(cloudDev.GapIntervalSec);
+            if (cloudDev.NextFeed !== undefined) match.nextFeed = cloudDev.NextFeed;
+            if (cloudDev.NextFeedSub !== undefined) match.nextFeedSub = cloudDev.NextFeedSub;
             if (cloudDev.FeedQuantity_kg !== undefined) match.targetKg = Number(cloudDev.FeedQuantity_kg);
             if (cloudDev.StartHour !== undefined) match.startHour = Number(cloudDev.StartHour);
             if (cloudDev.StartMinute !== undefined) match.startMin = Number(cloudDev.StartMinute);

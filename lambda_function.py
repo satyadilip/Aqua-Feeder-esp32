@@ -172,7 +172,10 @@ def lambda_handler(event, context):
             
             cur_ev_int = int(cur_ev)
             tot_ev_int = int(tot_ev)
-            fpe_g = 100
+            if cur_ev_int > 0 and int(feed_disp) > 0:
+                fpe_g = int(round(int(feed_disp) / cur_ev_int))
+            else:
+                fpe_g = 100
             total_dispensed_g = cur_ev_int * fpe_g
             dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
             target_kg = Decimal(str(round((tot_ev_int * fpe_g) / 1000.0, 1)))
@@ -369,6 +372,61 @@ def lambda_handler(event, context):
                 live_cur_ev = Decimal('0')
                 live_disp_kg = Decimal('0')
 
+            # Dynamic interval calculation matching firmware FeedEngine::calcSchedule / recalcDynamic
+            shour_val = int(saved_shour)
+            smin_val = int(saved_smin)
+            ehour_val = int(saved_ehour)
+            emin_val = int(saved_emin)
+            
+            sec_since_midnight = now_ist_dt.hour * 3600 + now_ist_dt.minute * 60 + now_ist_dt.second
+            end_sec_today = ehour_val * 3600 + emin_val * 60
+            start_sec_today = shour_val * 3600 + smin_val * 60
+            
+            rate_val = float(saved_rate) if float(saved_rate) > 0.1 else 100.0
+            motor_time_s = round(float(fpe_g) / rate_val, 2)
+            single_event_s = 3.0 + motor_time_s + 3.0
+            
+            remaining_events = max(0, tot_ev_int - cur_ev_int)
+            remaining_time_s = max(0, end_sec_today - sec_since_midnight)
+            rem_events_calc = max(1, remaining_events)
+            rem_duration_s = rem_events_calc * single_event_s
+            
+            if remaining_time_s > rem_duration_s and remaining_events > 0:
+                dynamic_gap_sec = max(5, int((remaining_time_s - rem_duration_s) / rem_events_calc))
+            else:
+                dynamic_gap_sec = int(float(saved_interval) * 60.0) if float(saved_interval) > 0 else 60
+            
+            dynamic_interval_min = round(dynamic_gap_sec / 60.0, 1)
+
+            # Synchronous Next Feed calculation
+            s_ampm = "PM" if shour_val >= 12 else "AM"
+            s_disph = 12 if shour_val % 12 == 0 else shour_val % 12
+            s_time_fmt = f"{s_disph:02d}:{smin_val:02d} {s_ampm}"
+            
+            if status_str == 'FEEDING':
+                last_anchor_epoch = int(timestamp) if timestamp > 1700000000 else now_epoch
+                next_epoch = last_anchor_epoch + dynamic_gap_sec
+                if next_epoch < now_epoch:
+                    next_epoch = now_epoch + dynamic_gap_sec
+                next_ist_dt = datetime.utcfromtimestamp(next_epoch) + timedelta(hours=5, minutes=30)
+                next_feed_str = next_ist_dt.strftime("%I:%M %p")
+                next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m) - {remaining_events} remaining"
+            elif status_str == 'COMPLETED' or now_ist_mins >= end_mins:
+                next_feed_str = s_time_fmt
+                next_feed_sub = "Tomorrow morning"
+            elif now_ist_mins < start_mins:
+                next_feed_str = s_time_fmt
+                next_feed_sub = f"Starts today at {s_time_fmt}"
+            elif status_str == 'PAUSED':
+                next_feed_str = "--"
+                next_feed_sub = "Feed Paused"
+            elif status_str == 'FEED EMPTY':
+                next_feed_str = "--"
+                next_feed_sub = "Refill Required"
+            else:
+                next_feed_str = s_time_fmt
+                next_feed_sub = f"Starts at {s_time_fmt}" if now_ist_mins < end_mins else "Tomorrow morning"
+
             dev_item = {
                 'DeviceId': dev_eui,
                 'LastSeen': Decimal(str(timestamp)),
@@ -380,17 +438,21 @@ def lambda_handler(event, context):
                 'LastCurrent_mA': Decimal(str(current)),
                 'LastFeed_g': Decimal(str(feed_disp)),
                 'CurrentEvent': live_cur_ev,
-                'TotalEvents': tot_ev,
+                'TotalEvents': Decimal(str(tot_ev_int)),
+                'TotalEventsRemaining': Decimal(str(remaining_events)),
+                'GapIntervalSec': Decimal(str(dynamic_gap_sec)),
+                'IntervalMin': Decimal(str(dynamic_interval_min)),
+                'NextFeed': next_feed_str,
+                'NextFeedSub': next_feed_sub,
                 'StatusFlags': effective_flags,
                 'DispensedFeed_kg': live_disp_kg,
-                'FeedQuantity_kg': saved_qty,
-                'FeedPerEvent_g': saved_fpe,
-                'DischargeRate_gs': saved_rate,
-                'StartHour': saved_shour,
-                'StartMinute': saved_smin,
-                'EndHour': saved_ehour,
-                'EndMinute': saved_emin,
-                'IntervalMin': saved_interval,
+                'FeedQuantity_kg': target_kg,
+                'FeedPerEvent_g': Decimal(str(fpe_g)),
+                'DischargeRate_gs': Decimal(str(int(rate_val))),
+                'StartHour': Decimal(str(shour_val)),
+                'StartMinute': Decimal(str(smin_val)),
+                'EndHour': Decimal(str(ehour_val)),
+                'EndMinute': Decimal(str(emin_val)),
                 'FeedAvailable': feed_available,
                 'Status': status_str
             }
@@ -426,6 +488,22 @@ def lambda_handler(event, context):
                 dev_item['PondId'] = 'P-01'
 
             devices_table.put_item(Item=dev_item)
+            
+            # Keep AquaFeeder_Settings aligned with live active schedule
+            if tot_ev_int > 0 and cur_ev_int > 0:
+                try:
+                    settings_table.update_item(
+                        Key={'DeviceId': dev_eui},
+                        UpdateExpression='SET TotalEvents = :te, FeedPerEvent_g = :fpe, FeedQuantity_kg = :fq, IntervalMin = :im',
+                        ExpressionAttributeValues={
+                            ':te': Decimal(str(tot_ev_int)),
+                            ':fpe': Decimal(str(fpe_g)),
+                            ':fq': target_kg,
+                            ':im': Decimal(str(dynamic_interval_min))
+                        }
+                    )
+                except Exception:
+                    pass
             
             # Record daily metrics whenever feeding has occurred
             if cur_ev_int > 0:
