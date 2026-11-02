@@ -615,6 +615,32 @@ async function fetchLiveTelemetry() {
         renderActiveFeeder();
       }
     }
+    // Fetch live hardware telemetry history from DynamoDB
+    try {
+      const activeDevId = appState.selectedFeederId || 'e072a1fffef64134';
+      const telRes = await fetch(`${API_BASE_URL}/api/telemetry/${activeDevId}?_t=${Date.now()}`);
+      if (telRes.ok) {
+        const telData = await telRes.json();
+        if (telData && telData.telemetry && telData.telemetry.length > 0) {
+          const seen = new Set();
+          const cleanUplinks = [];
+          for (const t of telData.telemetry) {
+            const ev = Math.round(t.CurrentEvent || 0);
+            if (ev > 0 && !seen.has(ev)) {
+              seen.add(ev);
+              cleanUplinks.push({
+                time: (t.Time || '14:00 IST').replace(/:\d{2}\s/, ' '),
+                event: `Pulse #${ev} (${Math.round(t.FeedDispensed_g || 100)}g)`,
+                batt: `${((t.Voltage_mV || 12800) / 1000.0).toFixed(1)}V`,
+                rssi: '-82 dBm'
+              });
+            }
+          }
+          appState.telemetryLogs = cleanUplinks;
+          renderAnalyticsLogs();
+        }
+      }
+    } catch (e) {}
   } catch (err) {
     console.log('Live polling fallback');
   }

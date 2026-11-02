@@ -1253,6 +1253,43 @@ async function renderHistoryView() {
     } catch (e) {}
   }
 
+  // Fetch actual live telemetry events logged in DynamoDB from hardware
+  try {
+    const tRes = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
+    if (tRes.ok) {
+      const tData = await tRes.json();
+      if (tData && tData.telemetry && tData.telemetry.length > 0) {
+        const seenEvents = new Set();
+        const cleanEvents = [];
+        for (const item of tData.telemetry) {
+          const evNum = Math.round(Number(item.CurrentEvent || 0));
+          if (evNum > 0 && !seenEvents.has(evNum)) {
+            seenEvents.add(evNum);
+            let timeStr = item.Time || '';
+            if (timeStr && timeStr.includes(':')) {
+              const parts = timeStr.split(' ');
+              const timeParts = parts[0].split(':');
+              if (timeParts.length >= 2) {
+                timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
+              }
+            }
+            cleanEvents.push({
+              eventNumber: evNum,
+              time: timeStr,
+              grams: dev.fpeGrams || 100,
+              cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
+              timestamp: Number(item.Timestamp || 0),
+              date: item.Date || ''
+            });
+          }
+        }
+        dev.eventsLog = cleanEvents;
+      }
+    }
+  } catch (e) {
+    console.error("Telemetry fetch error:", e);
+  }
+
   // Fallback 7-day records if offline or pending
   if (!metrics || metrics.length === 0) {
     const today = new Date();
@@ -1367,10 +1404,11 @@ function renderEventsLog(dev, metrics) {
   const endEvent = Math.max(1, startEvent - maxToDisplay + 1);
 
   if (logLabel) {
-    if (hasTodayEvents) {
-      logLabel.textContent = eventsCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events today` 
-        : `Showing ${eventsCount} completed feed events today`;
+    const actualCount = (dev.eventsLog && dev.eventsLog.length) ? dev.eventsLog.length : eventsCount;
+    if (hasTodayEvents || actualCount > 0) {
+      logLabel.textContent = actualCount > maxToDisplay 
+        ? `Showing latest ${maxToDisplay} of ${actualCount} feed events today` 
+        : `Showing ${actualCount} completed feed events today`;
     } else if (lastActiveMetric) {
       const activeLabel = lastActiveMetric.dateLabel || 'Sunday, Oct 25';
       logLabel.textContent = eventsCount > maxToDisplay 
@@ -1388,7 +1426,7 @@ function renderEventsLog(dev, metrics) {
     return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
-  const intervalMin = parseFloat(dev.intervalMin || dev.IntervalMin || 4.8);
+  const intervalMin = parseFloat(dev.intervalMin || dev.IntervalMin || 2.7);
 
   if (dev.eventsLog && dev.eventsLog.length > 0) {
     const displayed = dev.eventsLog.slice(0, maxToDisplay);
