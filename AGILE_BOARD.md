@@ -12,12 +12,16 @@
 
 | 📋 Backlog | 🚧 In Progress | 🧪 Verification / Review | ✅ Done (Closed with Commit) |
 | :--- | :--- | :--- | :--- |
-| | **STORY-007** (Immutable History Grams) | **STORY-009** (Completed State vs Settings) | **STORY-001** (6 AM–6 PM Window) `f88e19f` |
-| | **STORY-008** (15-Day Retention & Rollup) | **STORY-010** (Midnight Rollover Projection) | **STORY-002** (Dynamic Mid-Day Recalc) `7868864` |
+| *(All Sprint Items Completed)* | | | **STORY-001** (6 AM–6 PM Window) `f88e19f` |
+| | | | **STORY-002** (Dynamic Mid-Day Recalc) `7868864` |
 | | | | **STORY-003** (Daily Recurrence & Heartbeat Decouple) `ddfcaf1` |
 | | | | **STORY-004** (Real Telemetry Timestamps in History) `2db9958` |
 | | | | **STORY-005** (Bi-Directional Settings Sync) `bd0522e` |
 | | | | **STORY-006** (Timezone Invariance & Cache-Bust) `bd0522e` |
+| | | | **STORY-007** (Immutable History Grams) `1243591` |
+| | | | **STORY-008** (15-Day Retention & Rollup) `1243591` |
+| | | | **STORY-009** (Completed State vs Settings) `1243591` |
+| | | | **STORY-010** (Midnight Rollover Projection) `1243591` |
 
 ---
 
@@ -108,7 +112,8 @@
 ---
 
 ### STORY-007: Immutable Event Log Telemetry (Per-Event Frozen Grams & Settings)
-- **Status:** `IN PROGRESS`
+- **Status:** `CLOSED`
+- **Closed Commit:** [`1243591`](https://github.com/satyadilip/Aqua-Feeder-esp32/commit/1243591)
 - **Assigned To:** Full Stack Team (Firmware, Cloud, UI)
 - **As a:** Quality Assurance Auditor
 - **I want:** The History tab to freeze and display the exact grams and target settings that were active when each specific event ran
@@ -122,7 +127,8 @@
 ---
 
 ### STORY-008: 15-Day Granular Telemetry Retention & Permanent Daily Consolidation
-- **Status:** `IN PROGRESS`
+- **Status:** `CLOSED`
+- **Closed Commit:** [`1243591`](https://github.com/satyadilip/Aqua-Feeder-esp32/commit/1243591)
 - **Assigned To:** Cloud & Data Engineer
 - **As a:** Cloud Operations Manager
 - **I want:** Granular event-by-event telemetry older than 15 days to be automatically cleared while consolidating daily totals into permanent records
@@ -136,7 +142,8 @@
 ---
 
 ### STORY-009: Post-Feed Completion State Preservation Until Midnight (Prevent 0/100 Reset on Settings Change)
-- **Status:** `IN PROGRESS`
+- **Status:** `CLOSED`
+- **Closed Commit:** [`1243591`](https://github.com/satyadilip/Aqua-Feeder-esp32/commit/1243591)
 - **Assigned To:** Cloud Backend & UI Lead
 - **As a:** Farm Supervisor
 - **I want:** The dashboard to continue displaying today's completed events and feed dispensed until 12:00 AM midnight IST even if I modify settings
@@ -151,7 +158,8 @@
 ---
 
 ### STORY-010: Midnight Rollover & Pre-Schedule Next Day Projection (00:00 to 06:00 IST)
-- **Status:** `IN PROGRESS`
+- **Status:** `CLOSED`
+- **Closed Commit:** [`1243591`](https://github.com/satyadilip/Aqua-Feeder-esp32/commit/1243591)
 - **Assigned To:** Cloud Backend & UI Lead
 - **As a:** Morning Operator
 - **I want:** The dashboard to transition at midnight IST to show the upcoming day's projected schedule (`0 / TargetEvents`) in `STANDBY`
