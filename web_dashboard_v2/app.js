@@ -187,6 +187,8 @@ function selectFeeder(deviceId) {
   localStorage.setItem('aquacon_selected_device', deviceId);
   renderFeederPills();
   renderActiveFeeder();
+  const dev = getActiveDevice();
+  if (dev) loadDeviceSettingsFromCloud(dev);
 }
 
 function renderFeederPills() {
@@ -550,18 +552,57 @@ function recalculateSchedule() {
   if (intervalEl) intervalEl.textContent = `Every ${intervalMin} minutes`;
 }
 
-function saveProtocolToDevice() {
+async function saveProtocolToDevice() {
   const dev = getActiveDevice();
   if (!dev) return;
 
-  sendDownlinkCommand(dev.id, 'SET_CONFIG', {
-    targetKg: dev.targetKg,
-    fpeGrams: dev.fpeGrams,
-    intervalMin: dev.intervalMin
-  });
+  showToast(`Deploying settings to ${dev.name}...`);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        feedQuantity_kg: dev.targetKg,
+        feedPerEvent_g: dev.fpeGrams || 100,
+        dischargeRate_gs: dev.dischargeRateGs || 100,
+        startHour: dev.startHour !== undefined ? dev.startHour : 6,
+        startMinute: dev.startMin !== undefined ? dev.startMin : 0,
+        endHour: dev.endHour !== undefined ? dev.endHour : 18,
+        endMinute: dev.endMin !== undefined ? dev.endMin : 0
+      })
+    });
+    if (res.ok) {
+      showToast(`Protocol deployed & queued for ${dev.name} via LoRaWAN!`);
+    } else {
+      showToast(`Saved settings for ${dev.name}`);
+    }
+  } catch (err) {
+    showToast(`Saved locally for ${dev.name}`);
+  }
 
   renderActiveFeeder();
-  showToast(`📡 Protocol transmitted to ${dev.name} via LoRaWAN`);
+}
+
+async function loadDeviceSettingsFromCloud(dev) {
+  if (!dev) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.settings) {
+        const s = data.settings;
+        if (s.DailyTarget_kg !== undefined) dev.targetKg = Number(s.DailyTarget_kg);
+        else if (s.FeedQuantity_kg !== undefined) dev.targetKg = Number(s.FeedQuantity_kg);
+        if (s.FeedPerEvent_g !== undefined) dev.fpeGrams = Number(s.FeedPerEvent_g);
+        if (s.StartHour !== undefined) dev.startHour = Number(s.StartHour);
+        if (s.StartMinute !== undefined) dev.startMin = Number(s.StartMinute);
+        if (s.EndHour !== undefined) dev.endHour = Number(s.EndHour);
+        if (s.EndMinute !== undefined) dev.endMin = Number(s.EndMinute);
+        recalculateSchedule();
+        renderActiveFeeder();
+      }
+    }
+  } catch (e) {}
 }
 
 // AWS API Gateway Command Dispatch
@@ -602,7 +643,8 @@ async function fetchLiveTelemetry() {
             if (cloudDev.GapIntervalSec !== undefined) match.gapIntervalSec = Number(cloudDev.GapIntervalSec);
             if (cloudDev.NextFeed !== undefined) match.nextFeed = cloudDev.NextFeed;
             if (cloudDev.NextFeedSub !== undefined) match.nextFeedSub = cloudDev.NextFeedSub;
-            if (cloudDev.FeedQuantity_kg !== undefined) match.targetKg = Number(cloudDev.FeedQuantity_kg);
+            if (cloudDev.DailyTarget_kg !== undefined) match.targetKg = Number(cloudDev.DailyTarget_kg);
+            else if (cloudDev.FeedQuantity_kg !== undefined) match.targetKg = Number(cloudDev.FeedQuantity_kg);
             if (cloudDev.StartHour !== undefined) match.startHour = Number(cloudDev.StartHour);
             if (cloudDev.StartMinute !== undefined) match.startMin = Number(cloudDev.StartMinute);
             if (cloudDev.EndHour !== undefined) match.endHour = Number(cloudDev.EndHour);

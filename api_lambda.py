@@ -193,15 +193,19 @@ def lambda_handler(event, context):
                     target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
                     dispensed_kg = float(d.get('DispensedFeed_kg', round((cur_ev * fpe) / 1000.0, 2)))
                     
-                    # Merge user-configured settings if present
+                    # Merge user-configured settings if present (Authoritative Daily Target)
                     try:
                         s_res = settings_table.get_item(Key={'DeviceId': dev_id})
                         s_item = s_res.get('Item')
                         if s_item:
+                            target_kg = float(s_item.get('DailyTarget_kg', s_item.get('FeedQuantity_kg', target_kg)))
                             if cur_ev == 0:
-                                target_kg = float(s_item.get('FeedQuantity_kg', target_kg))
                                 fpe = float(s_item.get('FeedPerEvent_g', fpe))
                                 tot_ev = float(s_item.get('TotalEvents', tot_ev))
+                            elif fpe <= 0:
+                                fpe = float(s_item.get('FeedPerEvent_g', 100))
+                            d['DailyTarget_kg'] = target_kg
+                            d['FeedQuantity_kg'] = target_kg
                             d['StartHour'] = int(s_item.get('StartHour', d.get('StartHour', 6)))
                             d['StartMinute'] = int(s_item.get('StartMinute', d.get('StartMinute', 0)))
                             d['EndHour'] = int(s_item.get('EndHour', d.get('EndHour', 18)))
@@ -330,7 +334,8 @@ def lambda_handler(event, context):
                         d['CurrentEvent'] = cur_ev_int
                         d['TotalEventsRemaining'] = rem_events
                         d['FeedPerEvent_g'] = int(fpe)
-                        d['FeedQuantity_kg'] = round((tot_ev_int * fpe) / 1000.0, 1)
+                        d['FeedQuantity_kg'] = target_kg
+                        d['DailyTarget_kg'] = target_kg
                         d['DispensedFeed_kg'] = round((cur_ev_int * fpe) / 1000.0, 2)
                         d['GapIntervalSec'] = gap_s
                         d['IntervalMin'] = dyn_interval_m
@@ -695,6 +700,7 @@ def lambda_handler(event, context):
                 
                 settings_item = {
                     'DeviceId': device_id,
+                    'DailyTarget_kg': feed_qty,
                     'FeedQuantity_kg': feed_qty,
                     'FeedPerEvent_g': feed_burst,
                     'DischargeRate_gs': rate,
@@ -715,8 +721,9 @@ def lambda_handler(event, context):
                 # Also update device in devices table
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv',
+                    UpdateExpression='SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv',
                     ExpressionAttributeValues={
+                        ':dq': feed_qty,
                         ':fq': feed_qty,
                         ':fpe': feed_burst,
                         ':dr': rate,

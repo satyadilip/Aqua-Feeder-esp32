@@ -587,6 +587,7 @@ function switchActivePond(pondId) {
   refreshPondsDropdown();
   updatePondContextBar();
   loadSelectedDeviceToUI();
+  populateParamEditorUI(dev);
   renderHistoryView();
   renderTrayChecksView();
   showToast(`Switched to ${pond.name}`);
@@ -1059,8 +1060,17 @@ function loadSelectedDeviceToUI() {
   populateParamEditorUI(dev, heroTitle);
 }
 
-function populateParamEditorUI(dev, heroTitle) {
+async function populateParamEditorUI(dev, heroTitle) {
+  if (!dev) {
+    dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  }
   if (!dev) return;
+
+  if (!heroTitle) {
+    const heroMatch = (dev.name || '').match(/Feeder\s*\d+/i);
+    heroTitle = heroMatch ? heroMatch[0] : (dev.name || 'Feeder 01');
+  }
+
   const paramDevName = document.getElementById('param-device-name');
   if (paramDevName) paramDevName.textContent = heroTitle;
 
@@ -1073,10 +1083,10 @@ function populateParamEditorUI(dev, heroTitle) {
   const inputEndHour = document.getElementById('input-end-hour');
   const inputEndMin = document.getElementById('input-end-min');
 
+  const curTarget = dev.targetKg !== undefined ? dev.targetKg : 15.0;
   if (inputQty && sliderQty) {
-    const qty = dev.targetKg !== undefined ? dev.targetKg : 15.0;
-    inputQty.value = qty;
-    sliderQty.value = qty;
+    inputQty.value = curTarget;
+    sliderQty.value = curTarget;
   }
 
   if (inputFpe && sliderFpe) {
@@ -1091,6 +1101,42 @@ function populateParamEditorUI(dev, heroTitle) {
   if (inputEndMin) inputEndMin.value = dev.endMin !== undefined ? dev.endMin : 0;
 
   recalculateSchedule();
+
+  // Authoritatively fetch device settings from cloud
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.settings) {
+        const s = data.settings;
+        const liveTarget = s.DailyTarget_kg !== undefined ? Number(s.DailyTarget_kg) : (s.FeedQuantity_kg !== undefined ? Number(s.FeedQuantity_kg) : curTarget);
+        dev.targetKg = liveTarget;
+        if (s.FeedPerEvent_g !== undefined) dev.fpeGrams = Number(s.FeedPerEvent_g);
+        if (s.StartHour !== undefined) dev.startHour = Number(s.StartHour);
+        if (s.StartMinute !== undefined) dev.startMin = Number(s.StartMinute);
+        if (s.EndHour !== undefined) dev.endHour = Number(s.EndHour);
+        if (s.EndMinute !== undefined) dev.endMin = Number(s.EndMinute);
+        if (s.DischargeRate_gs !== undefined) dev.dischargeRateGs = Number(s.DischargeRate_gs);
+
+        if (inputQty && sliderQty) {
+          inputQty.value = dev.targetKg;
+          sliderQty.value = dev.targetKg;
+        }
+        if (inputFpe && sliderFpe) {
+          inputFpe.value = dev.fpeGrams;
+          sliderFpe.value = dev.fpeGrams;
+        }
+        if (inputStartHour) inputStartHour.value = dev.startHour;
+        if (inputStartMin) inputStartMin.value = dev.startMin;
+        if (inputEndHour) inputEndHour.value = dev.endHour;
+        if (inputEndMin) inputEndMin.value = dev.endMin;
+
+        recalculateSchedule();
+      }
+    }
+  } catch (err) {
+    console.warn("Could not fetch remote settings:", err);
+  }
 }
 
 /* ==========================================================================
@@ -1449,16 +1495,18 @@ function renderEventsLog(dev, metrics) {
       try {
         const lastD = new Date(dev.lastEventTime);
         if (!isNaN(lastD.getTime())) {
-          const istD = new Date(lastD.getTime() + 19800000);
-          const lastEventMin = istD.getUTCHours() * 60 + istD.getUTCMinutes();
+          // LastEventTime is UTC ISO string from server: convert to IST minutes
+          const lastEventMin = (lastD.getUTCHours() * 60 + lastD.getUTCMinutes() + 330) % 1440;
           baseMin = lastEventMin - Math.round((effectiveCurrent - 1) * intervalMin);
           if (baseMin < startTotalMin) baseMin = startTotalMin;
         }
       } catch (e) {}
     } else if (dev.CycleStartEpoch) {
       try {
-        const cD = new Date(Number(dev.CycleStartEpoch) * 1000 + 19800000);
+        // CycleStartEpoch is IST epoch from device DS3231 (seconds) - already in IST!
+        const cD = new Date(Number(dev.CycleStartEpoch) * 1000);
         baseMin = cD.getUTCHours() * 60 + cD.getUTCMinutes();
+        if (baseMin < startTotalMin || baseMin > endTotalMin) baseMin = startTotalMin;
       } catch (e) {}
     }
 
@@ -1644,6 +1692,10 @@ function navigateToTab(tabId) {
 
   if (tabId === 'tab-history') {
     renderHistoryView();
+  }
+
+  if (tabId === 'tab-params') {
+    populateParamEditorUI();
   }
 
   if (tabId === 'tab-traycheck') {
@@ -2513,7 +2565,8 @@ async function syncDevicesFromCloud() {
           if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
           if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
           else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
-          if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
+          if (cloudDev.DailyTarget_kg !== undefined) localDev.targetKg = Number(cloudDev.DailyTarget_kg);
+          else if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
           if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
           if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = Number(cloudDev.TotalEvents);
           if (cloudDev.TotalEventsRemaining !== undefined) localDev.totalEventsRemaining = Number(cloudDev.TotalEventsRemaining);

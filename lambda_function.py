@@ -120,6 +120,7 @@ def lambda_handler(event, context):
                 settings_table.put_item(
                     Item={
                         'DeviceId': dev_eui,
+                        'DailyTarget_kg': feed_qty_kg,
                         'FeedQuantity_kg': feed_qty_kg,
                         'FeedPerEvent_g': fpe_g,
                         'StartHour': shour,
@@ -139,8 +140,9 @@ def lambda_handler(event, context):
                 try:
                     devices_table.update_item(
                         Key={'DeviceId': dev_eui},
-                        UpdateExpression="SET FeedQuantity_kg=:q, FeedPerEvent_g=:f, StartHour=:sh, StartMinute=:sm, EndHour=:eh, EndMinute=:em, DischargeRate_gs=:r, TotalEvents=:te, IntervalMin=:im, ScheduleValid=:sv",
+                        UpdateExpression="SET DailyTarget_kg=:dq, FeedQuantity_kg=:q, FeedPerEvent_g=:f, StartHour=:sh, StartMinute=:sm, EndHour=:eh, EndMinute=:em, DischargeRate_gs=:r, TotalEvents=:te, IntervalMin=:im, ScheduleValid=:sv",
                         ExpressionAttributeValues={
+                            ':dq': feed_qty_kg,
                             ':q': feed_qty_kg,
                             ':f': fpe_g,
                             ':sh': shour,
@@ -211,7 +213,7 @@ def lambda_handler(event, context):
             prev_flags = int(existing_dev.get('StatusFlags', 0))
             prev_ev = int(existing_dev.get('CurrentEvent', 0))
 
-            saved_qty = target_kg
+            saved_qty = existing_dev.get('DailyTarget_kg', existing_dev.get('FeedQuantity_kg', Decimal('15.0')))
             saved_fpe = Decimal('100')
             saved_shour = Decimal('6')
             saved_smin = Decimal('0')
@@ -223,7 +225,7 @@ def lambda_handler(event, context):
                 s_res = settings_table.get_item(Key={'DeviceId': dev_eui})
                 s_item = s_res.get('Item')
                 if s_item:
-                    saved_qty = s_item.get('FeedQuantity_kg', saved_qty)
+                    saved_qty = s_item.get('DailyTarget_kg', s_item.get('FeedQuantity_kg', saved_qty))
                     saved_fpe = s_item.get('FeedPerEvent_g', saved_fpe)
                     saved_shour = s_item.get('StartHour', saved_shour)
                     saved_smin = s_item.get('StartMinute', saved_smin)
@@ -233,6 +235,7 @@ def lambda_handler(event, context):
                     saved_interval = s_item.get('IntervalMin', saved_interval)
             except Exception:
                 pass
+            target_kg = Decimal(str(saved_qty))
             
             # Handle special message types
             # 1. TRAY_CHECKIN (0x0A = 10)
@@ -442,6 +445,7 @@ def lambda_handler(event, context):
                 'NextFeedSub': next_feed_sub,
                 'StatusFlags': effective_flags,
                 'DispensedFeed_kg': live_disp_kg,
+                'DailyTarget_kg': target_kg,
                 'FeedQuantity_kg': target_kg,
                 'FeedPerEvent_g': Decimal(str(fpe_g)),
                 'DischargeRate_gs': Decimal(str(int(rate_val))),
@@ -490,11 +494,10 @@ def lambda_handler(event, context):
                 try:
                     settings_table.update_item(
                         Key={'DeviceId': dev_eui},
-                        UpdateExpression='SET TotalEvents = :te, FeedPerEvent_g = :fpe, FeedQuantity_kg = :fq, IntervalMin = :im',
+                        UpdateExpression='SET TotalEvents = :te, FeedPerEvent_g = :fpe, IntervalMin = :im',
                         ExpressionAttributeValues={
                             ':te': Decimal(str(tot_ev_int)),
                             ':fpe': Decimal(str(fpe_g)),
-                            ':fq': target_kg,
                             ':im': Decimal(str(dynamic_interval_min))
                         }
                     )
