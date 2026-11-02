@@ -1204,17 +1204,27 @@ void setup() {
     feedEng.setCurrentReadCallback(cbReadCurrent);
     feedEng.setSaveStateCallback(cbOnSaveRunState);
     
-    if (sysStatus.feedActive) {
-        Serial.println("[MAIN] Recovering from power failure!");
-        uint32_t nowEpoch = sysStatus.rtcOK ? rtcMgr.getEpoch() : 0;
-        feedEng.resumeFromPowerFailure(nowEpoch);
+    uint32_t bootEpoch = sysStatus.rtcOK ? rtcMgr.getEpoch() : 0;
+    uint32_t currentBootDay = (bootEpoch > 0) ? (bootEpoch / 86400) : 0;
+    if (currentBootDay > 0 && sysStatus.lastFedDay > 0 && currentBootDay > sysStatus.lastFedDay) {
+        Serial.printf("[MAIN] Boot on new calendar day %lu (last was %lu). Resetting daily counters.\r\n",
+                      currentBootDay, sysStatus.lastFedDay);
+        sysStatus.feedActive = false;
+        sysStatus.currentEvent = 0;
+        sysStatus.dispensedQuantity_g = 0.0f;
+        sysStatus.lastFedDay = currentBootDay;
+        cfgMgr.clearRunState();
+        feedEng.calcSchedule(bootEpoch);
+    } else if (sysStatus.feedActive) {
+        Serial.println("[MAIN] Recovering from power failure during active feed!");
+        feedEng.resumeFromPowerFailure(bootEpoch);
         if (sysStatus.feedActive) {
             currentMenu = MenuState::RUNNING;
         } else {
             cfgMgr.clearRunState();
         }
     } else {
-        feedEng.calcSchedule();
+        feedEng.calcSchedule(bootEpoch);
     }
 
     // ── Telemetry Manager ──
@@ -1422,8 +1432,16 @@ void loop() {
     }
 
     // Check if feed engine transitioned to finished
+    static unsigned long finishedDisplayTimer = 0;
     if (!sysStatus.feedActive && currentMenu == MenuState::RUNNING) {
         currentMenu = MenuState::FINISHED;
+        finishedDisplayTimer = millis();
+    }
+
+    // Auto-return from FINISHED screen to MAIN_STATUS after 30 seconds
+    if (currentMenu == MenuState::FINISHED && finishedDisplayTimer > 0 && (millis() - finishedDisplayTimer > 30000UL)) {
+        currentMenu = MenuState::MAIN_STATUS;
+        finishedDisplayTimer = 0;
     }
 
     // ── 7. Auto-Start Scheduled Feed ──
@@ -1431,10 +1449,11 @@ void loop() {
         if (feedEng.shouldAutoStart(epoch)) {
             feedEng.calcSchedule(epoch);
             if (sysStatus.scheduleValid) {
-                feedEng.startFeed();
+                feedEng.startFeed(epoch);
                 currentMenu = MenuState::RUNNING;
                 telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
-                Serial.println("[SCHED] Auto-start triggered!");
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+                Serial.println("[SCHED] Autonomous recurring daily feed auto-started!");
             }
         }
     }

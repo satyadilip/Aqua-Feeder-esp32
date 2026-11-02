@@ -8,6 +8,7 @@ void FeedEngine::begin(SystemStatus* status, DeviceConfig* cfg) {
     _fcEntered = false;
     _fcTimer = 0;
     _lastCurrentCheckMs = 0;
+    _lastFedDay = (_status && _status->lastFedDay > 0) ? _status->lastFedDay : 0;
     
     _setRelay = nullptr;
     _motorsOff = nullptr;
@@ -128,6 +129,10 @@ void FeedEngine::startFeed(uint32_t nowEpoch) {
     _status->currentEvent = 0;
     _status->dispensedQuantity_g = 0.0f;
     _fcEntered = false;
+    if (nowEpoch > 0) {
+        _lastFedDay = nowEpoch / 86400;
+        if (_status) _status->lastFedDay = _lastFedDay;
+    }
 
     // If start time is in the future, wait in FC_WAIT
     if (nowEpoch > 0 && _status->nextFeedEpoch > nowEpoch) {
@@ -178,7 +183,25 @@ void FeedEngine::resumeFeed() {
 }
 
 void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
-    if (!_status || !_status->feedActive) return;
+    if (!_status) return;
+    if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
+
+    // Autonomous day rollover for daily recurring feed
+    if (nowEpoch > 0 && !_status->feedActive) {
+        uint32_t currentDay = nowEpoch / 86400;
+        if (_lastFedDay != 0 && currentDay > _lastFedDay) {
+            _status->currentEvent = 0;
+            _status->dispensedQuantity_g = 0.0f;
+            _status->state = SystemState::IDLE;
+            _lastFedDay = currentDay;
+            _status->lastFedDay = currentDay;
+            calcSchedule(nowEpoch);
+            if (_saveState) _saveState();
+            Serial.printf("[SCHED] Day rolled over to calendar day %lu. Daily counters reset.\r\n", currentDay);
+        }
+    }
+
+    if (!_status->feedActive) return;
     if (_status->state == SystemState::FEED_PAUSED) return;
     
     _status->feedState = _fcState;
@@ -262,6 +285,7 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                     }
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
                     if (_saveState) _saveState();
+                    if (_cfg && _cfg->hasBeenRun && nowEpoch > 0) calcSchedule(nowEpoch);
                 } else {
                     _status->nextFeedEpoch = (nowEpoch > 0) ? (nowEpoch + (_status->intervalMs / 1000)) : ((nowMs / 1000) + (_status->intervalMs / 1000));
                     _fcTimer = nowMs;
@@ -291,6 +315,7 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                     Serial.println("[FEED] 6:00 PM operational window reached during gap wait. Feeding concluded for today.");
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
                     if (_saveState) _saveState();
+                    if (_cfg && _cfg->hasBeenRun && nowEpoch > 0) calcSchedule(nowEpoch);
                     break;
                 }
             }
@@ -396,16 +421,25 @@ bool FeedEngine::recalcDynamic(uint32_t nowEpoch) {
 
 bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
     if (!_status || !_cfg) return false;
-    if (!_status->rtcOK || _status->feedActive || !_status->scheduleValid) return false;
+    if (!_status->rtcOK || _status->feedActive) return false;
     if (!_cfg->hasBeenRun) return false;
     
     uint32_t secSinceMidnight = nowEpoch % 86400;
     int currentMins = secSinceMidnight / 60;
     int startMins = _cfg->startHour * 60 + _cfg->startMinute;
+    int endMins = _cfg->endHour * 60 + _cfg->endMinute;
     
-    // Only auto-start during the morning start window (within 30 minutes of scheduled start time)
-    if (currentMins >= startMins && currentMins < (startMins + 30) && _status->currentEvent == 0) {
-        if (nowEpoch >= _status->nextFeedEpoch) {
+    // Only auto-start during daylight operational window
+    if (currentMins >= startMins && currentMins < endMins) {
+        uint32_t currentDay = nowEpoch / 86400;
+        // If we have already finished feeding today, do not auto-start again today
+        if (_lastFedDay == currentDay && _status->state == SystemState::FEED_FINISHED) {
+            return false;
+        }
+        if (!_status->scheduleValid) {
+            calcSchedule(nowEpoch);
+        }
+        if (_status->scheduleValid && nowEpoch >= _status->nextFeedEpoch) {
             return true;
         }
     }

@@ -198,6 +198,7 @@ void ConfigManager::saveRunState(const SystemStatus& status) {
     prefs.putInt("curEvt", status.currentEvent);
     prefs.putFloat("dispQty", status.dispensedQuantity_g);
     prefs.putUInt("nxtEpoc", status.nextFeedEpoch);
+    prefs.putUInt("lastDay", status.lastFedDay);
     prefs.end();
 }
 
@@ -207,6 +208,7 @@ void ConfigManager::loadRunState(SystemStatus& status) {
     status.currentEvent = prefs.getInt("curEvt", 0);
     status.dispensedQuantity_g = prefs.getFloat("dispQty", 0.0f);
     status.nextFeedEpoch = prefs.getUInt("nxtEpoc", 0);
+    status.lastFedDay = prefs.getUInt("lastDay", 0);
     prefs.end();
 }
 

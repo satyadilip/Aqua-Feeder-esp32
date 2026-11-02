@@ -277,13 +277,48 @@ def lambda_handler(event, context):
             flag_empty = (status_flags & 0x08) != 0
             flag_paused = (status_flags & 0x10) != 0 or (msg_type in [4, 15])
 
+            # Identify genuine feed dispense events vs background heartbeats
+            is_feed_advance = (cur_ev_int > prev_ev)
+            is_feed_start   = (msg_type == 0x03)
+            is_feed_finish  = (msg_type == 0x02)
+            is_feed_stop    = (msg_type == 0x06)
+            is_tray_check   = (msg_type == 0x0A)
+            is_feed_action  = (is_feed_advance or is_feed_start or is_feed_finish or is_feed_stop or is_tray_check)
+
+            # Explicit feed lifecycle events
+            is_feed_start   = (msg_type == 0x03)
+            is_feed_finish  = (msg_type == 0x02)
+            is_feed_pause   = (msg_type == 0x04 or flag_paused or flag_proximity)
+            is_feed_resume  = (msg_type == 0x05)
+            is_feed_stop    = (msg_type == 0x06)
+            is_tray_check   = (msg_type == 0x0A)
+            # Actual feed events that update event counters/timestamps (not heartbeats/boots/diagnostics)
+            is_event_report = (msg_type in [0x02, 0x03, 0x04, 0x05, 0x06, 0x0A])
+
+            # Check if the existing device record had a feed event from TODAY (IST)
+            existing_last_ev_str = str(existing_dev.get('LastEventTime', '')).strip()
+            existing_is_today = False
+            if existing_last_ev_str:
+                try:
+                    clean_ts = existing_last_ev_str.replace('Z', '').replace('T', ' ')
+                    dt_val = datetime.strptime(clean_ts[:19], "%Y-%m-%d %H:%M:%S")
+                    dt_ist = dt_val + timedelta(hours=5, minutes=30)
+                    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                    if dt_ist.date() == now_ist.date():
+                        existing_is_today = True
+                except:
+                    pass
+
             # State transition engine:
-            if cur_ev_int > prev_ev:
-                # Cycle has advanced! Device is actively feeding.
+            if is_feed_finish or (cur_ev_int >= tot_ev_int and tot_ev_int > 0 and existing_is_today):
+                status_str = 'COMPLETED'
                 feed_available = True
-                status_str = 'FEEDING'
-                effective_flags = status_flags & ~0x10
-            elif flag_paused or flag_proximity:
+                effective_flags = status_flags
+            elif is_feed_stop:
+                status_str = 'STANDBY'
+                feed_available = True
+                effective_flags = status_flags
+            elif is_feed_pause:
                 status_str = 'PAUSED'
                 feed_available = False
                 effective_flags = status_flags if status_flags > 0 else 24
@@ -291,42 +326,62 @@ def lambda_handler(event, context):
                 status_str = 'FEED EMPTY'
                 feed_available = False
                 effective_flags = status_flags if status_flags > 0 else 8
-            elif cur_ev_int >= tot_ev_int and tot_ev_int > 0:
-                status_str = 'COMPLETED'
+            elif is_feed_start:
+                # Explicit FEED_STARTED message from device!
                 feed_available = True
-                effective_flags = status_flags
-            elif msg_type == 0x03:
-                # Explicit FEED_STARTED message
                 status_str = 'FEEDING'
-                feed_available = True
-                effective_flags = status_flags
+                effective_flags = status_flags & ~0x10
             elif not is_inside_schedule:
                 status_str = 'STANDBY'
                 feed_available = True
                 effective_flags = status_flags
-            elif cur_ev_int > 0:
-                status_str = 'FEEDING'
+            elif msg_type == 0x01: # PERIODIC_HEARTBEAT
+                # Heartbeats report health, NOT feeding.
+                # Only retain FEEDING if feed actually started TODAY and is underway.
+                if prev_status == 'FEEDING' and existing_is_today:
+                    status_str = 'FEEDING'
+                elif prev_status in ['COMPLETED', 'FEED EMPTY', 'PAUSED']:
+                    status_str = prev_status if existing_is_today else 'STANDBY'
+                else:
+                    status_str = 'STANDBY'
                 feed_available = True
                 effective_flags = status_flags
             else:
-                status_str = 'SCHEDULED'
+                status_str = existing_dev.get('Status', 'STANDBY')
+                if status_str not in ['FEEDING', 'PAUSED', 'FEED EMPTY', 'COMPLETED', 'STANDBY']:
+                    status_str = 'STANDBY'
                 feed_available = True
                 effective_flags = status_flags
+
+            # Crucial: Only update LastEventTime when a real feed event or cycle change occurred!
+            # Heartbeats (0x01) and health pings MUST preserve the actual feed event anchor!
+            if is_event_report:
+                last_event_time = now_iso
+            else:
+                last_event_time = existing_dev.get('LastEventTime', '2026-10-29 12:06:43Z')
+
+            # Today's live event progress: if no feed has run TODAY, today's current event is 0
+            if not existing_is_today and not is_feed_start:
+                live_cur_ev = Decimal('0')
+                live_disp_kg = Decimal('0')
+            else:
+                live_cur_ev = cur_ev
+                live_disp_kg = dispensed_kg
 
             dev_item = {
                 'DeviceId': dev_eui,
                 'LastSeen': Decimal(str(timestamp)),
                 'LastSeenEpoch': Decimal(str(now_epoch)),
-                'LastEventTime': now_iso,
+                'LastEventTime': last_event_time,
                 'CycleStartEpoch': Decimal(str(timestamp if (timestamp > 1700000000 and msg_type == 0x03) else existing_dev.get('CycleStartEpoch', now_epoch))),
                 'FeedStartTime': now_iso if msg_type == 0x03 else existing_dev.get('FeedStartTime', now_iso),
                 'LastVoltage_mV': Decimal(str(voltage)),
                 'LastCurrent_mA': Decimal(str(current)),
                 'LastFeed_g': Decimal(str(feed_disp)),
-                'CurrentEvent': cur_ev,
+                'CurrentEvent': live_cur_ev,
                 'TotalEvents': tot_ev,
                 'StatusFlags': effective_flags,
-                'DispensedFeed_kg': dispensed_kg,
+                'DispensedFeed_kg': live_disp_kg,
                 'FeedQuantity_kg': saved_qty,
                 'FeedPerEvent_g': saved_fpe,
                 'DischargeRate_gs': saved_rate,
@@ -371,16 +426,19 @@ def lambda_handler(event, context):
 
             devices_table.put_item(Item=dev_item)
             
-            daily_metrics_table.put_item(
-                Item={
-                    'DeviceId': dev_eui,
-                    'Date': date_str,
-                    'DailyFeed_g': Decimal(str(total_dispensed_g)),
-                    'DailyFeed_kg': dispensed_kg,
-                    'TotalCycles': Decimal(str(cur_ev)),
-                    'Target_kg': target_kg
-                }
-            )
+            # Only record daily metrics if an actual feed event occurred today!
+            # Background heartbeats (0x01) and boots (0x20) MUST NEVER write duplicate metrics on idle days.
+            if is_event_report and cur_ev_int > 0:
+                daily_metrics_table.put_item(
+                    Item={
+                        'DeviceId': dev_eui,
+                        'Date': date_str,
+                        'DailyFeed_g': Decimal(str(total_dispensed_g)),
+                        'DailyFeed_kg': dispensed_kg,
+                        'TotalCycles': Decimal(str(cur_ev)),
+                        'Target_kg': target_kg
+                    }
+                )
             print(f"Stored telemetry for {dev_eui}: {dispensed_kg}kg ({cur_ev}/{tot_ev}) | Status: {status_str} | FeedAvailable: {feed_available}")
         else:
             print(f"Payload too small: {len(payload_bytes)} bytes")

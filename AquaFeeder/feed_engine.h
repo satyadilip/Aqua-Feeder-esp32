@@ -17,6 +17,7 @@ public:
 
     bool isActive() const;
     bool isPaused() const;
+    uint32_t getLastFedDay() const { return _lastFedDay; }
 
     void setRelayCallback(void (*setRelay)(int relay, bool on));
     void setMotorsOffCallback(void (*motorsOff)());
@@ -32,6 +33,7 @@ private:
     bool _fcEntered;
     unsigned long _fcTimer;
     unsigned long _lastCurrentCheckMs;
+    uint32_t _lastFedDay;
 
     void (*_setRelay)(int relay, bool on);
     void (*_motorsOff)();

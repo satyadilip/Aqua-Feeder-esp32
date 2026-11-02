@@ -278,8 +278,10 @@ def lambda_handler(event, context):
                             actual_status = 'STANDBY'
                         elif raw_status == 'FEEDING' and is_today_feed_event:
                             actual_status = 'FEEDING'
+                        elif is_today_feed_event and (cur_ev >= tot_ev or raw_status == 'COMPLETED'):
+                            actual_status = 'COMPLETED'
                         else:
-                            actual_status = calc_status
+                            actual_status = 'STANDBY' if (now_min >= end_min or now_min < start_min) else 'SCHEDULED' 
 
                         d['FeedAvailable'] = actual_feed_avail if is_online else False
                         d['Status'] = actual_status
@@ -309,14 +311,14 @@ def lambda_handler(event, context):
                         elif actual_status == 'FEED EMPTY':
                             d['NextFeed'] = "--"
                             d['NextFeedSub'] = "Refill Required"
-                        elif actual_status == 'COMPLETED' or now_min >= end_min or cur_ev >= tot_ev:
+                        elif actual_status == 'COMPLETED' or now_min >= end_min or (is_today_feed_event and cur_ev >= tot_ev):
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = "Tomorrow morning"
                         elif now_min < start_min:
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = f"Starts today at {s_time_fmt}"
-                        elif actual_status in ['FEEDING', 'ACTIVE', 'SCHEDULED']:
-                            # Feed is underway today
+                        elif actual_status in ['FEEDING', 'ACTIVE']:
+                            # Feed is actively underway today
                             if cur_ev == 0:
                                 next_m = now_min
                             else:
@@ -340,7 +342,7 @@ def lambda_handler(event, context):
                                 d['NextFeedSub'] = f"Interval: {interval_m:.1f} min"
                         else:
                             d['NextFeed'] = s_time_fmt
-                            d['NextFeedSub'] = f"Starts at {s_time_fmt}"
+                            d['NextFeedSub'] = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"
 
                         devices.append(d)
 

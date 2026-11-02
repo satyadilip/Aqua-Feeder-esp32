@@ -343,6 +343,7 @@ struct SystemStatus {
     long            totalEvents;
     bool            scheduleValid;
     char            schedError[32];
+    uint32_t        lastFedDay;         // Calendar day index (epoch / 86400) for daily recurring schedule
 
     // Timing
     unsigned long   motorTimeMs;
