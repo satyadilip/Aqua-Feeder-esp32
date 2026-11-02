@@ -350,6 +350,7 @@ function revealMainApp(instant = false) {
     renderAlertContacts();
     renderHistoryView();
     renderTrayChecksView();
+    syncDevicesFromCloud();
 
     // Restore active tab if previously saved
     const savedTab = localStorage.getItem('aquacon_active_tab');
@@ -1400,6 +1401,7 @@ function renderEventsLog(dev, metrics) {
   } else {
     // Generate chronologically accurate feed event times anchoring to actual feed start or last event
     let baseMin = startTotalMin;
+    const effectiveCurrent = eventsCount;
     if (dev.lastEventTime && effectiveCurrent > 0) {
       try {
         const lastD = new Date(dev.lastEventTime);
@@ -2447,74 +2449,60 @@ function toggleFeedStockState() {
   }
 }
 
-function startTelemetryLoop() {
-  async function poll() {
-    if (!appState.isAuthenticated) return;
+async function syncDevicesFromCloud() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/devices?_t=${Date.now()}`);
+    const data = await res.json();
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/devices`);
-      const data = await res.json();
-
-      if (data && data.devices) {
-        // Scrub any legacy dummy feeder from state
-        appState.devices = appState.devices.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02');
-        data.devices.forEach(cloudDev => {
-          let localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
-          if (!localDev) {
-            if (cloudDev.DeviceId === 'e072a1fffef5ba08') {
-              const dummy02 = appState.devices.find(d => d.id === 'aquaCON-Feeder-02');
-              if (dummy02) {
-                dummy02.id = 'e072a1fffef5ba08';
-                localDev = dummy02;
-              }
-            } else if (cloudDev.DeviceId === 'e072a1fffef64134') {
-              const dummy03 = appState.devices.find(d => d.id === 'aquaCON-Feeder-03');
-              if (dummy03) {
-                dummy03.id = 'e072a1fffef64134';
-                localDev = dummy03;
-              }
-            }
-            if (!localDev) {
-              localDev = {
-                id: cloudDev.DeviceId,
-                name: cloudDev.DeviceName || 'aquaCON Feeder',
-                pondId: cloudDev.PondId || 'P-01'
-              };
-              appState.devices.push(localDev);
-            }
-          }
-          if (localDev) {
-            if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
-            if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
-            else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
-            if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
-            if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
-            if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = Number(cloudDev.TotalEvents);
-            if (cloudDev.FeedPerEvent_g !== undefined) localDev.fpeGrams = Number(cloudDev.FeedPerEvent_g);
-            if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
-            if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);
-            if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
-            if (cloudDev.LastEventTime !== undefined) localDev.lastEventTime = cloudDev.LastEventTime;
-            if (cloudDev.LastSeenEpoch !== undefined) localDev.lastSeenEpoch = Number(cloudDev.LastSeenEpoch);
-            if (cloudDev.StartHour !== undefined) localDev.startHour = Number(cloudDev.StartHour);
-            if (cloudDev.EndHour !== undefined) localDev.endHour = Number(cloudDev.EndHour);
-            if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);
-            if (cloudDev.EndMinute !== undefined) localDev.endMin = Number(cloudDev.EndMinute);
-            if (cloudDev.Status) localDev.status = cloudDev.Status;
-            if (cloudDev.StatusFlags !== undefined) localDev.statusFlags = Number(cloudDev.StatusFlags);
-          }
-        });
-        loadSelectedDeviceToUI();
-        updatePondContextBar();
-        if (appState.activeTab === 'tab-traycheck') {
-          renderTrayChecksView();
+    if (data && data.devices) {
+      appState.devices = appState.devices.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02');
+      data.devices.forEach(cloudDev => {
+        let localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
+        if (!localDev) {
+          localDev = {
+            id: cloudDev.DeviceId,
+            name: cloudDev.DeviceName || 'aquaCON Feeder',
+            pondId: cloudDev.PondId || 'P-01'
+          };
+          appState.devices.push(localDev);
         }
+        if (localDev) {
+          if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
+          if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
+          else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
+          if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
+          if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
+          if (cloudDev.TotalEvents !== undefined) localDev.totalEvents = Number(cloudDev.TotalEvents);
+          if (cloudDev.FeedPerEvent_g !== undefined) localDev.fpeGrams = Number(cloudDev.FeedPerEvent_g);
+          if (cloudDev.IntervalMin !== undefined) localDev.intervalMin = Number(cloudDev.IntervalMin);
+          if (cloudDev.DischargeRate_gs !== undefined) localDev.dischargeRateGs = Number(cloudDev.DischargeRate_gs);
+          if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
+          if (cloudDev.LastEventTime !== undefined) localDev.lastEventTime = cloudDev.LastEventTime;
+          if (cloudDev.LastSeenEpoch !== undefined) localDev.lastSeenEpoch = Number(cloudDev.LastSeenEpoch);
+          if (cloudDev.StartHour !== undefined) localDev.startHour = Number(cloudDev.StartHour);
+          if (cloudDev.EndHour !== undefined) localDev.endHour = Number(cloudDev.EndHour);
+          if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);
+          if (cloudDev.EndMinute !== undefined) localDev.endMin = Number(cloudDev.EndMinute);
+          if (cloudDev.Status) localDev.status = cloudDev.Status;
+          if (cloudDev.StatusFlags !== undefined) localDev.statusFlags = Number(cloudDev.StatusFlags);
+        }
+      });
+      loadSelectedDeviceToUI();
+      updatePondContextBar();
+      if (appState.activeTab === 'tab-history') {
+        renderHistoryView();
+      } else if (appState.activeTab === 'tab-traycheck') {
+        renderTrayChecksView();
       }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
+}
 
-  poll();
-  setInterval(poll, 10000);
+function startTelemetryLoop() {
+  syncDevicesFromCloud();
+  setInterval(() => {
+    syncDevicesFromCloud();
+  }, 5000);
 }
 
 /* ==========================================================================

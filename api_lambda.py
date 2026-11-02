@@ -240,6 +240,7 @@ def lambda_handler(event, context):
 
                         # Verify if last event was actually from TODAY during today's feeding schedule (IST)
                         last_ev_str = str(d.get('LastEventTime', '')).strip()
+                        last_seen_epoch = int(d.get('LastSeenEpoch', 0))
                         is_today_feed_event = False
                         if last_ev_str:
                             try:
@@ -247,6 +248,14 @@ def lambda_handler(event, context):
                                 dt_val = datetime.strptime(clean_ts[:19], "%Y-%m-%d %H:%M:%S")
                                 dt_ist = dt_val + timedelta(hours=5, minutes=30)
                                 if dt_ist.date() == now_ist.date() and (dt_ist.hour * 60 + dt_ist.minute) >= start_min:
+                                    is_today_feed_event = True
+                            except:
+                                pass
+
+                        if not is_today_feed_event and last_seen_epoch > 0:
+                            try:
+                                seen_ist = datetime.utcfromtimestamp(last_seen_epoch) + timedelta(hours=5, minutes=30)
+                                if seen_ist.date() == now_ist.date() and cur_ev > 0:
                                     is_today_feed_event = True
                             except:
                                 pass
@@ -276,10 +285,10 @@ def lambda_handler(event, context):
                             actual_status = 'FEED EMPTY'
                         elif now_min < start_min:
                             actual_status = 'STANDBY'
-                        elif raw_status == 'FEEDING' and is_today_feed_event:
-                            actual_status = 'FEEDING'
                         elif is_today_feed_event and (cur_ev >= tot_ev or raw_status == 'COMPLETED'):
                             actual_status = 'COMPLETED'
+                        elif is_today_feed_event and (raw_status == 'FEEDING' or cur_ev > 0):
+                            actual_status = 'FEEDING'
                         else:
                             actual_status = 'STANDBY' if (now_min >= end_min or now_min < start_min) else 'SCHEDULED' 
 
@@ -823,6 +832,9 @@ def lambda_handler(event, context):
                         is_today_live_event = True
                 except:
                     pass
+
+            if not is_today_live_event and live_cur_ev > 0:
+                is_today_live_event = True
 
             # Build rolling 7-day calendar window ending today (IST)
             rolling_7_days = []
