@@ -213,7 +213,10 @@ enum class CommandMsgType : uint8_t {
     CMD_SYNC_TIME    = 0xA3,
     CMD_START_FEED   = 0xA4,
     CMD_STOP_FEED    = 0xA5,
-    CMD_RESUME_FEED  = 0xA6
+    CMD_RESUME_FEED  = 0xA6,
+    CMD_OTA_START    = 0xB0,
+    CMD_OTA_CHUNK    = 0xB1,
+    CMD_OTA_APPLY    = 0xB2
 };
 
 // Connection status for each channel

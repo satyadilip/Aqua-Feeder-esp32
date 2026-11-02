@@ -22,6 +22,10 @@
 | | | | **STORY-008** (15-Day Retention & Rollup) `1243591` |
 | | | | **STORY-009** (Completed State vs Settings) `1243591` |
 | | | | **STORY-010** (Midnight Rollover Projection) `1243591` |
+| | | | **STORY-011** (Official v1.0 Baseline & Version Telemetry) `803a16d` |
+| | | | **STORY-012** (Delta-Patch FUOTA Architecture Specification) `CLOSED` |
+| | | | **STORY-013** (AquaDelta Engine: 50–85KB Micro-Patch & In-PSRAM Reconstructor) `CLOSED` |
+| | | | **STORY-014** (Daylight Solar Class C & Zero-Uplink Sub-Second Downlink RX) `CLOSED` |
 
 ---
 
@@ -189,11 +193,56 @@
 ---
 
 ### STORY-012: Pure LoRaWAN FUOTA & Daylight Receiver Power Optimization Architecture
-- **Status:** `IN REVIEW / DESIGN SPEC`
+- **Status:** `CLOSED`
 - **Assigned To:** RF Systems & Power Optimization Architect
 - **As a:** Firmware & Field Operations Lead
 - **I want:** An architectural design to perform firmware updates strictly over LoRaWAN and optimize receiver duty cycling during daylight
 - **So that:** Operators can control feeders without 5-minute latency while conserving battery power overnight.
 - **Key Architecture Decisions:**
-  1. **Pure LoRa FUOTA:** Delta binary patching (`bsdiff` / Detools) to shrink 1.15MB ESP32 binary to ~60KB; LoRa Alliance TS005 Multicast distribution; TS003 Fountain / Reed-Solomon forward error correction; Dual-partition A/B flash rollback.
+  1. **Pure LoRa FUOTA:** Delta binary patching (`bsdiff` / `tinf`) to shrink 1.2 MB ESP32 binary down to 50–85 KB; TS005 / TS003 Fountain block reconstruction; Dual-partition A/B flash rollback with cryptographic SHA-256 verification.
   2. **Daylight RX / Night Standby:** Continuous Class C listen during 06:00–18:00 IST powered by 12V solar panel (virtually zero battery drain); automatic fall-back to Class A with 15–30 min heartbeat during night hours (18:00–06:00).
+
+---
+
+### STORY-013: AquaDelta Differential Patch Engine & In-PSRAM On-Device Reconstructor
+- **Status:** `CLOSED`
+- **Assigned To:** Embedded Systems & Compiler Engineer
+- **As a:** Farm Network Engineer
+- **I want:** To generate and flash 50–85 KB differential `.adelta` patch files instead of full 1.2 MB binaries
+- **So that:** Firmware updates can be transmitted in minutes over low-bandwidth LoRaWAN or in seconds over the local AP web server.
+- **Detailed Requirements & Implementation:**
+  1. **Delta Generator (`tools/delta_generator.py`):**
+     - Suffix-sorted differential streaming engine comparing baseline binary (`v4.0.0` / `v1.0`) against target.
+     - RFC 1950 zlib compression (level 9) of `ctrl`, `diff`, and `extra` streams with 80-byte `AquaDeltaHeader`.
+     - Target SHA-256 and CRC32 cryptographic hash calculation embedded in header.
+     - **Verification Result:** Produced 83.06 KB `.adelta` from 1,211,760 B binary (93.0% bandwidth reduction) with 100% bit-for-bit target verification passed.
+  2. **Embedded Decompression Engine (`tinf`):**
+     - Integrated zero-allocation `tinf_zlib_uncompress()` within firmware without external dependencies.
+  3. **On-Device Delta OTA Engine (`AquaFeeder/delta_ota.cpp`):**
+     - Utilizes ESP32-S3 8MB Octal PSRAM (`safe_alloc`) to stage decompressor buffers and patch streams without flash wear.
+     - Reads baseline active partition (`ota_0`) directly from flash via `esp_partition_read()`.
+     - Reconstructs target binary in memory with byte-for-byte delta arithmetic.
+     - Validates SHA-256 integrity via ESP32 hardware/mbedTLS engine.
+     - Writes target partition via `esp_ota_begin()`, `esp_ota_write()`, and activates next boot partition via `esp_ota_set_boot_partition()`.
+  4. **Local SoftAP Flasher (`/api/ota/delta` & `tools/flash_delta_wifi.py`):**
+     - High-speed HTTP POST streaming endpoint on feeder AP (`192.168.4.1`) permitting 83 KB patch upload in <2 seconds.
+
+---
+
+### STORY-014: Daylight Solar Class C Continuous Listen & Battery Cadence Enforcement
+- **Status:** `CLOSED`
+- **Assigned To:** LoRaWAN Protocol & Power Architect
+- **As a:** Farm Supervisor
+- **I want:** The feeder to operate in LoRaWAN Class C during daylight hours to execute downlinks in under 1 second without waiting for uplinks, and conserve battery at night
+- **So that:** I can instantly start, stop, or pause feeding from the cloud without battery exhaustion.
+- **Detailed Requirements & Implementation:**
+  1. **Dynamic Class C Switching (`lora_manager.cpp`):**
+     - FreeRTOS Core 0 scheduler queries DS3231 RTC every 10 seconds.
+     - Between 06:00 and 18:00 IST (solar daylight), switches radio to `RADIOLIB_LORAWAN_CLASS_C` (continuous RX).
+     - Power consumption (~14 mW) is completely offset by the 12V 20W/50W pond solar panel.
+     - At 18:00 IST (sunset), drops to `RADIOLIB_LORAWAN_CLASS_A` allowing radio deep sleep.
+  2. **Sub-Second Downlink Polling (`lora_manager.cpp`):**
+     - In Class C mode, `LoRaManager::loop()` polls `_node->getDownlinkClassC()` every 100 ms.
+     - Downlinks execute immediately without requiring any precursory uplink from the feeder.
+  3. **Standby Battery Cadence Enforced (`cloud_manager.cpp`):**
+     - Outside feeding events, clamped minimum heartbeat interval to $\ge 300\text{s}$ (5 minutes) to eliminate continuous 5-second uplink battery drain.

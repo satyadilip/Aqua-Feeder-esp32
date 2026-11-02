@@ -32,6 +32,11 @@ public:
     // Handle LoRaWAN MAC events (RX windows, etc.)
     void loop();
     
+    // Class C / Class A dynamic day-night switching
+    void setClassMode(uint8_t lwClass);
+    uint8_t getClassMode();
+    void checkDayNightMode(uint8_t hour);
+    
     // Set callback for incoming downlinks
     void setDownlinkCallback(void (*cb)(const LoRaDownlinkPayload&));
     

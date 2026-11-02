@@ -77,6 +77,7 @@
 #include "cloud_manager.h"
 
 #include "web_dashboard.h"
+#include "delta_ota.h"
 
 
 
@@ -470,6 +471,15 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
 
     }
 
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_OTA_START) {
+        uint32_t patchSize = (uint32_t)dl.feedQuantity * 100UL;
+        Serial.printf("[MAIN] [DOWNLINK] Received CMD_OTA_START! Expected patch size: %u bytes\r\n", patchSize);
+        deltaOTA.begin(patchSize);
+    }
+    else if (dl.msgType == (uint8_t)CommandMsgType::CMD_OTA_APPLY) {
+        Serial.println("[MAIN] [DOWNLINK] Received CMD_OTA_APPLY! Applying delta patch...");
+        deltaOTA.applyPatch();
+    }
     else if (dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED) {
 
         Serial.println("[MAIN] [DOWNLINK] Received CMD_RESUME_FEED from Cloud!");
@@ -2055,21 +2065,25 @@ void runHardwareDiagnostics() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 void cloudTask(void* pvParameters) {
-
     while (true) {
+        // Auto Day/Night Operating Class Switching:
+        // 06:00 to 18:00 IST -> Class C (Continuous RX via Solar Power, Instant Control)
+        // 18:00 to 06:00 IST -> Class A (Deep Sleep Battery Conservation)
+        static unsigned long lastClassCheckMs = 0;
+        if (millis() - lastClassCheckMs >= 10000UL) {
+            lastClassCheckMs = millis();
+            DateTime now = rtcMgr.getNow();
+            loraMgr.checkDayNightMode(now.hour());
+        }
 
         cloudMgr.loop();
 
         if (loraMgr.isAvailable()) {
-
             loraMgr.loop();
-
         }
 
         vTaskDelay(pdMS_TO_TICKS(10)); // Yield to IDLE task
-
     }
-
 }
 
 

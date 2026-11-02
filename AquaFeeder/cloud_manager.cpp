@@ -49,7 +49,7 @@ void CloudManager::loop() {
     } else {
         // User-configurable telemetry interval setting (default 300s / 5m if unconfigured)
         unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;
-        interval = (cfgInterval >= 5000) ? cfgInterval : 300000UL;
+        interval = (cfgInterval >= 300000UL) ? cfgInterval : 300000UL;
     }
     
     if (nowMs - _lastSendAttemptMs < interval) return;

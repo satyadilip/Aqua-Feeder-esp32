@@ -1,5 +1,6 @@
 #include "wifi_manager.h"
 #include "web_dashboard.h"
+#include "delta_ota.h"
 #include <ArduinoJson.h>
 #include <Preferences.h>
 
@@ -92,6 +93,26 @@ void WiFiManager_AF::setupWebServer(WebServer& server) {
         _server->send(200, "application/json", "{\"ok\":true}");
     });
     _server->on("/api/network/scan", HTTP_GET, [this]() { handleScan(); });
+    _server->on("/api/ota/delta", HTTP_POST, [this]() {
+        if (!authenticateAdmin()) return;
+        if (deltaOTA.getStatus() == DeltaStatus::RECEIVED_ALL) {
+            _server->send(200, "application/json", "{\"status\":\"applying_patch\",\"message\":\"Delta received! Reconstructing and rebooting...\"}");
+            deltaOTA.applyPatch();
+        } else {
+            _server->send(400, "application/json", "{\"status\":\"error\",\"message\":\"Delta upload incomplete or failed\"}");
+        }
+    }, [this]() {
+        HTTPUpload& upload = _server->upload();
+        if (upload.status == UPLOAD_FILE_START) {
+            Serial.printf("[HTTP-OTA] Starting Delta upload: %s\n", upload.filename.c_str());
+            deltaOTA.begin(150000);
+        } else if (upload.status == UPLOAD_FILE_WRITE) {
+            deltaOTA.writeChunk(upload.totalSize - upload.currentSize, upload.buf, upload.currentSize);
+        } else if (upload.status == UPLOAD_FILE_END) {
+            Serial.printf("[HTTP-OTA] Delta upload complete: %u bytes\n", upload.totalSize);
+        }
+    });
+
     _server->on("/api/reboot", HTTP_POST, [this]() { 
         if (!authenticateAdmin()) return;
         handleReboot(); 

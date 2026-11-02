@@ -392,7 +392,7 @@ bool LoRaManager::send(const uint8_t* data, uint8_t len, uint8_t port) {
 
                 memcpy(&dl, downData, downLen);
 
-                if (dl.msgType == (uint8_t)CommandMsgType::CMD_SET_SETTINGS || dl.msgType == (uint8_t)CommandMsgType::CMD_POLL_DATA || dl.msgType == (uint8_t)CommandMsgType::CMD_TEST_MOTOR || dl.msgType == (uint8_t)CommandMsgType::CMD_SYNC_TIME || dl.msgType == (uint8_t)CommandMsgType::CMD_START_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_STOP_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED) {
+                if (dl.msgType == (uint8_t)CommandMsgType::CMD_SET_SETTINGS || dl.msgType == (uint8_t)CommandMsgType::CMD_POLL_DATA || dl.msgType == (uint8_t)CommandMsgType::CMD_TEST_MOTOR || dl.msgType == (uint8_t)CommandMsgType::CMD_SYNC_TIME || dl.msgType == (uint8_t)CommandMsgType::CMD_START_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_STOP_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED || dl.msgType == (uint8_t)CommandMsgType::CMD_OTA_START || dl.msgType == (uint8_t)CommandMsgType::CMD_OTA_CHUNK || dl.msgType == (uint8_t)CommandMsgType::CMD_OTA_APPLY) {
 
                     _downlinkCb(dl);
 
@@ -495,10 +495,52 @@ bool LoRaManager::sendSettings(const DeviceConfig& config) {
 
 
 
+void LoRaManager::setClassMode(uint8_t lwClass) {
+    if (_node == nullptr || !_available) return;
+    uint8_t currentCls = _node->getClass();
+    if (currentCls == lwClass) return;
+
+    int16_t state = _node->setClass(lwClass);
+    Serial.printf("[LORA] Switching Operating Class: %s (RadioLib code: %d)\n",
+                  lwClass == RADIOLIB_LORAWAN_CLASS_C ? "CLASS C (Continuous RX)" : "CLASS A (Low Power)", state);
+}
+
+uint8_t LoRaManager::getClassMode() {
+    if (_node == nullptr || !_available) return RADIOLIB_LORAWAN_CLASS_A;
+    return _node->getClass();
+}
+
+void LoRaManager::checkDayNightMode(uint8_t hour) {
+    // 06:00 to 18:00 IST -> Daylight Operation (Class C Continuous RX)
+    // 18:00 to 06:00 IST -> Night Standby (Class A Low Power Sleep)
+    if (hour >= 6 && hour < 18) {
+        setClassMode(RADIOLIB_LORAWAN_CLASS_C);
+    } else {
+        setClassMode(RADIOLIB_LORAWAN_CLASS_A);
+    }
+}
+
 void LoRaManager::loop() {
+    if (_node == nullptr || !_available || _status != ConnStatus::CONNECTED) return;
 
-    // Periodic MAC tasks
-
+    // In Class C (Daylight operation), poll for downlinks directly from the radio receiver
+    if (_node->getClass() == RADIOLIB_LORAWAN_CLASS_C) {
+        static unsigned long lastClassCPoll = 0;
+        if (millis() - lastClassCPoll >= 100) { // Check every 100ms
+            lastClassCPoll = millis();
+            uint8_t downData[256];
+            size_t downLen = 0;
+            int16_t state = _node->getDownlinkClassC(downData, &downLen);
+            if (state == RADIOLIB_ERR_NONE && downLen > 0) {
+                Serial.printf("[LORA-ClassC] Immediate Downlink Received! (%d bytes)\n", downLen);
+                if (downLen == sizeof(LoRaDownlinkPayload) && _downlinkCb != nullptr) {
+                    LoRaDownlinkPayload dl;
+                    memcpy(&dl, downData, downLen);
+                    _downlinkCb(dl);
+                }
+            }
+        }
+    }
 }
 
 
