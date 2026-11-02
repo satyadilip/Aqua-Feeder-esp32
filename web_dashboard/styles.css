@@ -2514,10 +2514,10 @@ html.user-authenticated #main-app-shell {
   white-space: nowrap !important;
 }
 
-/* 2x2 Telemetry Grid (Zero Wrap) */
+/* 2x2 Telemetry Grid (Strictly Symmetrical 50/50 Columns) */
 .metrics-grid {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
   gap: 10px !important;
   margin-bottom: 14px !important;
 }

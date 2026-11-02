@@ -406,7 +406,7 @@ def lambda_handler(event, context):
             if status_str == 'FEEDING':
                 next_ist_dt = now_ist_dt + timedelta(seconds=dynamic_gap_sec)
                 next_feed_str = next_ist_dt.strftime("%I:%M %p")
-                next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m) - {remaining_events} remaining"
+                next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m)"
             elif status_str == 'COMPLETED' or now_ist_mins >= end_mins:
                 next_feed_str = s_time_fmt
                 next_feed_sub = "Tomorrow morning"

@@ -948,7 +948,7 @@ function loadSelectedDeviceToUI() {
         nextSubText = `Interval: ${intervalMin} min`;
       }
     }
-    eventSubText = `${totalRemaining} remaining today`;
+    eventSubText = 'Events today';
   } else {
     statusText = 'ACTIVE';
     badgeClass = 'b-run';
@@ -980,7 +980,7 @@ function loadSelectedDeviceToUI() {
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today (${totalRemaining} remaining)`;
+    gaugeHeroSub.textContent = `/ ${totalEvents} Events Today`;
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
@@ -995,7 +995,7 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${totalEvents}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : `${totalRemaining} remaining today`);
+  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : (isScheduleDone ? 'Schedule completed' : 'Events today'));
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');

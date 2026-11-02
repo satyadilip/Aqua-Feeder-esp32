@@ -364,7 +364,7 @@ def lambda_handler(event, context):
                             
                             next_ist = datetime.utcfromtimestamp(next_feed_epoch) + timedelta(hours=5, minutes=30)
                             d['NextFeed'] = next_ist.strftime("%I:%M %p")
-                            d['NextFeedSub'] = f"Interval: {dyn_interval_m}m ({gap_s}s) - {rem_events} remaining"
+                            d['NextFeedSub'] = f"Interval: {dyn_interval_m}m ({gap_s}s)"
                         else:
                             d['NextFeed'] = s_time_fmt
                             d['NextFeedSub'] = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"

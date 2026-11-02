@@ -279,7 +279,7 @@ function renderActiveFeeder() {
 
   const eventsEl = document.getElementById('hero-events-progress');
   const remEvents = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, (dev.totalEvents || 150) - (dev.currentEvent || 0));
-  if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150} (${remEvents} left)`;
+  if (eventsEl) eventsEl.textContent = `${dev.currentEvent || 0} / ${dev.totalEvents || 150}`;
 
   // Next Dispense Pulse Time
   const nextPulseEl = document.getElementById('hero-next-pulse');

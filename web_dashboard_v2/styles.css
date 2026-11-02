@@ -637,10 +637,13 @@ body.theme-light .water-sheen-radial {
 .stat-cell {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 3px;
   flex: 1;
+  min-width: 0;
   text-align: center;
   align-items: center;
+  white-space: nowrap;
 }
 
 .stat-cell-divider {
