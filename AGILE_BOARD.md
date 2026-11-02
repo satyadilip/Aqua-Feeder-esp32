@@ -174,7 +174,7 @@
 
 ### STORY-011: Official Release v1.0 Baseline & Cloud Firmware Version Telemetry
 - **Status:** `CLOSED`
-- **Closed Commit:** `PENDING_COMMIT`
+- **Closed Commit:** [`803a16d`](https://github.com/satyadilip/Aqua-Feeder-esp32/commit/803a16d)
 - **Assigned To:** Embedded Firmware & Cloud Architect
 - **As a:** Farm Hardware Operator & Cloud Manager
 - **I want:** The firmware release version to be standardized to `v1.0` (with branding "AquaFeeder Firmware"), and reported dynamically to the cloud over LoRaWAN telemetry
