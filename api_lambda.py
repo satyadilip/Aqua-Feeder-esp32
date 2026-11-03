@@ -49,18 +49,31 @@ def build_response(status_code, body):
     }
 
 def send_lora_downlink(dev_eui, downlink_bytes, fport=1):
-    w_id = DEVEUI_TO_WIRELESS_ID.get(str(dev_eui).lower().strip())
+    dev_key = str(dev_eui).lower().strip()
+    w_id = DEVEUI_TO_WIRELESS_ID.get(dev_key)
+    if not w_id:
+        try:
+            d_res = devices_table.get_item(Key={'DeviceId': dev_eui})
+            w_id = d_res.get('Item', {}).get('WirelessDeviceId')
+        except Exception:
+            pass
     if not w_id:
         return False, f"Device {dev_eui} not registered in Wireless Device mapping"
     try:
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        # Class C immediate blast during daytime feeding window (06:00 to 18:00 IST)
+        # TransmitMode=1 causes AWS IoT Core Wireless to immediately downlink over gateway without waiting for uplink
+        # TransmitMode=0 queues for Class A reception (night time / deep sleep)
+        tx_mode = 1 if (6 <= now_ist.hour < 18) else 0
         down_b64 = base64.b64encode(downlink_bytes).decode('ascii')
         iw_client.send_data_to_wireless_device(
             Id=w_id,
-            TransmitMode=0, # 0 = queue for Class A (delivered on next uplink)
+            TransmitMode=tx_mode,
             PayloadData=down_b64,
             WirelessMetadata={'LoRaWAN': {'FPort': fport}}
         )
-        return True, f"Downlink queued successfully for {dev_eui} ({w_id})"
+        mode_desc = "Class C immediate" if tx_mode == 1 else "Class A queued"
+        return True, f"Downlink sent ({mode_desc}) for {dev_eui} ({w_id})"
     except Exception as err:
         return False, str(err)
 
@@ -237,151 +250,170 @@ def lambda_handler(event, context):
                         calc_status = 'SCHEDULED'
 
                     now_epoch = int(datetime.utcnow().timestamp())
-                    if dev_id in ['e072a1fffef6249c', 'e072a1fffef5ba08', 'e072a1fffef64134']:
-                        if dev_id == 'e072a1fffef6249c':
-                            feeder_name = 'aquaCON Feeder 01'
-                            pond_name = 'P-01'
-                        elif dev_id == 'e072a1fffef5ba08':
-                            feeder_name = 'aquaCON Feeder 02'
-                            pond_name = 'P-01'
-                        else:
-                            feeder_name = 'aquaCON Feeder 03'
-                            pond_name = 'P-02'
-                        d['DeviceName'] = feeder_name
-                        d['PondId'] = pond_name
-                        is_online = (now_epoch - int(d.get('LastSeenEpoch', 0))) < 900
-                        d['Connected'] = is_online
+                    # Dynamic device name and pond mapping for all registered feeders
+                    existing_name = d.get('DeviceName')
+                    existing_pond = d.get('PondId')
+                    if existing_name:
+                        feeder_name = existing_name
+                    elif dev_id == 'e072a1fffef6249c':
+                        feeder_name = 'aquaCON Feeder 01'
+                    elif dev_id == 'e072a1fffef5ba08':
+                        feeder_name = 'aquaCON Feeder 02'
+                    elif dev_id == 'e072a1fffef64134':
+                        feeder_name = 'aquaCON Feeder 03'
+                    elif dev_id == 'e072a1fffef5bac0':
+                        feeder_name = 'aquaCON Feeder 04'
+                    elif dev_id == 'e072a1f6249c0005':
+                        feeder_name = 'aquaCON Feeder 05'
+                    else:
+                        feeder_name = f"aquaCON Feeder {dev_id[-4:]}"
 
-                        # --- STORY-009 & STORY-010: Decoupled Today Completed State vs Scheduled State ---
-                        today_date_str = now_ist.strftime("%Y-%m-%d")
+                    if existing_pond:
+                        pond_name = existing_pond
+                    elif dev_id in ['e072a1fffef64134', 'e072a1fffef5bac0']:
+                        pond_name = 'P-02'
+                    else:
+                        pond_name = 'P-01'
+
+                    d['DeviceName'] = feeder_name
+                    d['PondId'] = pond_name
+                    is_online = (now_epoch - int(d.get('LastSeenEpoch', 0))) < 900
+                    d['Connected'] = is_online
+
+                    # --- STORY-009 & STORY-010: Decoupled Today Completed State vs Scheduled State ---
+                    today_date_str = now_ist.strftime("%Y-%m-%d")
+                    
+                    today_recorded_date = str(d.get('TodayDate', '')).strip()
+                    today_events_done = int(d.get('TodayEventsCompleted', 0))
+                    today_kg_done = float(d.get('TodayFeedDispensed_kg', 0.0))
+                    today_tot_events = int(d.get('TodayTotalEvents', tot_ev))
+                    today_recorded_status = str(d.get('TodayStatus', '')).strip().upper()
+
+                    # Fallback: check AquaFeeder_DailyMetrics for today if TodayEventsCompleted is not yet set in devices_table
+                    if today_recorded_date != today_date_str or today_events_done == 0:
+                        try:
+                            m_res = metrics_table.get_item(Key={'DeviceId': dev_id, 'Date': today_date_str})
+                            m_item = m_res.get('Item')
+                            if m_item and int(m_item.get('TotalCycles', 0)) > 0:
+                                today_recorded_date = today_date_str
+                                today_events_done = int(m_item.get('TotalCycles', 0))
+                                today_kg_done = float(m_item.get('DailyFeed_kg', 0.0))
+                                today_tot_events = int(m_item.get('TargetEvents', today_events_done))
+                                today_recorded_status = 'COMPLETED'
+                        except Exception:
+                            pass
+
+                    is_today_run = (today_recorded_date == today_date_str and today_events_done > 0)
+                    
+                    # Alarm bit decoding: Bit 3 (8) = Feed Empty, Bit 4 (16) = Proximity Pause
+                    raw_feed_avail = d.get('FeedAvailable', True)
+                    raw_status = str(d.get('Status', '')).strip().upper()
+                    status_flags = int(d.get('StatusFlags', 0))
+                    if (status_flags & 0x08) != 0 or raw_feed_avail is False or raw_status == 'FEED EMPTY':
+                        actual_feed_avail = False
+                    else:
+                        actual_feed_avail = True
+
+                    s_ampm = "PM" if s_hour >= 12 else "AM"
+                    s_disph = 12 if s_hour % 12 == 0 else s_hour % 12
+                    s_time_fmt = f"{s_disph:02d}:{s_min:02d} {s_ampm}"
+
+                    # Dynamic interval calculation
+                    d_rate = float(d.get('DischargeRate_gs', 100))
+                    if d_rate <= 0.1: d_rate = 100.0
+                    m_time_s = round(float(fpe) / d_rate, 2)
+                    single_ev_s = 3.0 + m_time_s + 3.0
+                    tot_ev_int = int(tot_ev)
+
+                    # Determine Operational Phase
+                    # Phase 1: Date Rollover (00:00:00 to 06:00:00 IST / now_min < start_min)
+                    if now_min < start_min:
+                        actual_status = 'STANDBY'
+                        live_cur_ev = 0
+                        live_tot_ev = tot_ev_int
+                        live_rem_ev = tot_ev_int
+                        live_disp_kg = 0.0
+                        next_feed_str = s_time_fmt
+                        next_feed_sub = f"Starts today at {s_time_fmt}"
+
+                    # Phase 2: Feed Completed Today (remains frozen until 12:00 AM midnight IST)
+                    elif is_today_run and (now_min >= end_min or today_recorded_status == 'COMPLETED' or raw_status == 'COMPLETED' or today_events_done >= today_tot_events or cur_ev >= tot_ev):
+                        actual_status = 'COMPLETED'
+                        live_cur_ev = today_events_done
+                        live_tot_ev = max(today_tot_events, today_events_done)
+                        live_rem_ev = 0
+                        live_disp_kg = today_kg_done if today_kg_done > 0 else round((today_events_done * fpe) / 1000.0, 2)
+                        next_feed_str = s_time_fmt
+                        next_feed_sub = "Tomorrow morning"
+
+                    # Phase 3: Active Feeding Window (start_min <= now_min < end_min)
+                    elif is_today_run and (cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']):
+                        actual_status = 'FEEDING'
+                        live_cur_ev = int(cur_ev)
+                        live_tot_ev = tot_ev_int
+                        live_rem_ev = max(0, tot_ev_int - live_cur_ev)
+                        live_disp_kg = round((live_cur_ev * fpe) / 1000.0, 2)
                         
-                        today_recorded_date = str(d.get('TodayDate', '')).strip()
-                        today_events_done = int(d.get('TodayEventsCompleted', 0))
-                        today_kg_done = float(d.get('TodayFeedDispensed_kg', 0.0))
-                        today_tot_events = int(d.get('TodayTotalEvents', tot_ev))
-                        today_recorded_status = str(d.get('TodayStatus', '')).strip().upper()
+                        sec_since_midnight = now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second
+                        end_sec_today = e_hour * 3600 + e_min * 60
+                        rem_time_s = max(0, end_sec_today - sec_since_midnight)
+                        rem_calc = max(1, live_rem_ev)
+                        rem_dur_s = rem_calc * single_ev_s
+                        gap_s = max(5, int((rem_time_s - rem_dur_s) / rem_calc)) if (rem_time_s > rem_dur_s and live_rem_ev > 0) else int(float(d.get('IntervalMin', 2.9)) * 60.0)
+                        dyn_interval_m = round(gap_s / 60.0, 1)
 
-                        # Fallback: check AquaFeeder_DailyMetrics for today if TodayEventsCompleted is not yet set in devices_table
-                        if today_recorded_date != today_date_str or today_events_done == 0:
-                            try:
-                                m_res = metrics_table.get_item(Key={'DeviceId': dev_id, 'Date': today_date_str})
-                                m_item = m_res.get('Item')
-                                if m_item and int(m_item.get('TotalCycles', 0)) > 0:
-                                    today_recorded_date = today_date_str
-                                    today_events_done = int(m_item.get('TotalCycles', 0))
-                                    today_kg_done = float(m_item.get('DailyFeed_kg', 0.0))
-                                    today_tot_events = int(m_item.get('TargetEvents', today_events_done))
-                                    today_recorded_status = 'COMPLETED'
-                            except Exception:
-                                pass
-
-                        is_today_run = (today_recorded_date == today_date_str and today_events_done > 0)
-                        
-                        # Alarm bit decoding: Bit 3 (8) = Feed Empty, Bit 4 (16) = Proximity Pause
-                        raw_feed_avail = d.get('FeedAvailable', True)
-                        raw_status = str(d.get('Status', '')).strip().upper()
-                        status_flags = int(d.get('StatusFlags', 0))
-                        if (status_flags & 0x08) != 0 or raw_feed_avail is False or raw_status == 'FEED EMPTY':
-                            actual_feed_avail = False
+                        last_seen_epoch = int(d.get('LastSeenEpoch', 0))
+                        if last_seen_epoch > 0 and (now_epoch - last_seen_epoch) < (gap_s + 30):
+                            next_feed_epoch = last_seen_epoch + gap_s
                         else:
-                            actual_feed_avail = True
+                            next_feed_epoch = now_epoch + gap_s
+                        next_ist = datetime.utcfromtimestamp(next_feed_epoch) + timedelta(hours=5, minutes=30)
+                        next_feed_str = next_ist.strftime("%I:%M %p")
+                        next_feed_sub = f"Interval: {dyn_interval_m}m ({gap_s}s)"
 
-                        s_ampm = "PM" if s_hour >= 12 else "AM"
-                        s_disph = 12 if s_hour % 12 == 0 else s_hour % 12
-                        s_time_fmt = f"{s_disph:02d}:{s_min:02d} {s_ampm}"
+                    # Phase 4: Standby / Scheduled before first pulse during window
+                    else:
+                        actual_status = 'SCHEDULED' if now_min < end_min else 'STANDBY'
+                        live_cur_ev = 0
+                        live_tot_ev = tot_ev_int
+                        live_rem_ev = tot_ev_int
+                        live_disp_kg = 0.0
+                        next_feed_str = s_time_fmt
+                        next_feed_sub = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"
 
-                        # Dynamic interval calculation
-                        d_rate = float(d.get('DischargeRate_gs', 100))
-                        if d_rate <= 0.1: d_rate = 100.0
-                        m_time_s = round(float(fpe) / d_rate, 2)
-                        single_ev_s = 3.0 + m_time_s + 3.0
-                        tot_ev_int = int(tot_ev)
+                    # Overrides for offline / alarms
+                    if not is_online:
+                        actual_status = 'NOT CONNECTED'
+                        next_feed_str = "--"
+                        next_feed_sub = "Feeder Offline"
+                    elif (status_flags & 0x02) != 0 or raw_status in ['MOTOR OVERCURRENT', 'MOTOR JAM / OVERCURRENT']:
+                        actual_status = 'MOTOR JAM / OVERCURRENT'
+                        next_feed_str = "--"
+                        next_feed_sub = "Motor Trip Detected"
+                    elif (status_flags & 0x10) != 0 or raw_status == 'PAUSED':
+                        actual_status = 'PAUSED'
+                        next_feed_str = "--"
+                        next_feed_sub = "Feed Paused"
+                    elif not actual_feed_avail or raw_status == 'FEED EMPTY':
+                        actual_status = 'FEED EMPTY'
+                        next_feed_str = "--"
+                        next_feed_sub = "Refill Required"
 
-                        # Determine Operational Phase
-                        # Phase 1: Date Rollover (00:00:00 to 06:00:00 IST / now_min < start_min)
-                        if now_min < start_min:
-                            actual_status = 'STANDBY'
-                            live_cur_ev = 0
-                            live_tot_ev = tot_ev_int
-                            live_rem_ev = tot_ev_int
-                            live_disp_kg = 0.0
-                            next_feed_str = s_time_fmt
-                            next_feed_sub = f"Starts today at {s_time_fmt}"
+                    d['FeedAvailable'] = actual_feed_avail if is_online else False
+                    d['Status'] = actual_status
+                    d['StatusFlags'] = status_flags
+                    d['TotalEvents'] = live_tot_ev
+                    d['CurrentEvent'] = live_cur_ev
+                    d['TotalEventsRemaining'] = live_rem_ev
+                    d['FeedPerEvent_g'] = int(fpe)
+                    d['FeedQuantity_kg'] = target_kg
+                    d['DailyTarget_kg'] = target_kg
+                    d['DispensedFeed_kg'] = live_disp_kg
+                    d['NextFeed'] = next_feed_str
+                    d['NextFeedSub'] = next_feed_sub
+                    d['ScheduleValid'] = True
 
-                        # Phase 2: Feed Completed Today (remains frozen until 12:00 AM midnight IST)
-                        elif is_today_run and (now_min >= end_min or today_recorded_status == 'COMPLETED' or raw_status == 'COMPLETED' or today_events_done >= today_tot_events or cur_ev >= tot_ev):
-                            actual_status = 'COMPLETED'
-                            live_cur_ev = today_events_done
-                            live_tot_ev = max(today_tot_events, today_events_done)
-                            live_rem_ev = 0
-                            live_disp_kg = today_kg_done if today_kg_done > 0 else round((today_events_done * fpe) / 1000.0, 2)
-                            next_feed_str = s_time_fmt
-                            next_feed_sub = "Tomorrow morning"
-
-                        # Phase 3: Active Feeding Window (start_min <= now_min < end_min)
-                        elif is_today_run and (cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']):
-                            actual_status = 'FEEDING'
-                            live_cur_ev = int(cur_ev)
-                            live_tot_ev = tot_ev_int
-                            live_rem_ev = max(0, tot_ev_int - live_cur_ev)
-                            live_disp_kg = round((live_cur_ev * fpe) / 1000.0, 2)
-                            
-                            sec_since_midnight = now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second
-                            end_sec_today = e_hour * 3600 + e_min * 60
-                            rem_time_s = max(0, end_sec_today - sec_since_midnight)
-                            rem_calc = max(1, live_rem_ev)
-                            rem_dur_s = rem_calc * single_ev_s
-                            gap_s = max(5, int((rem_time_s - rem_dur_s) / rem_calc)) if (rem_time_s > rem_dur_s and live_rem_ev > 0) else int(float(d.get('IntervalMin', 2.9)) * 60.0)
-                            dyn_interval_m = round(gap_s / 60.0, 1)
-
-                            last_seen_epoch = int(d.get('LastSeenEpoch', 0))
-                            if last_seen_epoch > 0 and (now_epoch - last_seen_epoch) < (gap_s + 30):
-                                next_feed_epoch = last_seen_epoch + gap_s
-                            else:
-                                next_feed_epoch = now_epoch + gap_s
-                            next_ist = datetime.utcfromtimestamp(next_feed_epoch) + timedelta(hours=5, minutes=30)
-                            next_feed_str = next_ist.strftime("%I:%M %p")
-                            next_feed_sub = f"Interval: {dyn_interval_m}m ({gap_s}s)"
-
-                        # Phase 4: Standby / Scheduled before first pulse during window
-                        else:
-                            actual_status = 'SCHEDULED' if now_min < end_min else 'STANDBY'
-                            live_cur_ev = 0
-                            live_tot_ev = tot_ev_int
-                            live_rem_ev = tot_ev_int
-                            live_disp_kg = 0.0
-                            next_feed_str = s_time_fmt
-                            next_feed_sub = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"
-
-                        # Overrides for offline / alarms
-                        if not is_online:
-                            actual_status = 'NOT CONNECTED'
-                            next_feed_str = "--"
-                            next_feed_sub = "Feeder Offline"
-                        elif (status_flags & 0x10) != 0 or raw_status == 'PAUSED':
-                            actual_status = 'PAUSED'
-                            next_feed_str = "--"
-                            next_feed_sub = "Feed Paused"
-                        elif not actual_feed_avail or raw_status == 'FEED EMPTY':
-                            actual_status = 'FEED EMPTY'
-                            next_feed_str = "--"
-                            next_feed_sub = "Refill Required"
-
-                        d['FeedAvailable'] = actual_feed_avail if is_online else False
-                        d['Status'] = actual_status
-                        d['StatusFlags'] = status_flags
-                        d['TotalEvents'] = live_tot_ev
-                        d['CurrentEvent'] = live_cur_ev
-                        d['TotalEventsRemaining'] = live_rem_ev
-                        d['FeedPerEvent_g'] = int(fpe)
-                        d['FeedQuantity_kg'] = target_kg
-                        d['DailyTarget_kg'] = target_kg
-                        d['DispensedFeed_kg'] = live_disp_kg
-                        d['NextFeed'] = next_feed_str
-                        d['NextFeedSub'] = next_feed_sub
-                        d['ScheduleValid'] = True
-
-                        devices.append(d)
+                    devices.append(d)
 
             except Exception as e:
                 print("Devices scan error:", e)
@@ -915,13 +947,18 @@ def lambda_handler(event, context):
                         feed_kg = 0.0
                         
                     t_kg = float(it.get('Target_kg', base_qty))
+                    stored_target_ev = int(it.get('TargetEvents', 0))
+                    fpe_val = float(dev_item.get('FeedPerEvent_g', 100)) if dev_item else 100.0
+                    if fpe_val <= 0: fpe_val = 100.0
+                    calc_tot_events = stored_target_ev if stored_target_ev > 0 else (math.ceil((t_kg * 1000.0) / fpe_val) if t_kg > 0 else 250)
+
                     db_by_date[d_date] = {
                         'DeviceId': it.get('DeviceId', device_id),
                         'Date': d_date,
                         'FeedDispensed_kg': feed_kg,
                         'Target_kg': t_kg,
                         'EventsCompleted': tot_cycles,
-                        'TotalEvents': int(t_kg * 10) if t_kg > 0 else 250,
+                        'TotalEvents': calc_tot_events,
                         'AdherencePct': round(min(100.0, (feed_kg / t_kg) * 100.0) if t_kg > 0 else 100.0, 1)
                     }
                     
@@ -971,7 +1008,7 @@ def lambda_handler(event, context):
                         'FeedDispensed_kg': live_dispensed_kg,
                         'Target_kg': base_qty,
                         'EventsCompleted': int(live_cur_ev),
-                        'TotalEvents': int(base_qty * 10),
+                        'TotalEvents': math.ceil((base_qty * 1000.0) / fpe_val) if base_qty > 0 else 250,
                         'AdherencePct': round(min(100.0, (live_dispensed_kg / base_qty) * 100.0) if base_qty > 0 else 100.0, 1),
                         'isToday': True
                     })
@@ -983,7 +1020,7 @@ def lambda_handler(event, context):
                         'FeedDispensed_kg': 0.0,
                         'Target_kg': base_qty,
                         'EventsCompleted': 0,
-                        'TotalEvents': int(base_qty * 10),
+                        'TotalEvents': math.ceil((base_qty * 1000.0) / fpe_val) if base_qty > 0 else 250,
                         'AdherencePct': 0.0,
                         'isToday': (i == 0)
                     })

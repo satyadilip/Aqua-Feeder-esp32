@@ -588,7 +588,7 @@ function switchActivePond(pondId) {
   refreshPondsDropdown();
   updatePondContextBar();
   loadSelectedDeviceToUI();
-  populateParamEditorUI(dev);
+  populateParamEditorUI();
   renderHistoryView();
   renderTrayChecksView();
   showToast(`Switched to ${pond.name}`);
@@ -849,10 +849,11 @@ function loadSelectedDeviceToUI() {
   updateDiagnosticsUI(dev, true, heroTitle);
 
   
-  // Operational Time & Schedule Completion Engine
+  // Operational Time & Schedule Completion Engine (strictly in Asia/Kolkata IST)
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMin = now.getMinutes();
+  const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
+  const currentHour = istParts[0];
+  const currentMin = istParts[1];
   const nowTotalMin = currentHour * 60 + currentMin;
 
   const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
@@ -870,6 +871,7 @@ function loadSelectedDeviceToUI() {
   const timeFormatted = formatTimeAmPm(sHour, sMin);
   const endTimeFormatted = formatTimeAmPm(eHour, eMin);
 
+  const isOvercurrent = dev.status === 'MOTOR JAM / OVERCURRENT' || dev.status === 'MOTOR OVERCURRENT' || ((dev.statusFlags || 0) & 0x02) !== 0;
   const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
   const isFeedEmpty = dev.feedAvailable === false || dev.status === 'FEED EMPTY' || ((dev.statusFlags || 0) & 0x08) !== 0 || ((dev.statusFlags || 0) & 0x01) !== 0;
 
@@ -894,7 +896,13 @@ function loadSelectedDeviceToUI() {
   let nextSubText = `Starts today at ${timeFormatted}`;
   let eventSubText = "Ready for schedule";
 
-  if (isPaused) {
+  if (isOvercurrent) {
+    statusText = 'MOTOR JAM / TRIP';
+    badgeClass = 'b-alert';
+    nextTimestamp = '--';
+    nextSubText = 'Overcurrent Trip';
+    eventSubText = 'Inspect Dispenser Mechanism';
+  } else if (isPaused) {
     statusText = 'PAUSED';
     badgeClass = 'b-alert';
     nextTimestamp = '--';
@@ -1360,12 +1368,11 @@ async function renderHistoryView() {
     const today = new Date();
     metrics = [];
     const base = dev.targetKg || 15.0;
-    const offsets = [0.2, -0.4, 0.5, -0.1, 0.3, -0.2, -(base - (dev.dispensedKg || 0.4))];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
-      const dStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
-      const disp = i === 0 ? (dev.dispensedKg || 0.40) : Math.max(0.5, parseFloat((base + offsets[6 - i]).toFixed(1)));
+      const dStr = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'numeric', day: 'numeric' });
+      const disp = (i === 0) ? Number(dev.dispensedKg || 0.0) : 0.0;
       metrics.push({
         dateLabel: dStr,
         feedKg: disp,
@@ -1930,9 +1937,8 @@ function recalculateSchedule() {
       subText = `${curEvent} ran + ${remainingEvents} rem`;
 
       const now = new Date();
-      const currentTotalMin = now.getHours() * 60 + now.getMinutes();
-      const currentSecInMin = now.getSeconds();
-      const nowTotalSec = currentTotalMin * 60 + currentSecInMin;
+      const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
+      const nowTotalSec = istParts[0] * 3600 + istParts[1] * 60 + (istParts[2] || 0);
       const endTotalSec = endMins * 60;
 
       const remainingWindowSec = Math.max(0, endTotalSec - nowTotalSec);
@@ -1952,7 +1958,7 @@ function recalculateSchedule() {
       }
     } else {
       // Fresh start / Start of day
-      totalEvents = Math.floor((qty * 1000.0) / fpe);
+      totalEvents = Math.ceil((qty * 1000.0) / fpe);
       remainingEvents = totalEvents;
       const totalCyclesSec = totalEvents * singleEventSec;
       subText = 'Events today';
@@ -2129,7 +2135,7 @@ async function triggerRemoteAction(action) {
     dev.eventsLog.unshift({
       eventNumber: newCurrent,
       grams: fpeGrams,
-      time: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      time: now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
       isManual: true
     });
 
@@ -2385,10 +2391,10 @@ async function renderTrayChecksView() {
     if (checks.length > 0) {
       const latest = checks[0];
       const d = new Date((latest.Timestamp || Math.floor(Date.now()/1000)) * 1000);
-      const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
-      const dateStr = d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      const dispKg = ((latest.FeedDispensed_g || 0) / 1000.0).toFixed(2);
-      const battV = latest.Battery_V ? Number(latest.Battery_V).toFixed(2) : (latest.voltage_mV ? (latest.voltage_mV / 1000.0).toFixed(2) : '4.12');
+      const timeStr = d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+      const dateStr = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' });
+      const dispKg = latest.DispensedKg !== undefined ? Number(latest.DispensedKg).toFixed(2) : ((latest.FeedDispensed_g || 0) / 1000.0).toFixed(2);
+      const battV = latest.Battery_V ? Number(latest.Battery_V).toFixed(2) : (latest.Voltage_mV ? (latest.Voltage_mV / 1000.0).toFixed(2) : (latest.voltage_mV ? (latest.voltage_mV / 1000.0).toFixed(2) : '4.12'));
 
       if (lastTimeEl) lastTimeEl.textContent = timeStr;
       if (lastSubEl) lastSubEl.textContent = dateStr;
@@ -2402,11 +2408,11 @@ async function renderTrayChecksView() {
       let html = '';
       checks.forEach((c, idx) => {
         const itemDate = new Date((c.Timestamp || Math.floor(Date.now()/1000)) * 1000);
-        const itemTimeStr = itemDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-        const itemDateStr = itemDate.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-        const cDispKg = ((c.FeedDispensed_g || 0) / 1000.0).toFixed(2);
+        const itemTimeStr = itemDate.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        const itemDateStr = itemDate.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' });
+        const cDispKg = c.DispensedKg !== undefined ? Number(c.DispensedKg).toFixed(2) : ((c.FeedDispensed_g || 0) / 1000.0).toFixed(2);
         const curEv = c.CurrentEvent || '--';
-        const cBatt = c.Battery_V ? Number(c.Battery_V).toFixed(2) : (c.voltage_mV ? (c.voltage_mV / 1000.0).toFixed(2) : '4.10');
+        const cBatt = c.Battery_V ? Number(c.Battery_V).toFixed(2) : (c.Voltage_mV ? (c.Voltage_mV / 1000.0).toFixed(2) : (c.voltage_mV ? (c.voltage_mV / 1000.0).toFixed(2) : '4.10'));
 
         html += `
           <div class="event-log-item" style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.05);">
@@ -2536,7 +2542,7 @@ function initFarmClock() {
   function tick() {
     const now = new Date();
     if (clockEl) {
-      clockEl.textContent = now.toLocaleTimeString('en-IN', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      clockEl.textContent = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     }
   }
   tick();

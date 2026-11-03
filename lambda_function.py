@@ -275,6 +275,9 @@ def lambda_handler(event, context):
                             'CurrentEvent': cur_ev,
                             'TotalEvents': tot_ev,
                             'DispensedKg': dispensed_kg,
+                            'FeedDispensed_g': Decimal(str(total_dispensed_g)),
+                            'Voltage_mV': Decimal(str(voltage)),
+                            'Battery_V': Decimal(str(round(voltage / 1000.0, 2))),
                             'Status': 'CONFIRMED',
                             'Remarks': 'Manual Tray Check logged from Feeder'
                         }
@@ -309,6 +312,7 @@ def lambda_handler(event, context):
 
             # Flag decoding
             flag_proximity = (status_flags & 0x01) != 0
+            flag_overcurrent = (status_flags & 0x02) != 0
             flag_empty = (status_flags & 0x08) != 0
             flag_paused = (status_flags & 0x10) != 0 or (msg_type in [4, 15])
 
@@ -345,6 +349,10 @@ def lambda_handler(event, context):
             elif is_feed_stop:
                 status_str = 'STANDBY'
                 feed_available = True
+                effective_flags = status_flags
+            elif flag_overcurrent:
+                status_str = 'MOTOR OVERCURRENT'
+                feed_available = False
                 effective_flags = status_flags
             elif is_feed_pause:
                 status_str = 'PAUSED'

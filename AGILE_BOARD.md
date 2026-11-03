@@ -28,6 +28,7 @@
 | | | | **STORY-014** (Daylight Solar Class C & Zero-Uplink Sub-Second Downlink RX) `CLOSED` |
 | | | | **STORY-015** (Fluid Multi-Field Settings Editing & Runtime Deductive Feed Schedule Math) `CLOSED` |
 | | | | **STORY-016** (Zero Stale Data Flash on Page Refresh via Pre-Hydration & Storage Persistence) `CLOSED` |
+| | | | **STORY-017** (Cloud Architecture Hardening & Latent Defect Elimination) `CLOSED` |
 
 ---
 
@@ -310,3 +311,23 @@
   4. **Live Verification & Proof:**
      - Automated Selenium headless test on live AWS S3 production site (`verify_live_s3_refresh.py`) verified 100ms post-refresh state: Feeder 03 rendered immediately with 0.00 kg dispensed, 20.0 kg target, 0/94 pulses, and STANDBY badge.
      - Confirmed zero occurrences of dummy numbers `235`, `23.50`, or `Feeder 01` throughout page load lifecycle.
+
+---
+
+### STORY-017: Cloud Architecture Hardening & Latent Defect Elimination
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As an:** Aquaculture System Architect & Site Reliability Engineer
+- **I want:** All latent multi-feeder, downlink mode, tray check, timezone, and safety trip bugs eradicated from the cloud Lambdas and UI
+- **So that:** The cloud platform exhibits 100% operational fidelity across all feeder nodes, global clients, and telemetry pipelines.
+- **Architectural Fixes Implemented:**
+  1. **Dynamic Multi-Device Expansion:** Removed the hardcoded 3-feeder whitelist (`e072a1fffef6249c`, `e072a1fffef5ba08`, `e072a1fffef64134`) from `api_lambda.py`. All 7 registered devices in DynamoDB (including Feeder 04, Feeder 05, and future nodes) are dynamically discovered and returned with custom names and pond associations.
+  2. **Pond Switching Fatal Crash Elimination:** Fixed `ReferenceError: dev is not defined` in `switchActivePond()` (`web_dashboard/app.js` line 591) by calling `populateParamEditorUI()` parameterless, allowing fluid pond transitions with 0 console errors.
+  3. **Daylight Solar Class C Sub-Second Downlinks:** In `send_lora_downlink()` (`api_lambda.py`), dynamically set `TransmitMode=1` during operational daylight hours (06:00 to 18:00 IST) to immediately transmit downlinks over gateways without waiting for Class A uplinks.
+  4. **Tray Inspection Key Reconciliation & Battery Telemetry:** In `lambda_function.py`, logged real `Voltage_mV`, `Battery_V`, and `FeedDispensed_g` to `AquaFeeder_TrayChecks`. Updated `app.js` to inspect both `DispensedKg` and `FeedDispensed_g`, displaying genuine dispensed weights and battery levels.
+  5. **Deterministic History Integrity & Math.ceil:** Eliminated synthetic random offsets (`offsets = [0.2, -0.4, 0.5, ...]`) in `web_dashboard/app.js`. In `recalculateSchedule()`, replaced `Math.floor` with `Math.ceil((qty * 1000.0) / fpe)` matching firmware precision.
+  6. **Absolute Timezone Invariance (Asia/Kolkata):** Added `{ timeZone: 'Asia/Kolkata', hour12: true }` across all UI date, time, clock, and event log formatters so international coworkers and remote farm managers see identical farm-local times.
+  7. **Motor Overcurrent / Jam Safety Trip Decoding:** Decoded Bit 1 (`statusFlags & 0x02`) across `api_lambda.py`, `lambda_function.py`, and `web_dashboard/app.js` as `MOTOR JAM / OVERCURRENT` with alert badges (`b-alert`).
+- **Production Verification:**
+  - Full Selenium headless test passed against live production AWS S3 bucket (`lorawan-telemetry-stack-webhostingbucket-djy9frtf8y6f.s3-website-us-east-1.amazonaws.com`).
+  - 0 console errors during pond switching, tray check hydration, history rendering, and schedule calculation.

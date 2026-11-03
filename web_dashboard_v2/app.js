@@ -242,13 +242,19 @@ function renderActiveFeeder() {
   const statusPill = document.getElementById('hero-status-pill');
   const statusText = document.getElementById('hero-status-text');
   if (statusPill && statusText) {
-    if (dev.isPaused) {
+    if (dev.status === 'MOTOR OVERCURRENT' || dev.status === 'MOTOR JAM / OVERCURRENT' || ((dev.statusFlags || 0) & 0x02) !== 0) {
+      statusPill.className = 'status-chip-live status-alert';
+      statusPill.style.background = 'rgba(239, 68, 68, 0.12)';
+      statusPill.style.borderColor = 'rgba(239, 68, 68, 0.35)';
+      statusPill.style.color = '#EF4444';
+      statusText.textContent = 'MOTOR TRIP';
+    } else if (dev.isPaused || dev.status === 'PAUSED') {
       statusPill.className = 'status-chip-live status-paused';
       statusPill.style.background = 'rgba(2, 132, 199, 0.12)';
       statusPill.style.borderColor = 'rgba(2, 132, 199, 0.35)';
       statusPill.style.color = '#0284C7';
       statusText.textContent = 'CYCLE PAUSED';
-    } else if (dev.status === 'ACTIVE' || dev.connected) {
+    } else if (dev.status === 'ACTIVE' || dev.status === 'FEEDING' || dev.connected) {
       statusPill.className = 'status-chip-live online';
       statusPill.style.background = 'rgba(16, 185, 129, 0.12)';
       statusPill.style.borderColor = 'rgba(16, 185, 129, 0.35)';
@@ -670,7 +676,30 @@ async function fetchLiveTelemetry() {
       const data = await res.json();
       if (data && data.devices) {
         data.devices.forEach(cloudDev => {
-          const match = appState.devices.find(d => d.id.toLowerCase() === cloudDev.DeviceId.toLowerCase());
+          let match = appState.devices.find(d => d.id.toLowerCase() === cloudDev.DeviceId.toLowerCase());
+          if (!match) {
+            match = {
+              id: cloudDev.DeviceId,
+              name: cloudDev.DeviceName || `Feeder ${cloudDev.DeviceId.slice(-4)}`,
+              pondId: cloudDev.PondId || 'P-01',
+              targetKg: Number(cloudDev.DailyTarget_kg || cloudDev.FeedQuantity_kg || 15.0),
+              dispensedKg: Number(cloudDev.DispensedFeed_kg || 0.0),
+              currentEvent: Number(cloudDev.CurrentEvent || 0),
+              totalEvents: Number(cloudDev.TotalEvents || 150),
+              totalEventsRemaining: Number(cloudDev.TotalEventsRemaining || 150),
+              fpeGrams: Number(cloudDev.FeedPerEvent_g || 100),
+              dischargeRateGs: Number(cloudDev.DischargeRate_gs || 100),
+              startHour: Number(cloudDev.StartHour || 6),
+              startMin: Number(cloudDev.StartMinute || 0),
+              endHour: Number(cloudDev.EndHour || 18),
+              endMin: Number(cloudDev.EndMinute || 0),
+              intervalMin: Number(cloudDev.IntervalMin || 1.4),
+              connected: Boolean(cloudDev.Connected),
+              status: cloudDev.Status || 'STANDBY',
+              statusFlags: Number(cloudDev.StatusFlags || 0)
+            };
+            appState.devices.push(match);
+          }
           if (match) {
             if (cloudDev.DispensedFeed_kg !== undefined) match.dispensedKg = Number(cloudDev.DispensedFeed_kg);
             if (cloudDev.CurrentEvent !== undefined) match.currentEvent = Number(cloudDev.CurrentEvent);
