@@ -190,8 +190,8 @@
         <!-- Pond & Device Context Switcher Banner -->
         <div class="pond-context-bar">
           <div class="context-pond-info">
-            <div class="context-title" id="context-pond-name">Pond P-01 (1.8 Acres)</div>
-            <div class="context-sub" id="context-pond-stock">Vannamei Shrimp • 2 Feeders Installed</div>
+            <div class="context-title" id="context-pond-name">Pond P-02 (2.2 Acres)</div>
+            <div class="context-sub" id="context-pond-stock">aquaCON Smart Feeder System</div>
           </div>
           
           <!-- Device Pills in Current Pond -->
@@ -213,10 +213,10 @@
               <div class="card-header-row">
                 <div class="device-meta">
                   <span class="device-tag" id="current-device-tag">ACTIVE FEEDER</span>
-                  <h2 class="device-name" id="current-device-name">aquaCON Feeder 01</h2>
+                  <h2 class="device-name" id="current-device-name">aquaCON Feeder 03</h2>
                 </div>
                 <div class="status-badge-container">
-                  <span id="feeder-state-badge" class="badge-state b-done">COMPLETED</span>
+                  <span id="feeder-state-badge" class="badge-state b-idle">STANDBY</span>
                 </div>
               </div>
 
@@ -224,12 +224,12 @@
               <div class="gauge-wrap">
                 <svg class="gauge-svg" viewBox="0 0 160 160">
                   <circle class="gauge-track" cx="80" cy="80" r="65"></circle>
-                  <circle id="gauge-progress-circle" class="gauge-progress" cx="80" cy="80" r="65" stroke-dasharray="408.4" stroke-dashoffset="395"></circle>
+                  <circle id="gauge-progress-circle" class="gauge-progress" cx="80" cy="80" r="65" stroke-dasharray="408.4" stroke-dashoffset="408.4"></circle>
                 </svg>
                 <div class="gauge-inner">
-                  <span class="gauge-hero-num" id="gauge-hero-num">235</span>
-                  <span class="gauge-hero-sub" id="gauge-hero-sub">/ 235 Events Today</span>
-                  <span class="gauge-hero-pct" id="gauge-pct-badge">100% Completed</span>
+                  <span class="gauge-hero-num" id="gauge-hero-num">--</span>
+                  <span class="gauge-hero-sub" id="gauge-hero-sub">/ -- Events Today</span>
+                  <span class="gauge-hero-pct" id="gauge-pct-badge">--</span>
                 </div>
               </div>
 
@@ -237,12 +237,12 @@
               <div class="gauge-secondary-metrics">
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Dispensed Today</span>
-                  <span class="metric-sub-val"><strong id="dispensed-val-text">23.50</strong> kg</span>
+                  <span class="metric-sub-val"><strong id="dispensed-val-text">--</strong> kg</span>
                 </div>
                 <div class="metric-sub-divider"></div>
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Daily Target</span>
-                  <span class="metric-sub-val"><span id="target-val-text">23.5</span> kg</span>
+                  <span class="metric-sub-val"><span id="target-val-text">--</span> kg</span>
                 </div>
               </div>
 
@@ -250,14 +250,14 @@
               <div class="metrics-grid">
                 <div class="metric-cell">
                   <span class="cell-label">FEED EVENT</span>
-                  <span id="burst-count-text" class="cell-value">235 / 235</span>
-                  <span class="cell-sub" id="burst-count-sub">Schedule completed</span>
+                  <span id="burst-count-text" class="cell-value">-- / --</span>
+                  <span class="cell-sub" id="burst-count-sub">Syncing status...</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">NEXT FEED</span>
-                  <span id="next-feed-timestamp" class="cell-value text-emerald">06:00 AM</span>
-                  <span class="cell-sub" id="next-feed-sub">Tomorrow morning</span>
+                  <span id="next-feed-timestamp" class="cell-value text-emerald">--:--</span>
+                  <span class="cell-sub" id="next-feed-sub">Calculating...</span>
                 </div>
 
                 <!-- Interactive Feed Level Toggle Cell -->
@@ -293,6 +293,64 @@
                 </button>
               </div>
             </div>
+            <!-- Instant Inline Pre-Hydration from Cached State (Eliminates Flash of Stale Data) -->
+            <script>
+              (function() {
+                try {
+                  const rawDevs = localStorage.getItem('aquacon_devices');
+                  const savedId = localStorage.getItem('aquacon_selected_device') || 'e072a1fffef64134';
+                  if (rawDevs) {
+                    const devs = JSON.parse(rawDevs);
+                    const d = devs.find(x => x.id === savedId) || devs.find(x => x.id === 'e072a1fffef64134') || devs[0];
+                    if (d) {
+                      const heroTitle = (d.name || '').replace(/\s*\(Live AF_[^)]+\)/gi, '').trim() || 'aquaCON Feeder 03';
+                      const elName = document.getElementById('current-device-name');
+                      if (elName) elName.textContent = heroTitle;
+                      const elTag = document.getElementById('current-device-tag');
+                      if (elTag) elTag.textContent = heroTitle + (d.connected === false ? ' • Not Connected' : ' • Connected');
+                      const elBadge = document.getElementById('feeder-state-badge');
+                      if (elBadge && d.status) {
+                        elBadge.textContent = d.status;
+                        elBadge.className = 'badge-state ' + (d.status === 'COMPLETED' ? 'b-done' : (d.status === 'FEEDING' || d.status === 'ACTIVE' ? 'b-run' : (d.status === 'PAUSED' ? 'b-alert' : (d.status === 'STANDBY' ? 'b-idle' : 'b-offline'))));
+                      }
+                      const curEv = d.currentEvent !== undefined ? parseInt(d.currentEvent, 10) : 0;
+                      const totEv = d.totalEvents ? Math.max(1, parseInt(d.totalEvents, 10)) : 100;
+                      const elHeroNum = document.getElementById('gauge-hero-num');
+                      if (elHeroNum) elHeroNum.textContent = curEv;
+                      const elHeroSub = document.getElementById('gauge-hero-sub');
+                      if (elHeroSub) elHeroSub.textContent = '/ ' + totEv + ' Events Today';
+                      const elBurst = document.getElementById('burst-count-text');
+                      if (elBurst) elBurst.textContent = curEv + ' / ' + totEv;
+                      const elDisp = document.getElementById('dispensed-val-text');
+                      if (elDisp && d.dispensedKg !== undefined) elDisp.textContent = Number(d.dispensedKg).toFixed(2);
+                      const elTarget = document.getElementById('target-val-text');
+                      if (elTarget && d.targetKg !== undefined) elTarget.textContent = Number(d.targetKg).toFixed(1);
+                      const elPct = document.getElementById('gauge-pct-badge');
+                      if (elPct && totEv > 0) {
+                        const pct = Math.min(100, Math.round((curEv / totEv) * 100));
+                        elPct.textContent = (d.status === 'COMPLETED' || pct >= 100) ? '100% Completed' : (pct + '% Completed');
+                      }
+                      const elNext = document.getElementById('next-feed-timestamp');
+                      if (elNext && d.nextFeed) elNext.textContent = d.nextFeed;
+                      const elNextSub = document.getElementById('next-feed-sub');
+                      if (elNextSub && d.nextFeedSub) elNextSub.textContent = d.nextFeedSub;
+                    }
+                  }
+                  const rawPonds = localStorage.getItem('aquacon_ponds');
+                  const savedPondId = localStorage.getItem('aquacon_selected_pond') || 'P-02';
+                  if (rawPonds) {
+                    const ponds = JSON.parse(rawPonds);
+                    const p = ponds.find(x => x.id === savedPondId) || ponds[0];
+                    if (p) {
+                      const elPond = document.getElementById('context-pond-name');
+                      if (elPond) elPond.textContent = p.name + ' (' + p.acres + ' Acres)';
+                      const elStock = document.getElementById('context-pond-stock');
+                      if (elStock) elStock.textContent = p.stock + ' • Feeders Installed';
+                    }
+                  }
+                } catch(e) {}
+              })();
+            </script>
 
             <!-- Operational Status Summary Card -->
             <div class="card summary-card">
@@ -347,34 +405,34 @@
               <div class="card-header-row">
                 <div>
                   <span class="device-tag">HISTORIC ANALYTICS</span>
-                  <h2 class="section-title" id="history-feeder-title">aquaCON Feeder 01 Trends</h2>
+                  <h2 class="section-title" id="history-feeder-title">Feeder Trends & Analytics</h2>
                 </div>
-                <span class="badge-pill" id="history-feeder-pond">Pond P-01</span>
+                <span class="badge-pill" id="history-feeder-pond">Pond P-02</span>
               </div>
 
               <!-- High-level Stats Overview Grid (Balanced 2x2) -->
               <div class="history-stats-grid">
                 <div class="metric-cell">
                   <span class="cell-label">THIS WEEK</span>
-                  <span id="stat-week-total" class="cell-value">77.5 kg</span>
+                  <span id="stat-week-total" class="cell-value">-- kg</span>
                   <span class="cell-sub">Past 7 days</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">DAILY AVERAGE</span>
-                  <span id="stat-daily-avg" class="cell-value text-emerald">11.1 kg</span>
+                  <span id="stat-daily-avg" class="cell-value text-emerald">-- kg</span>
                   <span class="cell-sub">Per day average</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">ADHERENCE</span>
-                  <span id="stat-adherence" class="cell-value text-emerald">98.7%</span>
+                  <span id="stat-adherence" class="cell-value text-emerald">--%</span>
                   <span class="cell-sub">On-time feeds</span>
                 </div>
 
                 <div class="metric-cell">
                   <span class="cell-label">SEASON TOTAL</span>
-                  <span id="stat-season-total" class="cell-value">485.0 kg</span>
+                  <span id="stat-season-total" class="cell-value">-- kg</span>
                   <span class="cell-sub">Cycle to date</span>
                 </div>
               </div>

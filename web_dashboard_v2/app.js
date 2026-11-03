@@ -110,6 +110,13 @@ let appState = {
 // Initialization
 // ============================================================================
 document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const cachedV2 = localStorage.getItem('aquacon_devices_v2');
+    if (cachedV2) {
+      const parsed = JSON.parse(cachedV2);
+      if (Array.isArray(parsed) && parsed.length > 0) appState.devices = parsed;
+    }
+  } catch(e) {}
   document.body.className = appState.currentTheme;
 
   const pondSelect = document.getElementById('pond-select');
@@ -683,6 +690,9 @@ async function fetchLiveTelemetry() {
             if (cloudDev.Status) match.status = cloudDev.Status;
           }
         });
+        try {
+          localStorage.setItem('aquacon_devices_v2', JSON.stringify(appState.devices));
+        } catch(e) {}
         renderActiveFeeder();
       }
     }

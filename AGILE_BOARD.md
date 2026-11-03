@@ -27,6 +27,7 @@
 | | | | **STORY-013** (AquaDelta Engine: 50–85KB Micro-Patch & In-PSRAM Reconstructor) `CLOSED` |
 | | | | **STORY-014** (Daylight Solar Class C & Zero-Uplink Sub-Second Downlink RX) `CLOSED` |
 | | | | **STORY-015** (Fluid Multi-Field Settings Editing & Runtime Deductive Feed Schedule Math) `CLOSED` |
+| | | | **STORY-016** (Zero Stale Data Flash on Page Refresh via Pre-Hydration & Storage Persistence) `CLOSED` |
 
 ---
 
@@ -284,3 +285,28 @@
        * Autonomous midnight rollover (clean reset to 0 events, 0 g, and fresh 50-event schedule).
        * Operational safety boundaries ("Time Too Short" error).
      - Compiled production binaries: `AquaFeeder.bin`, `AquaFeeder_v1.0.bin` (1,212,048 bytes), `AquaFeeder_merged_v1.0.bin`, and regenerated `AquaFeeder_v1.0.adelta` (87,268 bytes, 92.8% bandwidth savings, bit-for-bit verified).
+
+
+---
+
+### STORY-016: Zero Stale Data Flash on Page Refresh (Instant Pre-Hydration & Storage Persistence)
+- **Status:** `CLOSED`
+- **Assigned To:** Web Dashboard & Cloud Frontend Engineering
+- **As a:** Commercial Shrimp Farmer / Supervisor
+- **I want:** The status screen to never briefly flash stale placeholder data (such as dummy Feeder 01, 235 pulses, 23.50 kg) when I refresh or navigate to the page
+- **So that:** The dashboard displays my active feeder's true status seamlessly from frame 1 without confusing or jarring UI jumps.
+- **Root Cause Analysis:**
+  1. `web_dashboard/index.html` contained hardcoded static placeholder numbers (`aquaCON Feeder 01`, `COMPLETED`, `235 / 235`, `23.50 kg`) that rendered immediately upon HTML parsing before JavaScript executed.
+  2. `syncDevicesFromCloud()` fetched live telemetry from DynamoDB into memory every 5 seconds but never persisted the updated devices array to `localStorage`. As a result, page reloads fell back to un-updated default storage values before the asynchronous AWS API call returned.
+- **Detailed Implementation:**
+  1. **Clean Neutral HTML Placeholders (`web_dashboard/index.html`):**
+     - Replaced all fake numbers with neutral, non-misleading placeholders (`--`, `/ -- Events Today`, `-- kg`, `STANDBY`).
+  2. **Synchronous In-DOM Pre-Hydration (`web_dashboard/index.html`):**
+     - Implemented an inline script directly following the hero card that reads `localStorage.getItem('aquacon_devices')` synchronously during DOM tree construction.
+     - Pre-seeds the active device's real name, status badge, dispensed kg, daily target, and pulse count on the very first render frame prior to external script loads.
+  3. **Cloud Telemetry Storage Persistence (`web_dashboard/app.js` & `web_dashboard_v2/app.js`):**
+     - Updated `syncDevicesFromCloud()` and `fetchLiveTelemetry()` to atomically persist live device telemetry to `localStorage` on every poll cycle.
+     - Positioned active feeder Feeder 03 (`e072a1fffef64134`) in Pond P-02 as the primary default device.
+  4. **Live Verification & Proof:**
+     - Automated Selenium headless test on live AWS S3 production site (`verify_live_s3_refresh.py`) verified 100ms post-refresh state: Feeder 03 rendered immediately with 0.00 kg dispensed, 20.0 kg target, 0/94 pulses, and STANDBY badge.
+     - Confirmed zero occurrences of dummy numbers `235`, `23.50`, or `Feeder 01` throughout page load lifecycle.

@@ -22,6 +22,27 @@ function isDeviceConnected(dev) {
 // Default Feeders Registry (Live aquaCON hardware telemetry)
 const defaultDevices = [
   {
+    id: 'e072a1fffef64134',
+    name: 'aquaCON Feeder 03',
+    pondId: 'P-02',
+    status: 'STANDBY',
+    connected: true,
+    feedAvailable: true,
+    dispensedKg: 0.0,
+    targetKg: 20.0,
+    currentEvent: 0,
+    totalEvents: 100,
+    fpeGrams: 200,
+    dischargeRateGs: 50,
+    startHour: 6,
+    startMin: 0,
+    endHour: 18,
+    endMin: 0,
+    intervalMin: 7.2,
+    motorTimeSec: 4.0,
+    scheduleValid: true
+  },
+  {
     id: 'e072a1fffef6249c',
     name: 'aquaCON Feeder 01',
     pondId: 'P-01',
@@ -29,59 +50,38 @@ const defaultDevices = [
     connected: false,
     feedAvailable: false,
     dispensedKg: 0.0,
-    targetKg: 50.0,
+    targetKg: 15.0,
     currentEvent: 0,
-    totalEvents: 250,
-    fpeGrams: 200,
-    dischargeRateGs: 100,
+    totalEvents: 150,
+    fpeGrams: 100,
+    dischargeRateGs: 50,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
-    intervalMin: 2.9,
-    motorTimeSec: 1.0,
+    intervalMin: 4.8,
+    motorTimeSec: 2.0,
     scheduleValid: true
   },
   {
     id: 'e072a1fffef5ba08',
     name: 'aquaCON Feeder 02',
     pondId: 'P-01',
-    status: 'STANDBY',
-    connected: true,
+    status: 'NOT CONNECTED',
+    connected: false,
     feedAvailable: true,
     dispensedKg: 0.0,
     targetKg: 15.0,
     currentEvent: 0,
     totalEvents: 150,
     fpeGrams: 100,
-    dischargeRateGs: 100,
+    dischargeRateGs: 50,
     startHour: 6,
     startMin: 0,
     endHour: 18,
     endMin: 0,
     intervalMin: 4.8,
-    motorTimeSec: 1.0,
-    scheduleValid: true
-  },
-  {
-    id: 'e072a1fffef64134',
-    name: 'aquaCON Feeder 03',
-    pondId: 'P-02',
-    status: 'IDLE',
-    connected: true,
-    feedAvailable: true,
-    dispensedKg: 0.0,
-    targetKg: 15.0,
-    currentEvent: 0,
-    totalEvents: 150,
-    fpeGrams: 100,
-    dischargeRateGs: 100,
-    startHour: 6,
-    startMin: 0,
-    endHour: 18,
-    endMin: 0,
-    intervalMin: 4.7,
-    motorTimeSec: 1.0,
+    motorTimeSec: 2.0,
     scheduleValid: true
   }
 ];
@@ -129,8 +129,8 @@ const appState = {
   devices: [],
   
   // Selected Context
-  selectedPondId: 'P-01',
-  selectedDeviceId: 'e072a1fffef5ba08',
+  selectedPondId: 'P-02',
+  selectedDeviceId: 'e072a1fffef64134',
   
   // Historical Metrics Cache
   deviceMetrics: {},
@@ -2709,6 +2709,13 @@ async function syncDevicesFromCloud() {
           if (cloudDev.StatusFlags !== undefined) localDev.statusFlags = Number(cloudDev.StatusFlags);
         }
       });
+      // Persist latest telemetry into storage so page refreshes never flash stale data
+      try {
+        localStorage.setItem('aquacon_devices', JSON.stringify(appState.devices));
+        if (appState.selectedDeviceId) localStorage.setItem('aquacon_selected_device', appState.selectedDeviceId);
+        if (appState.selectedPondId) localStorage.setItem('aquacon_selected_pond', appState.selectedPondId);
+      } catch (e) {}
+
       loadSelectedDeviceToUI();
       updatePondContextBar();
       if (appState.activeTab === 'tab-history') {
