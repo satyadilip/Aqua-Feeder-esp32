@@ -122,6 +122,7 @@ const appState = {
   isAuthenticated: false,
   currentUser: null,
   activeTab: 'tab-status',
+  isEditingSettings: false,
   
   // Data Store
   ponds: [],
@@ -673,6 +674,8 @@ function switchActiveDevice(deviceId) {
   }
   updatePondContextBar();
   loadSelectedDeviceToUI();
+  appState.isEditingSettings = false;
+  populateParamEditorUI(dev, null, true);
   renderHistoryView();
   renderTrayChecksView();
   if (dev) showToast(`Selected: ${dev.name}`);
@@ -1058,10 +1061,11 @@ function loadSelectedDeviceToUI() {
   const pct = Math.min(100, Math.max(0, ((dev.dispensedKg || 0) / (dev.targetKg || 15.0)) * 100));
   if (fillBar) fillBar.style.width = `${pct.toFixed(1)}%`;
 
-  populateParamEditorUI(dev, heroTitle);
+  // Note: populateParamEditorUI is decoupled from background telemetry loop
+  // so that background 5s polls do not wipe out inputs while user is typing.
 }
 
-async function populateParamEditorUI(dev, heroTitle) {
+async function populateParamEditorUI(dev, heroTitle, force = false) {
   if (!dev) {
     dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   }
@@ -1074,6 +1078,18 @@ async function populateParamEditorUI(dev, heroTitle) {
 
   const paramDevName = document.getElementById('param-device-name');
   if (paramDevName) paramDevName.textContent = heroTitle;
+
+  // Guard: If user is actively typing or editing in the form, do not overwrite unless force is true
+  if (!force && appState.isEditingSettings) {
+    const activeEl = document.activeElement;
+    const settingsIds = [
+      'input-qty', 'slider-qty', 'input-fpe', 'slider-fpe',
+      'input-start-hour', 'input-start-min', 'input-end-hour', 'input-end-min'
+    ];
+    if (activeEl && settingsIds.includes(activeEl.id)) {
+      return; // Actively interacting with an input field
+    }
+  }
 
   const inputQty = document.getElementById('input-qty');
   const sliderQty = document.getElementById('slider-qty');
@@ -1108,6 +1124,7 @@ async function populateParamEditorUI(dev, heroTitle) {
     const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
+      if (!force && appState.isEditingSettings) return;
       if (data && data.settings) {
         const s = data.settings;
         const liveTarget = s.DailyTarget_kg !== undefined ? Number(s.DailyTarget_kg) : (s.FeedQuantity_kg !== undefined ? Number(s.FeedQuantity_kg) : curTarget);
@@ -1819,12 +1836,22 @@ function initScheduleEngine() {
   function sync(slider, input, callback) {
     if (slider && input) {
       slider.addEventListener('input', () => {
+        appState.isEditingSettings = true;
         input.value = slider.value;
         callback();
       });
-      input.addEventListener('change', () => {
+      input.addEventListener('input', () => {
+        appState.isEditingSettings = true;
         slider.value = input.value;
         callback();
+      });
+      input.addEventListener('change', () => {
+        appState.isEditingSettings = true;
+        slider.value = input.value;
+        callback();
+      });
+      input.addEventListener('focus', () => {
+        appState.isEditingSettings = true;
       });
     }
   }
@@ -1833,39 +1860,46 @@ function initScheduleEngine() {
   sync(sliderFpe, inputFpe, recalculateSchedule);
 
   ['input-start-hour', 'input-start-min', 'input-end-hour', 'input-end-min'].forEach(id => {
-    document.getElementById(id)?.addEventListener('change', recalculateSchedule);
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => {
+        appState.isEditingSettings = true;
+        recalculateSchedule();
+      });
+      el.addEventListener('change', () => {
+        appState.isEditingSettings = true;
+        recalculateSchedule();
+      });
+      el.addEventListener('focus', () => {
+        appState.isEditingSettings = true;
+      });
+    }
   });
 }
 
 function recalculateSchedule() {
-  const qty = parseFloat(document.getElementById('input-qty')?.value || '15.0');
-  const fpe = parseInt(document.getElementById('input-fpe')?.value || '100');
-  const sHour = parseInt(document.getElementById('input-start-hour')?.value || '6');
-  const sMin = parseInt(document.getElementById('input-start-min')?.value || '0');
-  const eHour = parseInt(document.getElementById('input-end-hour')?.value || '18');
-  const eMin = parseInt(document.getElementById('input-end-min')?.value || '0');
+  const inputQtyEl = document.getElementById('input-qty');
+  const inputFpeEl = document.getElementById('input-fpe');
+  const sHourEl = document.getElementById('input-start-hour');
+  const sMinEl = document.getElementById('input-start-min');
+  const eHourEl = document.getElementById('input-end-hour');
+  const eMinEl = document.getElementById('input-end-min');
+
+  const qty = parseFloat(inputQtyEl?.value || '15.0');
+  const fpe = parseInt(inputFpeEl?.value || '100');
+  const sHour = parseInt(sHourEl?.value || '6');
+  const sMin = parseInt(sMinEl?.value || '0');
+  const eHour = parseInt(eHourEl?.value || '18');
+  const eMin = parseInt(eMinEl?.value || '0');
 
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
-  if (dev) {
-    dev.targetKg = qty;
-    dev.fpeGrams = fpe;
-    dev.startHour = sHour;
-    dev.startMin = sMin;
-    dev.endHour = eHour;
-    dev.endMin = eMin;
-  }
+  const curEvent = Number(dev?.currentEvent || 0);
+  const dispensedKg = Number(dev?.dispensedKg || 0.0);
 
-  const validBadge = document.getElementById('calc-valid-badge');
-  const totalEventsEl = document.getElementById('calc-total-events');
-  const intervalEl = document.getElementById('calc-interval');
-  const motorTimeEl = document.getElementById('calc-motor-time');
-
-  // Total Events = (Qty * 1000) / FPE
-  const totalEvents = Math.floor((qty * 1000) / fpe);
   const rate = dev?.dischargeRateGs || 100;
   const motorTimeSec = Math.max(1.0, fpe / rate); // actual discharge rate calibration
   const singleEventSec = motorTimeSec + 6.0; // 3s pre-run warmup + motorTime + 3s post-run chute clear
-  const totalCyclesSec = totalEvents * singleEventSec;
+
   const startMins = sHour * 60 + sMin;
   const endMins = eHour * 60 + eMin;
   const windowSec = (endMins - startMins) * 60;
@@ -1873,21 +1907,73 @@ function recalculateSchedule() {
   let isValid = true;
   let errorMsg = '';
   let intervalMin = 0.0;
+  let totalEvents = 0;
+  let remainingEvents = 0;
+  let subText = 'Events today';
 
+  // Check 1: Operational daylight window limits (06:00 to 18:00)
   if (sHour < 6 || eHour > 18 || (eHour === 18 && eMin > 0)) {
     isValid = false;
     errorMsg = 'OUT OF 6AM-6PM WINDOW';
   } else if (endMins <= startMins) {
     isValid = false;
     errorMsg = 'END <= START TIME';
-  } else if (totalCyclesSec >= windowSec) {
+  } else if (qty <= 0 || fpe <= 0) {
     isValid = false;
-    errorMsg = 'TIME TOO SHORT';
+    errorMsg = 'INVALID PARAMETERS';
   } else {
-    intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+    // Runtime Change Deduction: If feeding ran today (curEvent > 0 && dispensedKg > 0)
+    if (curEvent > 0 && dispensedKg > 0) {
+      const remainingKg = Math.max(0.0, qty - dispensedKg);
+      remainingEvents = remainingKg > 0 ? Math.ceil((remainingKg * 1000.0) / fpe) : 0;
+      totalEvents = curEvent + remainingEvents;
+      subText = `${curEvent} ran + ${remainingEvents} rem`;
+
+      const now = new Date();
+      const currentTotalMin = now.getHours() * 60 + now.getMinutes();
+      const currentSecInMin = now.getSeconds();
+      const nowTotalSec = currentTotalMin * 60 + currentSecInMin;
+      const endTotalSec = endMins * 60;
+
+      const remainingWindowSec = Math.max(0, endTotalSec - nowTotalSec);
+      const remainingCyclesSec = remainingEvents * singleEventSec;
+
+      if (remainingEvents > 0) {
+        if (remainingCyclesSec >= remainingWindowSec) {
+          isValid = false;
+          errorMsg = 'TIME TOO SHORT';
+          intervalMin = 0.0;
+        } else {
+          intervalMin = parseFloat(((remainingWindowSec - remainingCyclesSec) / (remainingEvents * 60)).toFixed(1));
+        }
+      } else {
+        intervalMin = 0.0;
+        subText = `${curEvent} completed (Target reached)`;
+      }
+    } else {
+      // Fresh start / Start of day
+      totalEvents = Math.floor((qty * 1000.0) / fpe);
+      remainingEvents = totalEvents;
+      const totalCyclesSec = totalEvents * singleEventSec;
+      subText = 'Events today';
+
+      if (totalCyclesSec >= windowSec) {
+        isValid = false;
+        errorMsg = 'TIME TOO SHORT';
+      } else {
+        intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+      }
+    }
   }
 
+  const validBadge = document.getElementById('calc-valid-badge');
+  const totalEventsEl = document.getElementById('calc-total-events');
+  const intervalEl = document.getElementById('calc-interval');
+  const motorTimeEl = document.getElementById('calc-motor-time');
+  const totalSubEl = totalEventsEl?.parentElement?.querySelector('.calc-sub');
+
   if (totalEventsEl) totalEventsEl.textContent = `${totalEvents}`;
+  if (totalSubEl) totalSubEl.textContent = subText;
   if (intervalEl) intervalEl.textContent = `${intervalMin} min`;
   if (motorTimeEl) motorTimeEl.textContent = `${motorTimeSec.toFixed(1)} s`;
 
@@ -1897,7 +1983,14 @@ function recalculateSchedule() {
   }
 
   if (dev) {
+    dev.targetKg = qty;
+    dev.fpeGrams = fpe;
+    dev.startHour = sHour;
+    dev.startMin = sMin;
+    dev.endHour = eHour;
+    dev.endMin = eMin;
     dev.totalEvents = totalEvents;
+    dev.totalEventsRemaining = remainingEvents;
     dev.intervalMin = intervalMin;
     dev.motorTimeSec = motorTimeSec;
     dev.scheduleValid = isValid;
@@ -1908,6 +2001,23 @@ function recalculateSchedule() {
 async function saveSettingsToFeeder() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
+
+  // Read LIVE values directly from input fields in DOM to capture multi-field edits
+  const inputQty = parseFloat(document.getElementById('input-qty')?.value || '15.0');
+  const inputFpe = parseInt(document.getElementById('input-fpe')?.value || '100');
+  const sHour = parseInt(document.getElementById('input-start-hour')?.value || '6');
+  const sMin = parseInt(document.getElementById('input-start-min')?.value || '0');
+  const eHour = parseInt(document.getElementById('input-end-hour')?.value || '18');
+  const eMin = parseInt(document.getElementById('input-end-min')?.value || '0');
+
+  dev.targetKg = inputQty;
+  dev.fpeGrams = inputFpe;
+  dev.startHour = sHour;
+  dev.startMin = sMin;
+  dev.endHour = eHour;
+  dev.endMin = eMin;
+
+  recalculateSchedule();
 
   if (dev.scheduleValid === false) {
     showToast(`Cannot save: ${dev.scheduleError || 'Schedule violates 6 AM - 6 PM operational limit'}`);
@@ -1920,7 +2030,7 @@ async function saveSettingsToFeeder() {
   saveDataToStorage();
 
   try {
-    await fetch(`${API_BASE_URL}/api/settings/${dev.id}`, {
+    const res = await fetch(`${API_BASE_URL}/api/settings/${dev.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1930,9 +2040,18 @@ async function saveSettingsToFeeder() {
         startHour: dev.startHour,
         startMinute: dev.startMin,
         endHour: dev.endHour,
-        endMinute: dev.endMin
+        endMinute: dev.endMin,
+        alreadyDispensed_kg: dev.dispensedKg || 0.0,
+        alreadyRanEvents: dev.currentEvent || 0
       })
     });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.calculated) {
+        dev.totalEvents = data.calculated.totalEvents || dev.totalEvents;
+        dev.intervalMin = data.calculated.intervalMin || dev.intervalMin;
+      }
+    }
     showToast(`Settings saved for ${dev.name}!`);
   } catch (e) {
     showToast(`Settings saved locally for ${dev.name}`);
@@ -1940,6 +2059,7 @@ async function saveSettingsToFeeder() {
     if (btnText) btnText.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Save Settings to Feeder';
   }
 
+  appState.isEditingSettings = false;
   loadSelectedDeviceToUI();
 }
 

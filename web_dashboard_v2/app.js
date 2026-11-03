@@ -508,8 +508,19 @@ function recalculateSchedule() {
   const dev = getActiveDevice();
   if (!dev) return;
 
-  const targetGrams = dev.targetKg * 1000;
-  const totalEvents = Math.max(1, Math.round(targetGrams / dev.fpeGrams));
+  const curEvent = Number(dev.currentEvent || 0);
+  const dispensedKg = Number(dev.dispensedKg || 0.0);
+  let totalEvents = 0;
+  let remainingEvents = 0;
+
+  if (curEvent > 0 && dispensedKg > 0) {
+    const remKg = Math.max(0.0, dev.targetKg - dispensedKg);
+    remainingEvents = remKg > 0 ? Math.ceil((remKg * 1000.0) / dev.fpeGrams) : 0;
+    totalEvents = curEvent + remainingEvents;
+  } else {
+    totalEvents = Math.max(1, Math.round((dev.targetKg * 1000.0) / dev.fpeGrams));
+    remainingEvents = totalEvents;
+  }
   dev.totalEvents = totalEvents;
 
   const startEl = document.getElementById('proto-start-time');
@@ -537,19 +548,34 @@ function recalculateSchedule() {
 
   const rate = dev.dischargeRateGs || 100;
   const singleEventSec = (dev.fpeGrams / rate) + 6.0;
-  const totalCyclesSec = totalEvents * singleEventSec;
-  const windowSec = windowMinutes * 60;
 
   let intervalMin = 0.0;
-  if (windowSec > totalCyclesSec && totalEvents > 0) {
-    intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+  if (curEvent > 0 && dispensedKg > 0) {
+    const now = new Date();
+    const curMins = now.getHours() * 60 + now.getMinutes();
+    const endMins = (dev.endHour || 18) * 60 + (dev.endMin || 0);
+    const remWindowSec = Math.max(0, (endMins - curMins) * 60);
+    const remCyclesSec = remainingEvents * singleEventSec;
+    if (remWindowSec > remCyclesSec && remainingEvents > 0) {
+      intervalMin = parseFloat(((remWindowSec - remCyclesSec) / (remainingEvents * 60)).toFixed(1));
+    } else {
+      intervalMin = 0.0;
+    }
   } else {
-    intervalMin = parseFloat((windowMinutes / totalEvents).toFixed(1));
+    const windowSec = windowMinutes * 60;
+    const totalCyclesSec = totalEvents * singleEventSec;
+    if (windowSec > totalCyclesSec && totalEvents > 0) {
+      intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+    } else {
+      intervalMin = parseFloat((windowMinutes / totalEvents).toFixed(1));
+    }
   }
   dev.intervalMin = intervalMin;
 
   const pulsesEl = document.getElementById('proto-calc-pulses');
-  if (pulsesEl) pulsesEl.textContent = `${totalEvents} Pulses`;
+  if (pulsesEl) {
+    pulsesEl.textContent = curEvent > 0 ? `${totalEvents} Pulses (${curEvent} done + ${remainingEvents} rem)` : `${totalEvents} Pulses`;
+  }
 
   const intervalEl = document.getElementById('proto-calc-interval');
   if (intervalEl) intervalEl.textContent = `Every ${intervalMin} minutes`;

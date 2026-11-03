@@ -46,7 +46,20 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     }
 
     float qty_g = _cfg->feedQuantity * 1000.0f;
-    _status->totalEvents = (uint16_t)ceil(qty_g / (float)_cfg->feedPerEvent);
+    uint32_t currentDay = (nowEpoch > 0) ? (nowEpoch / 86400) : 0;
+    bool isSameDay = (_lastFedDay == 0 || _lastFedDay == currentDay);
+
+    if (isSameDay && _status->currentEvent > 0 && _status->dispensedQuantity_g > 0) {
+        float remaining_g = qty_g - _status->dispensedQuantity_g;
+        if (remaining_g > 0) {
+            uint16_t remainingEvents = (uint16_t)ceil(remaining_g / (float)_cfg->feedPerEvent);
+            _status->totalEvents = _status->currentEvent + remainingEvents;
+        } else {
+            _status->totalEvents = _status->currentEvent;
+        }
+    } else {
+        _status->totalEvents = (uint16_t)ceil(qty_g / (float)_cfg->feedPerEvent);
+    }
     
     if (_status->totalEvents <= 0) {
         strncpy(_status->schedError, "Zero Events", sizeof(_status->schedError)-1);
@@ -330,7 +343,8 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
 }
 
 bool FeedEngine::recalcDynamic(uint32_t nowEpoch) {
-    if (!_status || !_cfg || !_status->feedActive) return false;
+    if (!_status || !_cfg) return false;
+    if (!_status->feedActive && _status->dispensedQuantity_g == 0.0f) return false;
     
     // Check 1: Operational Window hard limit [06:00, 18:00]
     if (_cfg->startHour < OP_START_HOUR || _cfg->endHour > OP_END_HOUR || (_cfg->endHour == OP_END_HOUR && _cfg->endMinute > 0)) {

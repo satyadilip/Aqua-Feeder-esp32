@@ -261,7 +261,7 @@ void cbOnSaveConfig(const DeviceConfig& newCfg) {
 
     uint32_t epoch = rtcMgr.getEpoch();
 
-    bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+    bool valid = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
     if (!valid) {
 
@@ -327,7 +327,7 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
 
         uint32_t epoch = rtcMgr.getEpoch();
 
-        bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+        bool valid = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
         if (!valid) {
 
@@ -1090,7 +1090,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 
@@ -1136,7 +1136,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 
@@ -1220,7 +1220,7 @@ void handleButtonNavigation() {
 
                     uint32_t epoch = rtcMgr.getEpoch();
 
-                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                     if (!ok) {
 
@@ -1300,7 +1300,7 @@ void handleButtonNavigation() {
 
                     uint32_t epoch = rtcMgr.getEpoch();
 
-                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                     if (!ok) {
 
@@ -1350,7 +1350,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 

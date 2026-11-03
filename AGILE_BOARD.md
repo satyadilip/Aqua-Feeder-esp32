@@ -26,6 +26,7 @@
 | | | | **STORY-012** (Delta-Patch FUOTA Architecture Specification) `CLOSED` |
 | | | | **STORY-013** (AquaDelta Engine: 50–85KB Micro-Patch & In-PSRAM Reconstructor) `CLOSED` |
 | | | | **STORY-014** (Daylight Solar Class C & Zero-Uplink Sub-Second Downlink RX) `CLOSED` |
+| | | | **STORY-015** (Fluid Multi-Field Settings Editing & Runtime Deductive Feed Schedule Math) `CLOSED` |
 
 ---
 
@@ -246,3 +247,30 @@
      - Downlinks execute immediately without requiring any precursory uplink from the feeder.
   3. **Standby Battery Cadence Enforced (`cloud_manager.cpp`):**
      - Outside feeding events, clamped minimum heartbeat interval to $\ge 300\text{s}$ (5 minutes) to eliminate continuous 5-second uplink battery drain.
+
+---
+
+### STORY-015: Fluid Multi-Field Settings Editing & Runtime Deductive Feed Schedule Math
+- **Status:** `CLOSED`
+- **Assigned To:** Full Stack Systems Team (Cloud, Web Dashboard, Firmware)
+- **As a:** Farm Supervisor
+- **I want:** The web dashboard settings page to allow fluid, uninterrupted editing of multiple parameters without inputs jumping back before saving, and for runtime changes to deduct already dispensed feed from the new target
+- **So that:** If 8 pulses ran (dispensing 2 kg) and I change daily target from 20 kg to 25 kg, the schedule calculates remaining events for the remaining 23 kg and sets total events to $8 + \text{remaining}$, without clobbering my edits.
+- **Detailed Requirements & Implementation:**
+  1. **Decoupled Background Polling from Settings Inputs (`web_dashboard/app.js`):**
+     - Removed `populateParamEditorUI()` from `loadSelectedDeviceToUI()` so background 5-second telemetry polling never resets input fields.
+     - Added `isEditingSettings` state flag and focus guards to prevent asynchronous remote settings fetches from clobbering active user typing.
+     - Added `'input'` and `'change'` real-time listeners across all numerical and time inputs (`input-qty`, `input-fpe`, `input-start-hour`, etc.) ensuring sliders and calculations sync fluidly on every keystroke.
+     - In `saveSettingsToFeeder()`, read values directly from the DOM elements to guarantee all simultaneous multi-field edits are captured atomically.
+  2. **Runtime Deductive Math in Cloud API (`api_lambda.py`):**
+     - When `POST /api/settings/{deviceId}` is called mid-day, checks `CurrentEvent` ($E_{done}$) and `DispensedFeed_kg` ($Q_{disp}$).
+     - Calculates remaining feed: $Q_{rem} = \max(0, Q_{target} - Q_{disp})$.
+     - Calculates remaining events: $E_{rem} = \lceil (Q_{rem} \times 1000) / \text{FPE} \rceil$.
+     - Computes updated total events: $E_{total} = E_{done} + E_{rem}$.
+     - Recalculates `IntervalMin` for $E_{rem}$ evenly across remaining daylight seconds until `EndHour:EndMinute`.
+  3. **Runtime Deductive Math in Firmware (`AquaFeeder/feed_engine.cpp` & `AquaFeeder.ino`):**
+     - `FeedEngine::calcSchedule()` checks if `_status->currentEvent > 0 && _status->dispensedQuantity_g > 0` on the active operational day and deducts `dispensedQuantity_g` from the target quantity.
+     - `FeedEngine::recalcDynamic()` allows dynamic schedule adjustment when `sysStatus.dispensedQuantity_g > 0` even while paused or between state transitions.
+  4. **Live Verification:**
+     - Headless Selenium test verified zero input jump-back after an 8-second wait (exceeding the 5-second polling cycle).
+     - Verified API returns `totalEvents: 123` ($8 \text{ done} + 115 \text{ rem}$) for $25\text{ kg target} - 2\text{ kg dispensed}$ at $200\text{g FPE}$.

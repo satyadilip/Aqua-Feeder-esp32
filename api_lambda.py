@@ -1,3 +1,4 @@
+import math
 import json
 import base64
 import struct
@@ -701,20 +702,52 @@ def lambda_handler(event, context):
                 ehour = Decimal(str(body.get('endHour', 18)))
                 emin = Decimal(str(body.get('endMinute', 0)))
                 
-                # Calculate feed schedule math
-                total_events = int((float(feed_qty) * 1000.0) / float(feed_burst))
-                motor_time_s = round(float(feed_burst) / float(rate), 2)
-                single_event_s = motor_time_s + 6.0  # 3s PRE warmup + motor + 3s POST clearance
-                total_cycle_s = total_events * single_event_s
-                
+                # Fetch existing device state to account for already dispensed feed today
+                existing_dev = {}
+                try:
+                    dev_res = devices_table.get_item(Key={'DeviceId': device_id})
+                    existing_dev = dev_res.get('Item', {})
+                except Exception as e:
+                    print(f"Error fetching existing device: {e}")
+
+                now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                today_date_str = now_ist.strftime("%Y-%m-%d")
+
+                cur_ev = int(existing_dev.get('CurrentEvent', 0))
+                dispensed_kg = float(existing_dev.get('DispensedFeed_kg', 0.0))
+                today_ev = int(existing_dev.get('TodayEventsCompleted', 0))
+                today_kg = float(existing_dev.get('TodayFeedDispensed_kg', 0.0))
+                today_date = str(existing_dev.get('TodayDate', '')).strip()
+
+                already_ran_events = 0
+                already_dispensed_kg = 0.0
+                if cur_ev > 0 and dispensed_kg > 0:
+                    already_ran_events = cur_ev
+                    already_dispensed_kg = dispensed_kg
+                elif today_date == today_date_str and today_ev > 0:
+                    already_ran_events = today_ev
+                    already_dispensed_kg = today_kg if today_kg > 0 else dispensed_kg
+
+                if 'alreadyDispensed_kg' in body and float(body['alreadyDispensed_kg']) > 0:
+                    already_dispensed_kg = max(already_dispensed_kg, float(body['alreadyDispensed_kg']))
+                if 'alreadyRanEvents' in body and int(body['alreadyRanEvents']) > 0:
+                    already_ran_events = max(already_ran_events, int(body['alreadyRanEvents']))
+
+                feed_qty_float = float(feed_qty)
+                feed_burst_float = float(feed_burst)
+                rate_float = float(rate) if float(rate) > 0.1 else 100.0
+
+                motor_time_s = round(feed_burst_float / rate_float, 2)
+                single_event_s = 3.0 + motor_time_s + 3.0  # 3s PRE warmup + motor + 3s POST clearance
+
                 start_mins = int(shour) * 60 + int(smin)
                 end_mins = int(ehour) * 60 + int(emin)
                 feed_window_s = (end_mins - start_mins) * 60
-                
+
                 interval_min = 0.0
                 valid = True
                 err = ""
-                
+
                 # Check 1: 06:00 to 18:00 operational window limit
                 if int(shour) < 6 or int(ehour) > 18 or (int(ehour) == 18 and int(emin) > 0):
                     valid = False
@@ -722,11 +755,37 @@ def lambda_handler(event, context):
                 elif end_mins <= start_mins:
                     valid = False
                     err = "End time must be after start time"
-                elif total_cycle_s >= feed_window_s:
-                    valid = False
-                    err = "Feed window too short for requested events and chute clearing duration"
+
+                # Runtime Deductive Schedule Calculation:
+                # If feeding ran today, deduct already dispensed feed and calculate remaining pulses
+                if already_ran_events > 0 and already_dispensed_kg > 0:
+                    remaining_kg = max(0.0, feed_qty_float - already_dispensed_kg)
+                    remaining_events = int(math.ceil((remaining_kg * 1000.0) / feed_burst_float)) if remaining_kg > 0 else 0
+                    total_events = already_ran_events + remaining_events
+
+                    sec_since_midnight = now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second
+                    end_sec_today = int(ehour) * 3600 + int(emin) * 60
+                    rem_window_s = max(0, end_sec_today - sec_since_midnight)
+                    rem_cycles_s = remaining_events * single_event_s
+
+                    if remaining_events > 0:
+                        if rem_cycles_s >= rem_window_s:
+                            valid = False
+                            err = f"Remaining time ({rem_window_s}s) too short for {remaining_events} remaining events ({rem_cycles_s}s)"
+                            interval_min = 0.0
+                        else:
+                            interval_min = round((rem_window_s - rem_cycles_s) / (remaining_events * 60.0), 1)
+                    else:
+                        interval_min = 0.0
                 else:
-                    interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1)
+                    total_events = int(math.ceil((feed_qty_float * 1000.0) / feed_burst_float))
+                    remaining_events = total_events
+                    total_cycle_s = total_events * single_event_s
+                    if total_cycle_s >= feed_window_s:
+                        valid = False
+                        err = "Feed window too short for requested events and chute clearing duration"
+                    else:
+                        interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1)
                 
                 now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
                 
@@ -753,7 +812,7 @@ def lambda_handler(event, context):
                 # Also update device in devices table
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv',
+                    UpdateExpression='SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, TotalEventsRemaining = :ter, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv',
                     ExpressionAttributeValues={
                         ':dq': feed_qty,
                         ':fq': feed_qty,
@@ -764,6 +823,7 @@ def lambda_handler(event, context):
                         ':eh': ehour,
                         ':em': emin,
                         ':te': Decimal(str(total_events)),
+                        ':ter': Decimal(str(remaining_events)),
                         ':mt': Decimal(str(motor_time_s)),
                         ':im': Decimal(str(interval_min)),
                         ':sv': valid
