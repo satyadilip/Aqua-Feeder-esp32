@@ -49,16 +49,19 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     uint32_t currentDay = (nowEpoch > 0) ? (nowEpoch / 86400) : 0;
     bool isSameDay = (_lastFedDay == 0 || _lastFedDay == currentDay);
 
+    uint16_t remainingEvents = 0;
     if (isSameDay && _status->currentEvent > 0 && _status->dispensedQuantity_g > 0) {
         float remaining_g = qty_g - _status->dispensedQuantity_g;
         if (remaining_g > 0) {
-            uint16_t remainingEvents = (uint16_t)ceil(remaining_g / (float)_cfg->feedPerEvent);
+            remainingEvents = (uint16_t)ceil(remaining_g / (float)_cfg->feedPerEvent);
             _status->totalEvents = _status->currentEvent + remainingEvents;
         } else {
+            remainingEvents = 0;
             _status->totalEvents = _status->currentEvent;
         }
     } else {
         _status->totalEvents = (uint16_t)ceil(qty_g / (float)_cfg->feedPerEvent);
+        remainingEvents = _status->totalEvents;
     }
     
     if (_status->totalEvents <= 0) {
@@ -74,11 +77,11 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
     
     // Each event includes Pre-Warmup (3s) + Dispense (motorTime_ms) + Post-Clearance (3s)
     unsigned long singleEvent_ms = MOTOR_PRE_RUN_MS + motorTime_ms + MOTOR_POST_RUN_MS;
-    unsigned long totalEventsDuration_ms = _status->totalEvents * singleEvent_ms;
+    unsigned long eventsDuration_ms = remainingEvents * singleEvent_ms;
     unsigned long fullWindow_ms = (endMins - startMins) * 60UL * 1000UL;
 
     // Check: Can the requested quantity physically fit within the operational daylight window?
-    if (totalEventsDuration_ms >= fullWindow_ms) {
+    if (eventsDuration_ms >= fullWindow_ms) {
         strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
         Serial.println("[SCHED] Error: Configured feed parameters cannot fit before configured end time!");
         return false;
@@ -119,14 +122,14 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         }
 
         // Check: For mid-day start, can it finish in the remaining time today?
-        if (totalEventsDuration_ms >= availableTime_ms) {
+        if (eventsDuration_ms >= availableTime_ms) {
             strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
             Serial.println("[SCHED] Error: Remaining operational window is shorter than required total cycle time!");
             return false;
         }
     }
     
-    _status->intervalMs = (availableTime_ms - totalEventsDuration_ms) / _status->totalEvents;
+    _status->intervalMs = (remainingEvents > 0) ? ((availableTime_ms - eventsDuration_ms) / remainingEvents) : 0;
     Serial.printf("[SCHED] Schedule OK: %d events, motorTime: %lu ms, gap interval: %lu s (%lu ms)\n",
                   _status->totalEvents, _status->motorTimeMs, (_status->intervalMs / 1000UL), _status->intervalMs);
     

@@ -269,8 +269,18 @@
      - Computes updated total events: $E_{total} = E_{done} + E_{rem}$.
      - Recalculates `IntervalMin` for $E_{rem}$ evenly across remaining daylight seconds until `EndHour:EndMinute`.
   3. **Runtime Deductive Math in Firmware (`AquaFeeder/feed_engine.cpp` & `AquaFeeder.ino`):**
-     - `FeedEngine::calcSchedule()` checks if `_status->currentEvent > 0 && _status->dispensedQuantity_g > 0` on the active operational day and deducts `dispensedQuantity_g` from the target quantity.
-     - `FeedEngine::recalcDynamic()` allows dynamic schedule adjustment when `sysStatus.dispensedQuantity_g > 0` even while paused or between state transitions.
-  4. **Live Verification:**
+     - `FeedEngine::calcSchedule()` checks if `_status->currentEvent > 0 && _status->dispensedQuantity_g > 0` on the active operational day and deducts `dispensedQuantity_g` from the target quantity, computing $E_{rem} = \lceil Q_{rem} / \text{FPE} \rceil$ and $E_{total} = E_{done} + E_{rem}$.
+     - Corrected `eventsDuration_ms` in `calcSchedule()` to use $E_{rem} \times \text{singleEvent\_ms}$ against remaining daylight window, eliminating the prior distortion where $E_{total}$ was compared against remaining time.
+     - `FeedEngine::recalcDynamic()` enables exact dynamic schedule adjustment when `sysStatus.dispensedQuantity_g > 0` even while paused or between feeding cycles.
+  4. **Live Verification & Simulation:**
      - Headless Selenium test verified zero input jump-back after an 8-second wait (exceeding the 5-second polling cycle).
-     - Verified API returns `totalEvents: 123` ($8 \text{ done} + 115 \text{ rem}$) for $25\text{ kg target} - 2\text{ kg dispensed}$ at $200\text{g FPE}$.
+     - Verified Cloud API returns `totalEvents: 123` ($8 \text{ done} + 115 \text{ rem}$) for $25\text{ kg target} - 2\text{ kg dispensed}$ at $200\text{g FPE}$.
+     - Native C++ simulation harness (`scratch/test_firmware_math.cpp`) validated all 7 firmware operational scenarios:
+       * Initial schedule (80 events, 20 kg @ 250g FPE).
+       * User scenario mid-day update (8 events completed, 2 kg dispensed, updated to 25 kg @ 200g FPE -> both `recalcDynamic` and `calcSchedule` produced exactly 123 total events and 240,434 ms gap interval).
+       * Runtime reduction below dispensed quantity (clean `FEED_FINISHED` termination without underflow).
+       * Runtime reduction above dispensed quantity ($8 + 5 = 13$ events).
+       * FPE change only ($8 + 46 = 54$ events).
+       * Autonomous midnight rollover (clean reset to 0 events, 0 g, and fresh 50-event schedule).
+       * Operational safety boundaries ("Time Too Short" error).
+     - Compiled production binaries: `AquaFeeder.bin`, `AquaFeeder_v1.0.bin` (1,212,048 bytes), `AquaFeeder_merged_v1.0.bin`, and regenerated `AquaFeeder_v1.0.adelta` (87,268 bytes, 92.8% bandwidth savings, bit-for-bit verified).
