@@ -1434,6 +1434,18 @@ async function renderHistoryView() {
             });
           }
         }
+        // Recover physical pulse deltas from cumulative grams to prevent any running-average distortion
+        const sortedAsc = cleanEvents.slice().sort((a, b) => a.eventNumber - b.eventNumber);
+        for (let i = 1; i < sortedAsc.length; i++) {
+          const prev = sortedAsc[i - 1];
+          const curr = sortedAsc[i];
+          if (curr.cumulativeGrams > prev.cumulativeGrams) {
+            const delta = curr.cumulativeGrams - prev.cumulativeGrams;
+            if (delta >= 10 && delta <= 2000) {
+              curr.grams = delta;
+            }
+          }
+        }
         dev.eventsLog = cleanEvents;
         const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
         const todayEvents = cleanEvents.filter(e => !e.date || e.date === todayIso);

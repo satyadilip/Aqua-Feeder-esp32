@@ -774,8 +774,30 @@ def lambda_handler(event, context):
                         Limit=20
                     )
                     items = response.get('Items', [])
+                # Recover true physical event grams from cumulative hardware counter FeedDispensed_g
+                distinct_by_ev = {}
                 for it in items:
-                    if 'EventGrams' not in it or it['EventGrams'] is None or int(it.get('EventGrams', 0)) == 0:
+                    ev = int(it.get('CurrentEvent', 0))
+                    if ev > 0:
+                        fg = int(it.get('FeedDispensed_g', 0))
+                        if ev not in distinct_by_ev or fg > int(distinct_by_ev[ev].get('FeedDispensed_g', 0)):
+                            distinct_by_ev[ev] = it
+
+                sorted_ev_nums = sorted(distinct_by_ev.keys())
+                prev_fg = None
+                calculated_pulse_grams = {}
+                for ev in sorted_ev_nums:
+                    it_ev = distinct_by_ev[ev]
+                    fg = int(it_ev.get('FeedDispensed_g', 0))
+                    if prev_fg is not None and fg > prev_fg and 10 <= (fg - prev_fg) <= 2000:
+                        calculated_pulse_grams[ev] = fg - prev_fg
+                    prev_fg = fg
+
+                for it in items:
+                    ev_num = int(it.get('CurrentEvent', 0))
+                    if ev_num in calculated_pulse_grams:
+                        it['EventGrams'] = calculated_pulse_grams[ev_num]
+                    elif 'EventGrams' not in it or it['EventGrams'] is None or int(it.get('EventGrams', 0)) == 0:
                         it['EventGrams'] = it.get('FeedPerEvent_g', 100)
                     raw_ts = int(it.get('Timestamp', 0))
                     if 1700000000 <= raw_ts <= 2000000000:

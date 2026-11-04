@@ -181,12 +181,6 @@ def lambda_handler(event, context):
             
             cur_ev_int = int(cur_ev)
             tot_ev_int = int(tot_ev)
-            if cur_ev_int > 0 and int(feed_disp) > 0:
-                fpe_g = int(round(int(feed_disp) / cur_ev_int))
-            else:
-                fpe_g = 100
-            total_dispensed_g = int(feed_disp) if int(feed_disp) > 0 else (cur_ev_int * fpe_g)
-            dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
             
             # 1. Fetch existing device record and user-configured settings FIRST
             existing_dev = {}
@@ -225,15 +219,21 @@ def lambda_handler(event, context):
                 pass
             target_kg = Decimal(str(saved_qty))
 
-            # 2. Calculate exact event grams for this specific pulse (frozen immutably)
+            # Authoritative FeedPerEvent_g: strictly the active user configuration (NEVER a running average!)
+            fpe_g = int(saved_fpe) if int(saved_fpe) > 0 else 100
+            total_dispensed_g = int(feed_disp) if int(feed_disp) > 0 else (cur_ev_int * fpe_g)
+            dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
+
+            # 2. Calculate exact physical event grams for this specific pulse
             prev_disp = int(existing_dev.get('LastFeed_g', 0))
+            current_disp = int(feed_disp)
             if cur_ev_int > 0:
-                if cur_ev_int == prev_ev + 1 and int(feed_disp) > prev_disp:
-                    event_grams = int(feed_disp) - prev_disp
-                elif int(feed_disp) > 0:
-                    event_grams = int(round(int(feed_disp) / cur_ev_int))
+                if current_disp > prev_disp and 10 <= (current_disp - prev_disp) <= 2000:
+                    event_grams = current_disp - prev_disp
+                elif current_disp == prev_disp and cur_ev_int == prev_ev and int(existing_dev.get('LastEventGrams', 0)) > 0:
+                    event_grams = int(existing_dev.get('LastEventGrams', fpe_g))
                 else:
-                    event_grams = int(saved_fpe)
+                    event_grams = fpe_g
             else:
                 event_grams = 0
 
@@ -538,6 +538,7 @@ def lambda_handler(event, context):
                 'EndMinute': Decimal(str(emin_val)),
                 'FeedAvailable': feed_available,
                 'Status': status_str,
+                'LastEventGrams': Decimal(str(event_grams)),
                 'FeedActive': False if status_str in ['STANDBY', 'COMPLETED', 'PAUSED'] else existing_dev.get('FeedActive', True),
                 'TodayDate': today_date,
                 'TodayEventsCompleted': today_completed_ev,

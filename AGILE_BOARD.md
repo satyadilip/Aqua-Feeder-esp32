@@ -33,6 +33,8 @@
 | | | | **STORY-019** (Deterministic Stop Feed & Daylight Window Auto-Arm for Tomorrow) `CLOSED` |
 | | | | **STORY-020** (Cloud UI Remaining Events & Dynamic Event Gap Parity) `CLOSED` |
 | | | | **STORY-021** (Immutable Historical Feed Summation & Settings Decoupling) `CLOSED` |
+| | | | **STORY-022** (Senior Test Engineer Cloud Audit & Defect Resolution) `CLOSED` |
+| | | | **STORY-023** (Eradicate Running-Average Distortion on FeedPerEvent Changes in Event History) `CLOSED` |
 
 ---
 
@@ -482,3 +484,40 @@
     - `POST /api/command/STOP`: Status correctly preserved in `STANDBY`/`COMPLETED` without being overridden by `cur_ev > 0`.
     - Live Web Dashboard on S3: `9.02 kg / 15.0 kg`, Gauge Hero `3 / 27 Events (Completed)`, Gauge Pct `58.5%` (was 100%), Action Buttons correctly disabled (`text='START FEEDING'`).
     - Tab navigation (`tab-settings`, `tab-history`, `tab-traycheck`, `tab-hardware`): 0 SEVERE console errors.
+
+---
+
+### STORY-023: Eradicate Running-Average Distortion on FeedPerEvent Changes in Event History
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Aquaculture Farm Operator & Lead Systems Architect
+- **I want:** Changing `FeedPerEvent_g` in settings (e.g. from 100g to 200g) to immediately reflect the exact discrete physical pulse grams in subsequent events on the Event History tab without gradual creeping (101g, 102g, 104g)
+- **So that:** Event logs reliably display genuine physical pulse deliveries rather than a distorted, lagging running average across all prior daily events.
+- **Root Cause Identified (100% Confirmed):**
+  1. **`lambda_function.py` Line 185:**
+     ```python
+     if cur_ev_int > 0 and int(feed_disp) > 0:
+         fpe_g = int(round(int(feed_disp) / cur_ev_int))
+     ```
+     `feed_disp` is the cumulative hardware counter for the entire day. Dividing cumulative feed by `cur_ev_int` calculated the **running average** across all prior events rather than the active configured pulse grams. For instance, when stepping from 100g to 200g after 50 events:
+     $$\text{Pulse 51} = \frac{5000 + 200}{51} = 101.96 \approx 102\text{ g}$$
+     $$\text{Pulse 52} = \frac{5200 + 200}{52} = 103.8 \approx 104\text{ g}$$
+  2. **`lambda_function.py` Lines 230–238:**
+     Whenever duplicate packets arrived or `FEED_START` preceded `FEED_FINISHED` (making `cur_ev_int == prev_ev + 1` False), `event_grams` defaulted back to `int(round(int(feed_disp) / cur_ev_int))`, baking the creeping running average directly into `EventGrams` and `FeedPerEvent_g` in `AquaFeeder_Telemetry`.
+- **Architectural Fixes Implemented:**
+  1. **Authoritative Configuration Loading in `lambda_function.py`:**
+     - Reordered configuration load so `saved_fpe` is fetched from `AquaFeeder_Settings` *before* pulse calculations.
+     - `fpe_g` is strictly bound to `saved_fpe` (`fpe_g = int(saved_fpe) if int(saved_fpe) > 0 else 100`), completely eliminating `round(feed_disp / cur_ev_int)`.
+     - `event_grams` computes the true physical delta (`current_disp - prev_disp`) when `10 <= delta <= 2000`; handles duplicates via `LastEventGrams`; defaults to `fpe_g`.
+     - Added `'LastEventGrams': Decimal(str(event_grams))` to DynamoDB `devices_table` for idempotent ingestion.
+  2. **Physical Delta Reconstruction in `api_lambda.py`:**
+     - In `GET /api/telemetry/{deviceId}`, reconstructs true physical pulse deltas from consecutive `FeedDispensed_g` readings across distinct `CurrentEvent` items (`delta = fg - prev_fg`) when `10 <= delta <= 2000`, overriding legacy corrupted running-average values.
+  3. **Client-Side Step-Change Verification in `web_dashboard/app.js`:**
+     - In `renderHistoryView()`, added client-side delta verification on `cleanEvents` across `cumulativeGrams` to ensure discrete step changes render instantly with zero lag or creeping distortion.
+- **Verification:**
+  - Automated unit test suite `scratch/test_fpe_history_fix.py`: 2/2 tests passed.
+  - Deployed updated Lambdas (`AquaFeederApiHandler`, `AquaFeederTelemetryProcessor`) and S3 dashboards (`app.js`, `index.html`, `styles.css`, `v2/`).
+  - Automated live production verification in `scratch/verify_live_history_fpe.py`:
+    - `GET /api/telemetry/e072a1fffef64134`: returned 100 items with true physical pulse grams (e.g. 500g, 126g).
+    - Headless Chrome Selenium test on live S3 bucket: rendered 20 event log rows, 0 console errors, screenshot captured: `history_tab_fpe_step_change_verified.png`.
+
