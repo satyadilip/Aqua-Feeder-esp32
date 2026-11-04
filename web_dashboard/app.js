@@ -894,16 +894,22 @@ function loadSelectedDeviceToUI() {
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
-  // Calculate authoritative dispensed feed: strictly the sum of feed events history
+  // Calculate authoritative dispensed feed: strictly the sum of today's feed events history
   let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   if (dev.eventsLog && dev.eventsLog.length > 0) {
-    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    const todayEvents = dev.eventsLog.filter(e => !e.date || e.date === todayIso);
+    const todayEvents = dev.eventsLog.filter(e => e.date === todayIso);
     if (todayEvents.length > 0) {
       const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
       authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
       dev.dispensedKg = authoritativeDispensed;
+    } else {
+      authoritativeDispensed = 0.0;
+      dev.dispensedKg = 0.0;
     }
+  } else if (dev.currentEvent === 0) {
+    authoritativeDispensed = 0.0;
+    dev.dispensedKg = 0.0;
   }
   const rawDispensed = isBeforeSchedule ? 0.0 : authoritativeDispensed;
   const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
@@ -1487,25 +1493,32 @@ async function renderHistoryView() {
             }
           }
         }
-        dev.eventsLog = cleanEvents;
         const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-        const todayEvents = cleanEvents.filter(e => !e.date || e.date === todayIso);
+        const todayEvents = cleanEvents.filter(e => e.date === todayIso);
+        const pastEvents = cleanEvents.filter(e => e.date && e.date !== todayIso);
+        
+        // dev.eventsLog strictly contains events belonging to TODAY
+        dev.eventsLog = todayEvents;
+        dev.pastEventsLog = pastEvents;
         
         let calculatedKg = 0.0;
-        if (hwDispGrams > 0 && activeCurEv > 0) {
-          calculatedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
-        } else if (todayEvents.length > 0) {
-          const sumGrams = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-          calculatedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
+        if (todayEvents.length > 0) {
+          if (hwDispGrams > 0 && activeCurEv > 0) {
+            calculatedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
+          } else {
+            const sumGrams = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
+            calculatedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
+          }
+        } else {
+          // New day before any feed events have occurred today
+          calculatedKg = 0.0;
         }
 
-        if (calculatedKg > 0.0 || dev.dispensedKg === undefined) {
-          dev.historyDispensedKg = calculatedKg;
-          dev.dispensedKg = calculatedKg;
-          const dispensedText = document.getElementById('dispensed-val-text');
-          if (dispensedText) {
-            dispensedText.textContent = dev.dispensedKg.toFixed(2);
-          }
+        dev.historyDispensedKg = calculatedKg;
+        dev.dispensedKg = calculatedKg;
+        const dispensedText = document.getElementById('dispensed-val-text');
+        if (dispensedText) {
+          dispensedText.textContent = dev.dispensedKg.toFixed(2);
         }
       }
     }
@@ -1625,19 +1638,24 @@ function renderEventsLog(dev, metrics) {
   const startEvent = eventsCount > 0 ? eventsCount : 1;
   const endEvent = Math.max(1, startEvent - maxToDisplay + 1);
 
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const todayEvents = (dev.eventsLog || []).filter(e => !e.date || e.date === todayIso);
+  const pastEvents = dev.pastEventsLog || [];
+  const actualTodayCount = todayEvents.length;
+
   if (logLabel) {
-    const actualCount = (dev.eventsLog && dev.eventsLog.length) ? dev.eventsLog.length : eventsCount;
-    if (hasTodayEvents || actualCount > 0) {
-      logLabel.textContent = actualCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${actualCount} feed events today` 
-        : `Showing ${actualCount} completed feed events today`;
+    if (actualTodayCount > 0) {
+      logLabel.textContent = actualTodayCount > maxToDisplay 
+        ? `Showing latest ${maxToDisplay} of ${actualTodayCount} feed events today` 
+        : `Showing ${actualTodayCount} completed feed events today`;
+    } else if (pastEvents.length > 0) {
+      const pastDate = pastEvents[0].date || 'Yesterday';
+      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)} (Showing previous session from ${pastDate})`;
     } else if (lastActiveMetric) {
-      const activeLabel = lastActiveMetric.dateLabel || 'Sunday, Oct 25';
-      logLabel.textContent = eventsCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)})` 
-        : `Showing ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)})`;
+      const activeLabel = lastActiveMetric.dateLabel || lastActiveMetric.Date || 'Previous Session';
+      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)} (Last Active: ${activeLabel})`;
     } else {
-      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)}`;
+      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)}`;
     }
   }
 
@@ -1648,10 +1666,8 @@ function renderEventsLog(dev, metrics) {
     return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
   }
 
-  const intervalMin = parseFloat(dev.intervalMin || dev.IntervalMin || 2.7);
-
-  if (dev.eventsLog && dev.eventsLog.length > 0) {
-    const displayed = dev.eventsLog.slice(0, maxToDisplay);
+  if (actualTodayCount > 0) {
+    const displayed = todayEvents.slice(0, maxToDisplay);
     displayed.forEach(ev => {
       html += `
         <div class="event-log-item">
@@ -1663,45 +1679,36 @@ function renderEventsLog(dev, metrics) {
         </div>
       `;
     });
-  } else {
-    // Generate chronologically accurate feed event times anchoring to actual feed start or last event
-    let baseMin = startTotalMin;
-    const effectiveCurrent = eventsCount;
-    if (dev.lastEventTime && effectiveCurrent > 0) {
-      try {
-        const lastD = new Date(dev.lastEventTime);
-        if (!isNaN(lastD.getTime())) {
-          // LastEventTime is UTC ISO string from server: convert to IST minutes
-          const lastEventMin = (lastD.getUTCHours() * 60 + lastD.getUTCMinutes() + 330) % 1440;
-          baseMin = lastEventMin - Math.round((effectiveCurrent - 1) * intervalMin);
-          if (baseMin < startTotalMin) baseMin = startTotalMin;
-        }
-      } catch (e) {}
-    } else if (dev.CycleStartEpoch) {
-      try {
-        // CycleStartEpoch is IST epoch from device DS3231 (seconds) - already in IST!
-        const cD = new Date(Number(dev.CycleStartEpoch) * 1000);
-        baseMin = cD.getUTCHours() * 60 + cD.getUTCMinutes();
-        if (baseMin < startTotalMin || baseMin > endTotalMin) baseMin = startTotalMin;
-      } catch (e) {}
-    }
-
-    for (let i = startEvent; i >= endEvent; i--) {
-      const eventMin = Math.round(baseMin + (i - 1) * intervalMin);
-      const h = Math.floor(eventMin / 60) % 24;
-      const m = eventMin % 60;
-      const t = formatTimeAmPm(h, m);
-
+  } else if (pastEvents.length > 0) {
+    html += `
+      <div style="text-align:center; padding: 18px 12px; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 12px; border: 1px dashed rgba(255,255,255,0.08);">
+        <div style="font-size: 20px; margin-bottom: 4px;">🌅</div>
+        <strong style="color:var(--text-main);">New Day: 0 Feed Events Dispensed Today</strong>
+        <div style="font-size: 12px; margin-top: 3px; color: var(--text-muted);">Today's scheduled feeding begins at ${formatTimeAmPm(sHour, sMin)}.</div>
+      </div>
+      <div style="padding: 6px 4px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
+        Previous Feed Session (${pastEvents[0].date})
+      </div>
+    `;
+    pastEvents.slice(0, maxToDisplay).forEach(ev => {
       html += `
-        <div class="event-log-item">
+        <div class="event-log-item" style="opacity: 0.75;">
           <div>
-            <span class="event-log-time">${t}</span>
-            <div class="event-log-desc">Feed Event #${i} • ${fpe}g dispensed</div>
+            <span class="event-log-time">${ev.date || 'Past'} • ${ev.time}</span>
+            <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed</div>
           </div>
-          <span class="event-log-tag tag-completed">DISPENSED</span>
+          <span class="event-log-tag tag-idle">PREVIOUS</span>
         </div>
       `;
-    }
+    });
+  } else {
+    html = `
+      <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
+        <div style="font-size: 20px; margin-bottom: 6px;">⏳</div>
+        <strong style="color:var(--text-main);">Ready for Feed Schedule</strong>
+        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">0 events dispensed today. Schedule begins at ${formatTimeAmPm(sHour, sMin)}.</div>
+      </div>
+    `;
   }
 
   container.innerHTML = html;
