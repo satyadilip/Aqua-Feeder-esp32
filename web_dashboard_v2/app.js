@@ -254,7 +254,13 @@ function renderActiveFeeder() {
       statusPill.style.borderColor = 'rgba(2, 132, 199, 0.35)';
       statusPill.style.color = '#0284C7';
       statusText.textContent = 'CYCLE PAUSED';
-    } else if (dev.status === 'ACTIVE' || dev.status === 'FEEDING' || dev.connected) {
+    } else if (dev.status === 'COMPLETED') {
+      statusPill.className = 'status-chip-live status-completed';
+      statusPill.style.background = 'rgba(16, 185, 129, 0.12)';
+      statusPill.style.borderColor = 'rgba(16, 185, 129, 0.35)';
+      statusPill.style.color = '#10B981';
+      statusText.textContent = 'CYCLE COMPLETED';
+    } else if (dev.status === 'ACTIVE' || dev.status === 'FEEDING') {
       statusPill.className = 'status-chip-live online';
       statusPill.style.background = 'rgba(16, 185, 129, 0.12)';
       statusPill.style.borderColor = 'rgba(16, 185, 129, 0.35)';

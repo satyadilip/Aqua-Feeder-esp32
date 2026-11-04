@@ -4,7 +4,7 @@ import base64
 import struct
 import boto3
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 devices_table = dynamodb.Table('AquaFeeder_Devices')
@@ -193,11 +193,12 @@ def lambda_handler(event, context):
                     # Authoritative Dispensed Feed Today: strictly the sum of feed events history
                     actual_dispensed_kg = 0.0
                     try:
-                        today_start_epoch = int((now_ist.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30)).timestamp())
+                        today_midnight_ist = datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0, tzinfo=timezone.utc)
+                        today_start_epoch = int(today_midnight_ist.timestamp())
                         t_resp = telemetry_table.query(
                             KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(dev_id),
                             ScanIndexForward=False,
-                            Limit=50
+                            Limit=100
                         )
                         events_today = {}
                         for t_it in t_resp.get('Items', []):
@@ -367,12 +368,14 @@ def lambda_handler(event, context):
                     base_interval_m = round(base_gap_s / 60.0, 1)
 
                     # True completion conditions:
-                    # 1. Past operational end time (e.g. >= 18:00 IST), OR
-                    # 2. All scheduled events physically finished (cur_ev >= tot_ev_int), OR
-                    # 3. Target dispensed weight reached (dispensed_kg >= target_kg)
+                    # 1. All scheduled events physically finished (cur_ev >= tot_ev_int), OR
+                    # 2. Target dispensed weight reached (dispensed_kg >= target_kg), OR
+                    # 3. Past operational end time (now_min >= end_min) AND feeding actually ran today (cur_ev > 0 or dispensed_kg > 0)
                     is_truly_completed = (tot_ev_int > 0 and cur_ev >= tot_ev_int) or \
                                          (target_kg > 0 and dispensed_kg >= target_kg) or \
-                                         (now_min >= end_min)
+                                         (now_min >= end_min and (cur_ev > 0 or dispensed_kg > 0))
+
+                    is_feed_stopped = (raw_status in ['STANDBY', 'STOPPED']) or (d.get('FeedActive') is False)
 
                     # Phase 1: Date Rollover (00:00:00 to start_min IST / early morning before window)
                     if now_min < start_min:
@@ -386,7 +389,7 @@ def lambda_handler(event, context):
                         next_feed_str = s_time_fmt
                         next_feed_sub = f"Starts today at {s_time_fmt}"
 
-                    # Phase 2: Feed Completed Today (concluded after all pulses or past 18:00)
+                    # Phase 2: Feed Completed Today (concluded after all pulses or past 18:00 with feeds delivered)
                     elif is_truly_completed:
                         actual_status = 'COMPLETED'
                         live_cur_ev = int(cur_ev)
@@ -398,7 +401,19 @@ def lambda_handler(event, context):
                         next_feed_str = s_time_fmt
                         next_feed_sub = "Tomorrow morning"
 
-                    # Phase 3: Active Feeding Window (start_min <= now_min < end_min with events running)
+                    # Phase 3: Standby / Stopped (user commanded STOP or device in standby)
+                    elif is_feed_stopped:
+                        actual_status = 'STANDBY'
+                        live_cur_ev = int(cur_ev)
+                        live_tot_ev = tot_ev_int
+                        live_rem_ev = max(0, tot_ev_int - live_cur_ev)
+                        live_disp_kg = dispensed_kg
+                        gap_s = base_gap_s
+                        dyn_interval_m = base_interval_m
+                        next_feed_str = "--"
+                        next_feed_sub = "Feed Paused / Standby"
+
+                    # Phase 4: Active Feeding Window (start_min <= now_min < end_min with events running)
                     elif cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']:
                         actual_status = 'FEEDING'
                         live_cur_ev = int(cur_ev)
@@ -426,7 +441,7 @@ def lambda_handler(event, context):
                         next_feed_str = next_ist.strftime("%I:%M %p")
                         next_feed_sub = f"Interval: {dyn_interval_m}m ({gap_s}s)"
 
-                    # Phase 4: Standby / Scheduled before first pulse during window
+                    # Phase 5: Standby / Scheduled before first pulse during window or after hours with 0 events
                     else:
                         actual_status = 'SCHEDULED' if now_min < end_min else 'STANDBY'
                         live_cur_ev = int(cur_ev)
@@ -436,7 +451,7 @@ def lambda_handler(event, context):
                         gap_s = base_gap_s
                         dyn_interval_m = base_interval_m
                         next_feed_str = s_time_fmt
-                        next_feed_sub = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"
+                        next_feed_sub = f"Starts at {s_time_fmt}" if now_min < end_min else f"Starts tomorrow at {s_time_fmt}"
 
                     # Overrides for offline / alarms
                     if not is_online:

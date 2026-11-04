@@ -870,6 +870,27 @@ html.user-authenticated #main-app-shell {
   background: #E4E8EE;
 }
 
+.btn-ctrl:disabled, .btn-ctrl.btn-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.btn-start.btn-resume {
+  background: #10B981 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
+}
+
+.btn-stop.btn-stop-active {
+  background: #EF4444 !important;
+  color: #FFFFFF !important;
+  border-color: #DC2626 !important;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25) !important;
+}
+
 /* ==========================================================================
    2x2 TELEMETRY SENSOR GRID
    ========================================================================== */

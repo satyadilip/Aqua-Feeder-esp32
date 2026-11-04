@@ -416,7 +416,7 @@ def lambda_handler(event, context):
                 today_total_ev = Decimal(str(tot_ev_int))
                 today_status = status_str
             elif is_same_day and prev_today_ev > 0:
-                # After feed completion on the same calendar day, heartbeats report cur_ev == 0
+                # After feed completion or mid-day stop on the same calendar day, heartbeats report cur_ev == 0
                 # Retain today's completed numbers until midnight!
                 today_date = date_str
                 today_completed_ev = Decimal(str(prev_today_ev))
@@ -424,13 +424,14 @@ def lambda_handler(event, context):
                 today_total_ev = Decimal(str(prev_today_tot))
                 today_status = 'COMPLETED' if (now_ist_mins >= end_mins or prev_today_status == 'COMPLETED') else prev_today_status
                 
+                live_cur_ev = today_completed_ev
+                live_disp_kg = today_dispensed_kg
                 if now_ist_mins >= end_mins or prev_today_status == 'COMPLETED':
-                    live_cur_ev = today_completed_ev
-                    live_disp_kg = today_dispensed_kg
                     status_str = 'COMPLETED'
+                elif prev_status in ['STANDBY', 'STOPPED', 'PAUSED']:
+                    status_str = prev_status
                 else:
-                    live_cur_ev = Decimal(str(cur_ev_int))
-                    live_disp_kg = Decimal('0')
+                    status_str = 'FEEDING' if is_inside_schedule else 'STANDBY'
             else:
                 # New calendar day before feed starts (00:00 to 06:00 IST)
                 live_cur_ev = Decimal('0')
@@ -455,7 +456,23 @@ def lambda_handler(event, context):
             motor_time_s = round(float(fpe_g) / rate_val, 2)
             single_event_s = 3.0 + motor_time_s + 3.0
             
-            remaining_events = max(0, tot_ev_int - cur_ev_int)
+            # Authoritative Deductive Schedule Calculation (STORY-017 & Senior Test Audit)
+            fpe_val = float(saved_fpe) if float(saved_fpe) > 0 else 100.0
+            target_val = float(target_kg) if float(target_kg) > 0 else 15.0
+            
+            if int(live_cur_ev) > 0 and float(live_disp_kg) > 0:
+                rem_kg = max(0.0, target_val - float(live_disp_kg))
+                remaining_events = int(math.ceil((rem_kg * 1000.0) / fpe_val)) if rem_kg > 0 else 0
+                tot_ev_calc = int(live_cur_ev) + remaining_events
+            else:
+                tot_ev_calc = int(math.ceil((target_val * 1000.0) / fpe_val))
+                remaining_events = tot_ev_calc
+
+            if status_str == 'COMPLETED' or now_ist_mins >= end_mins or float(live_disp_kg) >= target_val or (tot_ev_calc > 0 and int(live_cur_ev) >= tot_ev_calc):
+                remaining_events = 0
+
+            tot_ev_int = tot_ev_calc
+            tot_ev = tot_ev_calc
             remaining_time_s = max(0, end_sec_today - sec_since_midnight)
             rem_events_calc = max(1, remaining_events)
             rem_duration_s = rem_events_calc * single_event_s
@@ -521,6 +538,7 @@ def lambda_handler(event, context):
                 'EndMinute': Decimal(str(emin_val)),
                 'FeedAvailable': feed_available,
                 'Status': status_str,
+                'FeedActive': False if status_str in ['STANDBY', 'COMPLETED', 'PAUSED'] else existing_dev.get('FeedActive', True),
                 'TodayDate': today_date,
                 'TodayEventsCompleted': today_completed_ev,
                 'TodayFeedDispensed_kg': today_dispensed_kg,
@@ -563,20 +581,8 @@ def lambda_handler(event, context):
 
             devices_table.put_item(Item=dev_item)
             
-            # Keep AquaFeeder_Settings aligned with live active schedule
-            if tot_ev_int > 0 and cur_ev_int > 0:
-                try:
-                    settings_table.update_item(
-                        Key={'DeviceId': dev_eui},
-                        UpdateExpression='SET TotalEvents = :te, FeedPerEvent_g = :fpe, IntervalMin = :im',
-                        ExpressionAttributeValues={
-                            ':te': Decimal(str(tot_ev_int)),
-                            ':fpe': Decimal(str(fpe_g)),
-                            ':im': Decimal(str(dynamic_interval_min))
-                        }
-                    )
-                except Exception:
-                    pass
+            # Routine telemetry uplinks do NOT overwrite user configuration in AquaFeeder_Settings (BUG-C04 FIX)
+            # AquaFeeder_Settings is the source of truth set by user POST /api/settings or SETTINGS_REPORT (0x22).
             
             # Record daily metrics whenever feeding has occurred or completed today (STORY-008)
             if int(today_completed_ev) > 0:

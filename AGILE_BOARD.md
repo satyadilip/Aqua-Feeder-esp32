@@ -449,3 +449,36 @@
     - Settings screen edited to `500g`: Status screen stayed strictly `5.58` kg.
     - Settings saved to cloud: Status screen stayed strictly `5.58` kg.
     - Browser console severe errors: 0.
+
+---
+
+### STORY-022: Senior Test Engineer Cloud Audit & Comprehensive Defect Resolution
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Aquaculture Farm Operator & Lead Systems Architect
+- **I want:** An exhaustive, line-by-line, feature-by-feature test engineering review of the cloud backend and UI dash codebase with full automated regression test suites
+- **So that:** All hidden bugs (e.g. stop feed overriding, after-hours completed statuses, mid-day heartbeat wipes, clobbered settings, erroneous remaining events, and arc gauge distortions) are permanently identified, resolved, and verified in production.
+- **Root Cause & Defect Log (All 10 Identified & Resolved Defects):**
+  1. **BUG-C01 (`api_lambda.py`:402-404) - Stop Feed State Overridden by `cur_ev > 0`:** In `GET /api/devices`, `elif cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']` forced `actual_status = 'FEEDING'`, overriding the user's manual STOP command on the next 5-second polling cycle.
+  2. **BUG-C02 (`api_lambda.py`:373-375) - Erroneous `COMPLETED` Status After Hours with 0 Feeds Ran:** `is_truly_completed = ... or (now_min >= end_min)` evaluated to `True` for completely idle feeders that never ran all day, falsely showing "Today's feeding completed" with 0.00 kg.
+  3. **BUG-C03 (`lambda_function.py`:431-434) - Mid-Day Heartbeat Zeroes Out Completed Feed:** In telemetry processing, when a heartbeat arrived with `cur_ev == 0` during mid-day standby, `else: live_disp_kg = Decimal('0')` erased the day's cumulative dispensed feed from `devices_table`.
+  4. **BUG-C04 (`lambda_function.py`:567-579) - Settings Table Overwritten by Telemetry Uplinks:** Uplinks clobbered user-configured `FeedPerEvent_g` in `settings_table` with calculated hardware pulse grams `round(feed_disp / cur_ev_int)`.
+  5. **BUG-C05 (`lambda_function.py`:458, 507) - `TotalEventsRemaining` Set to `TotalEvents` on Heartbeats / Completed Feeds:** `remaining_events = max(0, tot_ev_int - cur_ev_int)` computed `57 - 0 = 57` on heartbeats and wrote `TotalEventsRemaining: 57` to DynamoDB even when feeding was concluded.
+  6. **BUG-C06 (`lambda_function.py`:183, `api_lambda.py`:262) - Disagreement on `TotalEvents` between Telemetry Processor and API:** Telemetry Processor took `tot_ev_int = unpacked[6]` from raw LoRa byte 6, ignoring `saved_qty` and `saved_fpe` from `settings_table`.
+  7. **BUG-C07 (`web_dashboard/app.js`:891, 1001) - Radial Arc Gauge Forced to 100% Full After Hours When 0 kg Dispensed:** `const gaugePct = isScheduleDone ? 100 : ...` forced the arc gauge to 100% full after 18:00 even when 0 grams had been fed.
+  8. **BUG-C08 (`web_dashboard/app.js`:281-294) - Action Buttons Lacked Dynamic State Binding & Mutex Locks:** START/STOP buttons remained active when offline; STOP stayed active when already stopped; PAUSED lacked direct RESUME button.
+  9. **BUG-C09 (`api_lambda.py`:196, 205-208) - Timezone Naive Offset Inconsistencies:** Naive datetime `.timestamp()` subtraction caused double-offsetting on local runs, and history queries lacked IST boundary alignment.
+  10. **BUG-C10 (`lambda_function.py`:564) - `FeedActive` Dropped on DynamoDB `put_item`:** `dev_item` omitted `FeedActive`, wiping out `FeedActive=False` from user STOP commands on routine heartbeats.
+- **Architectural Fixes Implemented:**
+  - `api_lambda.py`: Explicit `is_feed_stopped` check before feeding window; requires actual delivered feed (`cur_ev > 0 or dispensed_kg > 0`) for after-hours `COMPLETED` state; robust UTC-to-IST midnight timestamp alignment using `tzinfo=timezone.utc`.
+  - `lambda_function.py`: Preserves `today_completed_ev` and `today_dispensed_kg` during same-day heartbeats; authoritative deductive schedule calculation for `tot_ev_int` and `remaining_events` (0 on completion); removed `settings_table` overwriting from routine uplinks; preserved `FeedActive`.
+  - `web_dashboard/app.js` & `styles.css`: True dispense percentage calculation for radial arc gauge; dynamic action button state machine (offline disabled, standby start-only, feeding active-stop + burst, paused resume-only, completed disabled); visual disabled styling and active color cues.
+  - `web_dashboard_v2/app.js`: Aligned status pill logic with `STANDBY`, `CYCLE COMPLETED`, and `SCHEDULE ACTIVE`.
+- **Senior Test Matrix & Verification:**
+  - Comprehensive Audit Matrix artifact: `senior_test_engineer_audit_matrix.md`.
+  - Automated test script `scratch/test_cloud_deep_audit.py` executed with 7/7 test suites passing.
+  - Live AWS production integration & Selenium headless Chrome test (`scratch/test_live_cloud_audit_verification.py`):
+    - `GET /api/devices`: Status `COMPLETED`, `TotalEventsRemaining: 0` (was 57).
+    - `POST /api/command/STOP`: Status correctly preserved in `STANDBY`/`COMPLETED` without being overridden by `cur_ev > 0`.
+    - Live Web Dashboard on S3: `9.02 kg / 15.0 kg`, Gauge Hero `3 / 27 Events (Completed)`, Gauge Pct `58.5%` (was 100%), Action Buttons correctly disabled (`text='START FEEDING'`).
+    - Tab navigation (`tab-settings`, `tab-history`, `tab-traycheck`, `tab-hardware`): 0 SEVERE console errors.

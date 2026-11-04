@@ -828,6 +828,19 @@ function loadSelectedDeviceToUI() {
     if (pillFeedDot) pillFeedDot.className = 'pill-dot dot-offline';
     if (pillFeedStatus) pillFeedStatus.textContent = 'Not Connected';
 
+    const btnStart = document.getElementById('btn-remote-start');
+    const btnStop = document.getElementById('btn-remote-stop');
+    if (btnStart) {
+      btnStart.disabled = true;
+      btnStart.classList.add('btn-disabled');
+      btnStart.title = 'Feeder Offline';
+    }
+    if (btnStop) {
+      btnStop.disabled = true;
+      btnStop.classList.add('btn-disabled');
+      btnStop.title = 'Feeder Offline';
+    }
+
     populateParamEditorUI(dev, heroTitle);
     updateDiagnosticsUI(dev, false, heroTitle);
     return;
@@ -881,14 +894,31 @@ function loadSelectedDeviceToUI() {
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
+  // Calculate authoritative dispensed feed: strictly the sum of feed events history
+  let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  if (dev.eventsLog && dev.eventsLog.length > 0) {
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const todayEvents = dev.eventsLog.filter(e => !e.date || e.date === todayIso);
+    if (todayEvents.length > 0) {
+      const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
+      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
+      dev.dispensedKg = authoritativeDispensed;
+    }
+  }
+  const rawDispensed = isBeforeSchedule ? 0.0 : authoritativeDispensed;
+  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
+
   // Before today's schedule begins, today's feeding progress is 0
   const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
-  const isTargetCompleted = !isBeforeSchedule && effectiveCurrent >= totalEvents;
-  const isScheduleDone = !isBeforeSchedule && (isTargetCompleted || isPastSchedule || dev.status === 'COMPLETED');
+  const hasFeedsRanToday = (effectiveCurrent > 0 || rawDispensed > 0);
+  const isTargetCompleted = !isBeforeSchedule && (effectiveCurrent >= totalEvents || (targetKg > 0 && rawDispensed >= targetKg));
+  const isTrulyCompleted = !isBeforeSchedule && (isTargetCompleted || (isPastSchedule && hasFeedsRanToday) || (dev.status === 'COMPLETED' && hasFeedsRanToday));
+  const isFeedStopped = (dev.status === 'STANDBY' || dev.status === 'STOPPED' || dev.feedActive === false);
 
-  const displayCurrent = isScheduleDone ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
-  const displayTotal = isScheduleDone ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
-  const gaugePct = isScheduleDone ? 100 : Math.min(100, Math.max(0, (displayCurrent / displayTotal) * 100));
+  const displayCurrent = isTrulyCompleted ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
+  const displayTotal = isTrulyCompleted ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
+  const trueDispensePct = Math.min(100, Math.max(0, (rawDispensed / targetKg) * 100));
+  const gaugePct = (isTrulyCompleted && rawDispensed >= targetKg) ? 100 : trueDispensePct;
 
   let statusText = 'STANDBY';
   let badgeClass = 'b-idle';
@@ -920,16 +950,22 @@ function loadSelectedDeviceToUI() {
     nextTimestamp = timeFormatted;
     nextSubText = `Starts today at ${timeFormatted}`;
     eventSubText = 'Ready for schedule';
-  } else if (isScheduleDone) {
+  } else if (isTrulyCompleted) {
     statusText = 'COMPLETED';
     badgeClass = 'b-done';
     nextTimestamp = timeFormatted;
     nextSubText = 'Tomorrow morning';
     eventSubText = "Schedule completed";
-  } else if (dev.status === 'FEEDING' || effectiveCurrent > 0) {
+  } else if (isFeedStopped) {
+    statusText = 'STANDBY';
+    badgeClass = 'b-idle';
+    nextTimestamp = '--';
+    nextSubText = 'Feed Paused / Standby';
+    eventSubText = `${displayCurrent} of ${displayTotal} completed`;
+  } else if (dev.status === 'FEEDING' || dev.status === 'ACTIVE' || (effectiveCurrent > 0 && !isPastSchedule)) {
     statusText = 'FEEDING';
     badgeClass = 'b-run';
-    const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
+    const totalRemaining = isTrulyCompleted ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
     if (dev.nextFeed) {
       nextTimestamp = dev.nextFeed;
       nextSubText = dev.nextFeedSub || (dev.gapIntervalSec ? `Interval: ${dev.intervalMin} min (${dev.gapIntervalSec}s)` : `Interval: ${dev.intervalMin || 2.9} min`);
@@ -963,20 +999,11 @@ function loadSelectedDeviceToUI() {
     }
     eventSubText = 'Events today';
   } else {
-    statusText = 'ACTIVE';
-    badgeClass = 'b-run';
-    const intervalMin = dev.intervalMin || 2.9;
-    const nextMin = nowTotalMin + Math.round(intervalMin);
-    if (nextMin >= endTotalMin) {
-      nextTimestamp = timeFormatted;
-      nextSubText = 'Tomorrow morning';
-    } else {
-      const nH = Math.floor(nextMin / 60) % 24;
-      const nM = nextMin % 60;
-      nextTimestamp = formatTimeAmPm(nH, nM);
-      nextSubText = `Interval: ${intervalMin} min`;
-    }
-    eventSubText = 'Events today';
+    statusText = 'STANDBY';
+    badgeClass = 'b-idle';
+    nextTimestamp = timeFormatted;
+    nextSubText = nowTotalMin >= endTotalMin ? `Starts tomorrow at ${timeFormatted}` : `Starts at ${timeFormatted}`;
+    eventSubText = 'Ready for schedule';
   }
 
   if (stateBadge) {
@@ -991,29 +1018,18 @@ function loadSelectedDeviceToUI() {
     gaugeCircle.style.strokeDashoffset = offset;
   }
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
-  const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
+  const totalRemaining = isTrulyCompleted ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = isScheduleDone
+    gaugeHeroSub.textContent = isTrulyCompleted
       ? `/ ${displayTotal} Events (Completed)`
       : `/ ${displayTotal} Events Today (${totalRemaining} Remaining)`;
   }
   if (gaugePctBadge) {
-    gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
+    gaugePctBadge.textContent = isBeforeSchedule 
+      ? `Scheduled ${timeFormatted}` 
+      : (isTrulyCompleted && rawDispensed >= targetKg ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
   }
 
-  // Calculate authoritative dispensed feed: strictly the sum of feed events history
-  let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
-  if (dev.eventsLog && dev.eventsLog.length > 0) {
-    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    const todayEvents = dev.eventsLog.filter(e => !e.date || e.date === todayIso);
-    if (todayEvents.length > 0) {
-      const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
-      dev.dispensedKg = authoritativeDispensed;
-    }
-  }
-  const rawDispensed = isBeforeSchedule ? 0.0 : authoritativeDispensed;
-  const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
 
@@ -1021,7 +1037,56 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${displayTotal}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted} (${displayTotal} Events)` : (isScheduleDone ? `All ${displayTotal} Completed Today` : `${totalRemaining} Events Remaining`));
+  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted} (${displayTotal} Events)` : (isTrulyCompleted ? `All ${displayTotal} Completed Today` : `${totalRemaining} Events Remaining`));
+
+  // Dynamic Primary Feeder Action Buttons (BUG-C08 FIX)
+  const btnStart = document.getElementById('btn-remote-start');
+  const btnStop = document.getElementById('btn-remote-stop');
+  if (btnStart && btnStop) {
+    if (isPaused) {
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      btnStart.classList.remove('btn-disabled');
+      btnStart.classList.add('btn-resume');
+      btnStop.classList.add('btn-disabled');
+      btnStop.classList.remove('btn-stop-active');
+      btnStart.innerHTML = `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>RESUME FEEDING</span>`;
+      btnStart.onclick = () => triggerRemoteAction('RESUME');
+      btnStop.onclick = null;
+    } else if (statusText === 'STANDBY') {
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+      btnStart.classList.remove('btn-disabled', 'btn-resume');
+      btnStop.classList.add('btn-disabled');
+      btnStop.classList.remove('btn-stop-active');
+      btnStart.innerHTML = `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>START FEEDING</span>`;
+      btnStart.onclick = () => triggerRemoteAction('START');
+      btnStop.onclick = null;
+    } else if (statusText === 'FEEDING' || statusText === 'ACTIVE') {
+      btnStart.disabled = false;
+      btnStop.disabled = false;
+      btnStart.classList.remove('btn-disabled', 'btn-resume');
+      btnStop.classList.remove('btn-disabled');
+      btnStop.classList.add('btn-stop-active');
+      btnStart.innerHTML = `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>FEED BURST NOW</span>`;
+      btnStart.onclick = () => triggerRemoteAction('START');
+      btnStop.onclick = () => triggerRemoteAction('STOP');
+    } else if (isTrulyCompleted) {
+      btnStart.disabled = true;
+      btnStop.disabled = true;
+      btnStart.classList.add('btn-disabled');
+      btnStop.classList.add('btn-disabled');
+      btnStart.classList.remove('btn-resume');
+      btnStop.classList.remove('btn-stop-active');
+      btnStart.title = "Today's Feeding Completed";
+      btnStop.title = "Today's Feeding Completed";
+    } else {
+      btnStart.disabled = false;
+      btnStop.disabled = false;
+      btnStart.classList.remove('btn-disabled', 'btn-resume');
+      btnStop.classList.remove('btn-disabled', 'btn-stop-active');
+    }
+  }
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
@@ -2203,6 +2268,7 @@ async function triggerRemoteAction(action) {
 
   } else if (action === 'STOP') {
     dev.status = 'STANDBY';
+    dev.feedActive = false;
     showToast(`⏹ Feeder paused: ${dev.name}`);
     saveDataToStorage();
     loadSelectedDeviceToUI();
