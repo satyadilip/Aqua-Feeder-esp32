@@ -219,13 +219,25 @@ void FeedEngine::pauseFeed() {
     }
 }
 
-void FeedEngine::resumeFeed() {
+void FeedEngine::resumeFeed(uint32_t nowEpoch) {
     if (_status && _status->state == SystemState::FEED_PAUSED) {
         _status->proximityTriggered = false;
         _fcState = _prePauseFCState;
         _fcEntered = false; // re-enter the state to restart timers/relays
         _status->state = (_fcState == FeedCycleState::FC_WAIT) ? SystemState::FEED_WAIT_NEXT : SystemState::FEED_DISPENSING;
+        
+        // Dynamically recalculate pending feed and remaining daylight window!
+        if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
+        if (nowEpoch > 0) {
+            recalcDynamic(nowEpoch);
+            // Trigger dispense immediately upon resuming so user sees instant feed
+            if (_fcState == FeedCycleState::FC_WAIT) {
+                _status->nextFeedEpoch = nowEpoch;
+            }
+        }
+
         if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_RESUMED);
+        if (_saveState) _saveState();
     }
 }
 
@@ -453,11 +465,26 @@ bool FeedEngine::recalcDynamic(uint32_t nowEpoch) {
     unsigned long remainingEventsDurationMs = remainingEvents * singleEvent_ms;
     
     if (remainingEventsDurationMs >= remainingTimeMs) {
-        _status->scheduleValid = false;
-        strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
-        Serial.printf("[SCHED] Error: Remaining time (%lu s) too short for %ld events (%lu s)\n",
-                      remainingTimeMs / 1000UL, remainingEvents, remainingEventsDurationMs / 1000UL);
-        return false;
+        if (remainingTimeMs < 60000UL) {
+            // Under 1 minute left before operational window ends - conclude cleanly for today
+            _status->scheduleValid = false;
+            strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
+            stopFeed();
+            _status->state = SystemState::FEED_FINISHED;
+            Serial.println("[SCHED] Less than 1 minute remaining in daylight window. Feeding concluded for today.");
+            return false;
+        } else {
+            // Window is tight: clamp to minimum safe gap (5s) to deliver maximum feed before operational window ends
+            _status->intervalMs = 5000UL;
+            _status->scheduleValid = true;
+            memset(_status->schedError, 0, sizeof(_status->schedError));
+            if (_fcState == FeedCycleState::FC_WAIT) {
+                _status->nextFeedEpoch = nowEpoch;
+            }
+            Serial.printf("[SCHED] Window tight: set to minimum 5s gap to deliver feed before %02d:%02d.\n",
+                          _cfg->endHour, _cfg->endMinute);
+            return true;
+        }
     }
     
     _status->intervalMs = (remainingTimeMs - remainingEventsDurationMs) / remainingEvents;

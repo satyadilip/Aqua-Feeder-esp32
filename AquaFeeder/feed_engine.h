@@ -9,7 +9,7 @@ public:
     void startFeed(uint32_t nowEpoch = 0);
     void stopFeed();
     void pauseFeed();
-    void resumeFeed();
+    void resumeFeed(uint32_t nowEpoch = 0);
     void update(unsigned long nowMs, uint32_t nowEpoch);
     bool recalcDynamic(uint32_t nowEpoch = 0);
     bool shouldAutoStart(uint32_t nowEpoch);

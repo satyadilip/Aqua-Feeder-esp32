@@ -498,9 +498,13 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
 
                 hal.setHooter(false);
 
-                feedEng.resumeFeed();
+                uint32_t epoch = rtcMgr.getEpoch();
+
+                feedEng.resumeFeed(epoch);
 
                 currentMenu = MenuState::RUNNING;
+
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
 
                 Serial.println("[MAIN] Feed resumed successfully via Cloud Downlink!");
 
@@ -1474,9 +1478,13 @@ void handleButtonNavigation() {
 
                     hal.setHooter(false); // Stop hooter when resumed
 
-                    feedEng.resumeFeed();
+                    uint32_t epoch = rtcMgr.getEpoch();
+
+                    feedEng.resumeFeed(epoch);
 
                     currentMenu = MenuState::RUNNING;
+
+                    telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
 
                     Serial.println("[RESUME] Feed successfully resumed by user pressing SELECT.");
 
@@ -1493,6 +1501,22 @@ void handleButtonNavigation() {
                     Serial.println("[RESUME] Cannot resume: proximity sensor still reports empty/blocked.");
 
                 }
+
+            } else if (cfg.risingEdge) {
+
+                // Cancel feeding session from paused screen (LCD [BACK]: Cancel)
+
+                hal.setHooter(false);
+
+                cbOnFeedStop();
+
+                currentMenu = MenuState::MAIN_STATUS;
+
+                telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
+
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+
+                Serial.println("[PAUSED] Feed session cancelled by user pressing BACK.");
 
             }
 

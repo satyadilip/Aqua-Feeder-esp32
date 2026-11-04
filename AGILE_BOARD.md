@@ -552,3 +552,28 @@
     - Live S3 headless Selenium verification: 0 SEVERE browser console errors, 20 history rows rendered.
     - Verification screenshot: `live_review_status_verified.png`, `live_review_history_verified.png`.
 
+
+---
+
+### STORY-025: Dynamic Operational Schedule Recalculation on Mid-Day Resume & Pause Menu Cancel Control
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Aquaculture Farm Operator
+- **I want:** When feed dispensing is paused due to Feed Empty (or manual pause) and subsequently refilled and resumed mid-day (e.g., paused at 08:00 AM after 5 kg, refilled and resumed at 10:00 AM with feeding window 06:00 AM to 06:00 PM), the feeder must:
+  1. Dynamically recalculate pending feed quantity and compress the event interval gap across the remaining daylight operational window (10:00 AM to 06:00 PM) so all daily feed is dispensed before the end of the day.
+  2. Trigger an immediate dispensing event right upon resumption so the operator does not wait an idle interval after refilling the hopper.
+  3. Support LCD `[BACK]` key on the `PAUSED` screen to cancel/stop the feeding session cleanly if the operator chooses not to continue.
+  4. Safely handle tight-window edge cases without infinite error spam or schedule invalidation.
+- **Root Cause & Architectural Fixes:**
+  1. **Resume Schedule Recalculation Gap (`feed_engine.cpp:219-241`, `feed_engine.h:12`):**
+     - *Defect:* `FeedEngine::resumeFeed()` simply restored `_fcState = _prePauseFCState` and `_status->state` without calling `recalcDynamic()`. The dispenser continued using the morning 06:00 AM interval gap, causing pending feed to be left un-dispensed when 18:00 cutoff arrived.
+     - *Fix:* Updated `resumeFeed(uint32_t nowEpoch)` to dynamically invoke `recalcDynamic(nowEpoch)`. When resumed, if in `FC_WAIT`, `_status->nextFeedEpoch = nowEpoch` is set to trigger an immediate dispensing cycle.
+  2. **Tight Operational Window Safety Clamping (`feed_engine.cpp:465-490`):**
+     - *Defect:* If pause duration was extensive such that `remainingEventsDurationMs >= remainingTimeMs`, `recalcDynamic` set `scheduleValid = false` and logged errors in an endless loop.
+     - *Fix:* If `< 60s` remain in daylight window, feeding concludes cleanly with `FEED_FINISHED`. If `>= 60s` remain, `_status->intervalMs` is clamped to a 5000ms safe minimum gap, preserving `scheduleValid = true` to deliver maximum possible feed safely before the cutoff.
+  3. **LCD `[BACK]` Cancel Button Handling (`AquaFeeder.ino:1505-1520`):**
+     - *Defect:* LCD displayed `[BACK]: Cancel` on the paused screen, but `case MenuState::PAUSED` lacked handling for `cfg.risingEdge`, leaving the button unresponsive.
+     - *Fix:* Added `else if (cfg.risingEdge)` branch calling `cbOnFeedStop()`, returning to `MAIN_STATUS`, and queuing `FEED_STOPPED` and `SETTINGS_REPORT` telemetry uplinks.
+- **Verification:**
+  - Firmware compiled successfully with `arduino-cli`: 1,213,104 bytes program storage (92%), 53,652 bytes RAM (16%), 0 errors, 0 warnings.
+  - Merged binary verified: `AquaFeeder.ino.merged.bin` (16,777,216 bytes) generated and mirrored to `AquaFeeder/build/`.
