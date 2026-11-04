@@ -96,12 +96,21 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         uint32_t startEpochToday = midnightEpoch + ((uint32_t)startMins * 60UL);
         uint32_t endEpochToday   = midnightEpoch + ((uint32_t)endMins * 60UL);
 
-        if (currentMins >= endMins) {
-            // Out of feeding hours (evening/night after end time) -> Arm/schedule for tomorrow's start time!
-            availableTime_ms = fullWindow_ms;
+        // If today's feed is concluded (target reached, all events done, or state is FEED_FINISHED), schedule for tomorrow!
+        bool isCompletedToday = (isSameDay && _status->currentEvent > 0 && 
+                                (_status->dispensedQuantity_g >= qty_g || _status->currentEvent >= _status->totalEvents || _status->state == SystemState::FEED_FINISHED));
+
+        if (isCompletedToday || currentMins >= endMins) {
+            // Concluded for today -> Arm/schedule for tomorrow's start time at startHour:startMinute!
+            _status->scheduleValid = true;
             _status->nextFeedEpoch = startEpochToday + 86400UL;
-            Serial.printf("[SCHED] Evening/night start at %02d:%02d: Feeding scheduled for tomorrow at %02d:%02d.\n",
-                          currentMins / 60, currentMins % 60, startMins / 60, startMins % 60);
+            unsigned long fullEvents = (unsigned long)ceil(qty_g / (float)_cfg->feedPerEvent);
+            unsigned long fullEventsDur = fullEvents * singleEvent_ms;
+            _status->intervalMs = (fullEventsDur < fullWindow_ms && fullEvents > 0) ? ((fullWindow_ms - fullEventsDur) / fullEvents) : 5000UL;
+            if (_status->intervalMs < 5000UL) _status->intervalMs = 5000UL;
+            Serial.printf("[SCHED] Today's feed concluded (or past %02d:%02d). Next daily feed armed for tomorrow at %02d:%02d (epoch %lu, gap %lu s).\n",
+                          endMins / 60, endMins % 60, startMins / 60, startMins % 60, _status->nextFeedEpoch, (_status->intervalMs / 1000UL));
+            return true;
         } else if (currentMins >= startMins) {
             // Mid-day start! Dynamically calculate remaining time until configured endHour:endMinute
             uint32_t endSecToday = (uint32_t)endMins * 60UL;
@@ -129,7 +138,8 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         }
     }
     
-    _status->intervalMs = (remainingEvents > 0) ? ((availableTime_ms - eventsDuration_ms) / remainingEvents) : 0;
+    _status->intervalMs = (remainingEvents > 0) ? ((availableTime_ms - eventsDuration_ms) / remainingEvents) : 5000UL;
+    if (_status->intervalMs < 5000UL) _status->intervalMs = 5000UL; // Safety minimum gap of 5 seconds
     Serial.printf("[SCHED] Schedule OK: %d events, motorTime: %lu ms, gap interval: %lu s (%lu ms)\n",
                   _status->totalEvents, _status->motorTimeMs, (_status->intervalMs / 1000UL), _status->intervalMs);
     
@@ -138,8 +148,21 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
 }
 
 void FeedEngine::startFeed(uint32_t nowEpoch) {
-    if (!_status) return;
+    if (!_status || !_cfg) return;
     if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
+
+    // Guard: Prevent auto-restart on the same day if today's feed is already complete
+    if (nowEpoch > 0) {
+        uint32_t currentDay = nowEpoch / 86400;
+        float target_g = _cfg->feedQuantity * 1000.0f;
+        if (_lastFedDay == currentDay && (_status->currentEvent >= _status->totalEvents || _status->dispensedQuantity_g >= target_g)) {
+            Serial.printf("[FEED] [GUARD REJECT] Feed already completed for today (%d/%ld events, %.1fg dispensed). Auto-start rejected!\n",
+                          _status->currentEvent, _status->totalEvents, _status->dispensedQuantity_g);
+            _status->state = SystemState::FEED_FINISHED;
+            _status->feedActive = false;
+            return;
+        }
+    }
 
     _status->feedActive = true;
     _status->currentEvent = 0;
@@ -335,11 +358,17 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                     break;
                 }
             }
+            // Failsafe: clamp intervalMs to at least 5000 ms to prevent relay chatter
+            if (_status->intervalMs < 5000UL) _status->intervalMs = 5000UL;
+
             if ((nowEpoch > 0 && _status->nextFeedEpoch > 0 && nowEpoch >= _status->nextFeedEpoch) || 
                 (nowEpoch == 0 && nowMs - _fcTimer >= _status->intervalMs)) {
-                _fcState = FeedCycleState::FC_IDLE;
-                _fcEntered = false;
-                Serial.println("[FEED] Gap elapsed. Beginning next feed cycle.");
+                // Ensure at least 5 seconds have elapsed since the last cycle completed
+                if (nowMs - _fcTimer >= 5000UL) {
+                    _fcState = FeedCycleState::FC_IDLE;
+                    _fcEntered = false;
+                    Serial.println("[FEED] Gap elapsed. Beginning next feed cycle.");
+                }
             }
             break;
     }
@@ -449,14 +478,25 @@ bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
     // Only auto-start during daylight operational window
     if (currentMins >= startMins && currentMins < endMins) {
         uint32_t currentDay = nowEpoch / 86400;
-        // If we have already finished feeding today, do not auto-start again today
-        if (_lastFedDay == currentDay && _status->state == SystemState::FEED_FINISHED) {
+        // If we have already finished feeding today, do not auto-start again today!
+        if (_lastFedDay == currentDay) {
+            float target_g = _cfg->feedQuantity * 1000.0f;
+            if (_status->dispensedQuantity_g >= target_g || 
+                (_status->totalEvents > 0 && _status->currentEvent >= _status->totalEvents) ||
+                _status->state == SystemState::FEED_FINISHED) {
+                return false;
+            }
+        }
+
+        // Never auto-start if next feed is scheduled in future (e.g. tomorrow)
+        if (_status->nextFeedEpoch > nowEpoch) {
             return false;
         }
+
         if (!_status->scheduleValid) {
             calcSchedule(nowEpoch);
         }
-        if (_status->scheduleValid && nowEpoch >= _status->nextFeedEpoch) {
+        if (_status->scheduleValid && _status->intervalMs > 0 && nowEpoch >= _status->nextFeedEpoch) {
             return true;
         }
     }

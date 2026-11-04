@@ -29,6 +29,7 @@
 | | | | **STORY-015** (Fluid Multi-Field Settings Editing & Runtime Deductive Feed Schedule Math) `CLOSED` |
 | | | | **STORY-016** (Zero Stale Data Flash on Page Refresh via Pre-Hydration & Storage Persistence) `CLOSED` |
 | | | | **STORY-017** (Cloud Architecture Hardening & Latent Defect Elimination) `CLOSED` |
+| | | | **STORY-018** (Eradicate Zero-Interval Re-Trigger & Concluded Day Auto-Start Loop) `CLOSED` |
 
 ---
 
@@ -331,3 +332,27 @@
 - **Production Verification:**
   - Full Selenium headless test passed against live production AWS S3 bucket (`lorawan-telemetry-stack-webhostingbucket-djy9frtf8y6f.s3-website-us-east-1.amazonaws.com`).
   - 0 console errors during pond switching, tray check hydration, history rendering, and schedule calculation.
+
+---
+
+### STORY-018: Eradicate Zero-Interval Re-Trigger & Concluded Day Auto-Start Loop
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Shrimp Farmer
+- **I want:** The feeder to never re-trigger feeding on the same day after reaching total target events, and under zero circumstances ever execute a 0-second relay loop
+- **So that:** Feed is never dumped rapidly due to race conditions between LCD menu transitions, mid-day schedule math, and auto-start timers.
+- **Root Cause Analysis (5 Intersecting Faults):**
+  1. **LCD Menu Destructive State Overwrite:** At Event 175 (completion), `_fcState` completed and set `sysStatus.state = FEED_FINISHED`. The LCD displayed `MenuState::FINISHED` for a 30s timeout (`finishedDisplayTimer`). When 30s elapsed, `currentMenu` reverted to `MenuState::MAIN_STATUS`. In `AquaFeeder.ino` line 1875, `switch (currentMenu)` had `default: sysStatus.state = SystemState::IDLE; break;`, erasing `FEED_FINISHED` and resetting state to `IDLE`.
+  2. **Auto-Start Day-Guard Bypass:** `AquaFeeder.ino` line 2929 called `feedEng.shouldAutoStart(epoch)`. Because `_status->state` was now `IDLE`, the guard `_lastFedDay == currentDay && _status->state == FEED_FINISHED` failed to engage.
+  3. **Mid-Day Schedule Math Fall-Through:** Because the time was 17:50 (before the 18:00 window cutoff), `calcSchedule()` evaluated `else if (currentMins >= startMins)`. Because `remainingEvents == 0`, `eventsDuration_ms = 0`, bypassing `eventsDuration_ms >= availableTime_ms` and producing `intervalMs = 0`, with `scheduleValid = true` and `nextFeedEpoch` in the past.
+  4. **Unconditional startFeed Counter Wipe:** Line 2937 invoked `startFeed(epoch)`, which unconditionally zeroed `currentEvent = 0` and `dispensedQuantity_g = 0.0f` on the very same day.
+  5. **Zero-Delay Machine-Gun Relay Loop:** In `FC_WAIT`, because `intervalMs == 0`, every cycle elapsed with 0 delay, firing Event 1..175 with zero gap.
+- **5-Layer Defensive Interlocks Implemented:**
+  1. **`calcSchedule()` Concluded Day Guard:** Added `isCompletedToday` guard (`dispensedQuantity_g >= qty_g || currentEvent >= totalEvents || state == FEED_FINISHED`). Once completed, immediately arms for tomorrow at 06:00 AM (`startEpochToday + 86400UL`), pre-calculates tomorrow's full interval, and clamps minimum interval to 5000 ms.
+  2. **`shouldAutoStart()` Irrevocable Day Completion Invariant:** In `shouldAutoStart()`, checks `_lastFedDay == currentDay` against target grams and total events regardless of LCD state string. Rejects auto-start if `dispensedQuantity_g >= target_g` or `currentEvent >= totalEvents`. Also requires `intervalMs > 0` and `nextFeedEpoch > nowEpoch`.
+  3. **Menu Switch State Preservation (`AquaFeeder.ino`):** Replaced `default: sysStatus.state = IDLE` with `if (sysStatus.state != SystemState::FEED_FINISHED && sysStatus.state != SystemState::FEED_PAUSED) { sysStatus.state = SystemState::IDLE; }`. Persistent operational states are completely immune to LCD menu navigation.
+  4. **`startFeed()` Guard Interlock:** `startFeed()` verifies if already completed today; returns `false` and rejects re-arming if `currentEvent >= totalEvents` or `dispensedQuantity_g >= target_g`.
+  5. **Zero-Interval Hardware Interlock (`FC_WAIT`):** Clamped `intervalMs` to minimum 5000 ms; `FC_WAIT` strictly enforces `nowMs - _fcTimer >= 5000UL` before any motor relay can re-energize.
+- **Verification:**
+  - Standalone simulation `scratch/test_crazy_loop_fix.cpp` compiled and executed with 0 errors, validating all 5 defensive layers.
+  - Production ESP32-S3 firmware compiled with `arduino-cli`.

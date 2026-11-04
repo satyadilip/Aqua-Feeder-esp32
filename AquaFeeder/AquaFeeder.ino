@@ -1872,7 +1872,11 @@ void updateSystemStatus() {
 
         case MenuState::FINISHED:  sysStatus.state = SystemState::FEED_FINISHED; break;
 
-        default:                   sysStatus.state = SystemState::IDLE; break;
+        default:
+            if (sysStatus.state != SystemState::FEED_FINISHED && sysStatus.state != SystemState::FEED_PAUSED) {
+                sysStatus.state = SystemState::IDLE;
+            }
+            break;
 
     }
 
@@ -2926,13 +2930,13 @@ void loop() {
 
     // ── 7. Auto-Start Scheduled Feed ──
 
-    if (sysStatus.rtcOK && !sysStatus.feedActive && currentMenu != MenuState::PAUSED) {
+    if (sysStatus.rtcOK && !sysStatus.feedActive && currentMenu != MenuState::PAUSED && sysStatus.state != SystemState::FEED_FINISHED) {
 
         if (feedEng.shouldAutoStart(epoch)) {
 
             feedEng.calcSchedule(epoch);
 
-            if (sysStatus.scheduleValid) {
+            if (sysStatus.scheduleValid && sysStatus.intervalMs > 0) {
 
                 feedEng.startFeed(epoch);
 
