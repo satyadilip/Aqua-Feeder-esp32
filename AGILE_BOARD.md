@@ -32,6 +32,7 @@
 | | | | **STORY-018** (Eradicate Zero-Interval Re-Trigger & Concluded Day Auto-Start Loop) `CLOSED` |
 | | | | **STORY-019** (Deterministic Stop Feed & Daylight Window Auto-Arm for Tomorrow) `CLOSED` |
 | | | | **STORY-020** (Cloud UI Remaining Events & Dynamic Event Gap Parity) `CLOSED` |
+| | | | **STORY-021** (Immutable Historical Feed Summation & Settings Decoupling) `CLOSED` |
 
 ---
 
@@ -414,4 +415,37 @@
     - Status screen verified: `3 / 53`, `All 53 Completed Today`, `3 / 53 Events (Completed)`.
     - Settings screen verified: `50 Events`, `14.2 min (853s)`, `SCHEDULE OK`.
     - Dynamic edit test (25kg -> 30kg): recalculated instantly to `60 Events`, `11.8 min (709s)`.
+    - Browser console severe errors: 0.
+
+---
+
+### STORY-021: Immutable Historical Feed Summation & Settings Decoupling
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Shrimp Farmer
+- **I want:** The "Feed Dispensed Today" value on the status screen to always strictly represent the physical sum of actual past feed events history, and NEVER change when I adjust the "Feed per Event" or target settings for future events
+- **So that:** Past feeding history remains permanent and physically accurate, ensuring future recipe adjustments do not retroactively distort already consumed feed.
+- **Root Cause Analysis:**
+  1. **Synthetic Recalculation in `api_lambda.py` `GET /api/devices`:** Line 190 unconditionally computed `dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)` and line 192 overwrote `d['DispensedFeed_kg'] = dispensed_kg`. Whenever `fpe` was merged from `settings_table` (e.g. edited to 500g), `cur_ev * fpe` jumped retroactively from 0.30 kg (3 pulses of 100g) to 1.50 kg (3 × 500g).
+  2. **Synthetic Multiplication in `lambda_function.py`:** Line 188 did `total_dispensed_g = cur_ev_int * fpe_g` and line 412 did `live_disp_kg = Decimal(str(round((cur_ev_int * fpe_g) / 1000.0, 2)))` instead of using the hardware's real cumulative grams `feed_disp` (`dispensedQuantity_g`).
+  3. **Lack of History Sum Binding in Web Dashboard:** `web_dashboard/app.js` and `web_dashboard_v2/app.js` rendered `rawDispensed` from `dev.dispensedKg` without binding to the sum of today's actual `eventsLog` records.
+- **Defensive Solutions Implemented:**
+  1. **Immutable Historical Summation in Cloud Backend (`api_lambda.py`):**
+     - Queries `AquaFeeder_Telemetry` for today's feed events to compute the exact sum of `EventGrams` across all distinct past pulses:
+       $$	ext{actual\_dispensed\_kg} = rac{\sum_{i=1}^{	ext{cur\_ev}} 	ext{EventGrams}_i}{1000.0}$$
+     - Fallbacks to `TodayFeedDispensed_kg`, `LastFeed_g / 1000.0`, or prior `DispensedFeed_kg`.
+     - Completely eradicates synthetic `cur_ev * new_fpe` re-calculation.
+     - Preserves `DispensedFeed_kg` and `TodayFeedDispensed_kg` during `POST /api/settings/{deviceId}` updates.
+  2. **Cumulative Hardware Accumulator Parity in `lambda_function.py`:**
+     - Uses `feed_disp` (`dispensedQuantity_g` from ESP32-S3 firmware) directly as the ground truth for cumulative dispensed grams.
+  3. **History Sum Binding in Web Dashboard UI (`app.js` & `v2/app.js`):**
+     - `updateStatusDisplay()` computes `authoritativeDispensed` as the sum of `cleanEvents` from `dev.eventsLog` for today's date.
+     - `renderHistoryView()` computes `dev.historyDispensedKg` from genuine telemetry records and binds it to `dispensed-val-text`.
+     - `recalculateSchedule()` strictly decouples `dispensedKg` from `input-fpe` and slider changes.
+- **Verification:**
+  - `scratch/test_settings_immutable_dispensed.py` verified that changing FPE to 500g and 100g leaves `DispensedFeed_kg` completely constant at 5.58 kg.
+  - Selenium end-to-end headless Chrome test on live AWS S3 production bucket:
+    - Status screen initial dispensed: `5.58` kg.
+    - Settings screen edited to `500g`: Status screen stayed strictly `5.58` kg.
+    - Settings saved to cloud: Status screen stayed strictly `5.58` kg.
     - Browser console severe errors: 0.

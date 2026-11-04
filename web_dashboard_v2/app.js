@@ -269,9 +269,19 @@ function renderActiveFeeder() {
     }
   }
 
-  // Dispense Metrics
+  // Dispense Metrics - strictly sum of feed events history
+  let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  if (dev.eventsLog && dev.eventsLog.length > 0) {
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const todayEvents = dev.eventsLog.filter(e => !e.date || e.date === todayIso);
+    if (todayEvents.length > 0) {
+      const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
+      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
+      dev.dispensedKg = authoritativeDispensed;
+    }
+  }
   const dispensedEl = document.getElementById('hero-dispensed-kg');
-  if (dispensedEl) dispensedEl.textContent = Number(dev.dispensedKg || 0).toFixed(2);
+  if (dispensedEl) dispensedEl.textContent = Number(authoritativeDispensed || 0).toFixed(2);
 
   const targetEl = document.getElementById('hero-target-kg');
   if (targetEl) targetEl.textContent = Number(dev.targetKg || 15).toFixed(1);

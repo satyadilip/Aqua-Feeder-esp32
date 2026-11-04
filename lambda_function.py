@@ -185,7 +185,7 @@ def lambda_handler(event, context):
                 fpe_g = int(round(int(feed_disp) / cur_ev_int))
             else:
                 fpe_g = 100
-            total_dispensed_g = cur_ev_int * fpe_g
+            total_dispensed_g = int(feed_disp) if int(feed_disp) > 0 else (cur_ev_int * fpe_g)
             dispensed_kg = Decimal(str(round(total_dispensed_g / 1000.0, 2)))
             
             # 1. Fetch existing device record and user-configured settings FIRST
@@ -407,9 +407,9 @@ def lambda_handler(event, context):
             is_same_day = (prev_today_date == date_str)
 
             if cur_ev_int > 0:
-                # Live feeding is advancing
+                # Live feeding is advancing - use hardware cumulative grams if reported
                 live_cur_ev = Decimal(str(cur_ev_int))
-                live_disp_kg = Decimal(str(round((cur_ev_int * fpe_g) / 1000.0, 2)))
+                live_disp_kg = Decimal(str(round(int(feed_disp) / 1000.0, 2))) if int(feed_disp) > 0 else Decimal(str(round((cur_ev_int * fpe_g) / 1000.0, 2)))
                 today_date = date_str
                 today_completed_ev = Decimal(str(cur_ev_int))
                 today_dispensed_kg = live_disp_kg

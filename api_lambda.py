@@ -184,28 +184,58 @@ def lambda_handler(event, context):
                 for d in raw_devices:
                     dev_id = str(d.get('DeviceId', ''))
                     cur_ev = float(d.get('CurrentEvent', 0))
-                    tot_ev = float(d.get('TotalEvents', 250))
+                    tot_ev = float(d.get('TotalEvents', 200))
                     fpe = float(d.get('FeedPerEvent_g', 100))
-                    target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
-                    dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)
                     
-                    d['DispensedFeed_kg'] = dispensed_kg
+                    now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                    today_date_str = now_ist.strftime("%Y-%m-%d")
+
+                    # Authoritative Dispensed Feed Today: strictly the sum of feed events history
+                    actual_dispensed_kg = 0.0
+                    try:
+                        today_start_epoch = int((now_ist.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=5, minutes=30)).timestamp())
+                        t_resp = telemetry_table.query(
+                            KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(dev_id),
+                            ScanIndexForward=False,
+                            Limit=50
+                        )
+                        events_today = {}
+                        for t_it in t_resp.get('Items', []):
+                            ts = int(t_it.get('Timestamp', 0))
+                            dt = datetime.utcfromtimestamp(ts)
+                            ev_date = dt.strftime('%Y-%m-%d')
+                            ev_num = int(t_it.get('CurrentEvent', 0))
+                            if ev_num > 0 and (ev_date == today_date_str or ts >= today_start_epoch):
+                                if ev_num not in events_today:
+                                    eg = float(t_it.get('EventGrams', t_it.get('FeedPerEvent_g', 100)))
+                                    events_today[ev_num] = eg
+                        if events_today:
+                            actual_dispensed_kg = round(sum(events_today.values()) / 1000.0, 2)
+                    except Exception as te_err:
+                        pass
+
+                    # Fallbacks if telemetry query returned no events:
+                    if actual_dispensed_kg == 0.0:
+                        if str(d.get('TodayDate', '')) == today_date_str and float(d.get('TodayFeedDispensed_kg', 0)) > 0:
+                            actual_dispensed_kg = float(d.get('TodayFeedDispensed_kg'))
+                        elif float(d.get('LastFeed_g', 0)) > 0:
+                            actual_dispensed_kg = round(float(d.get('LastFeed_g')) / 1000.0, 2)
+                        elif float(d.get('DispensedFeed_kg', 0)) > 0:
+                            actual_dispensed_kg = float(d.get('DispensedFeed_kg'))
+                        elif cur_ev > 0 and fpe > 0:
+                            actual_dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)
+
+                    dispensed_kg = actual_dispensed_kg
+                    target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
+                    
+                    d['DispensedFeed_kg'] = actual_dispensed_kg
+                    d['TodayFeedDispensed_kg'] = actual_dispensed_kg
                     d['FeedQuantity_kg'] = target_kg
                     d['CurrentEvent'] = int(cur_ev)
                     d['TotalEvents'] = int(tot_ev)
                     d['FeedPerEvent_g'] = int(fpe)
                     d['LastSeenEpoch'] = int(d.get('LastSeenEpoch', int(datetime.utcnow().timestamp())))
                     d['LastEventTime'] = str(d.get('LastEventTime', datetime.utcnow().strftime("%Y-%m-%d %H:%M:%SZ")))
-                    
-                    # Base values from device record (authoritative live telemetry)
-                    tot_ev = float(d.get('TotalEvents', 200))
-                    cur_ev = float(d.get('CurrentEvent', 0))
-                    fpe = float(d.get('FeedPerEvent_g', 100))
-                    if fpe == 0 and cur_ev > 0 and float(d.get('LastFeed_g', 0)) > 0:
-                        fpe = float(round(float(d.get('LastFeed_g')) / cur_ev))
-                    
-                    target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
-                    dispensed_kg = float(d.get('DispensedFeed_kg', round((cur_ev * fpe) / 1000.0, 2)))
                     
                     # Merge user-configured settings if present (Authoritative Daily Target)
                     try:
@@ -225,6 +255,7 @@ def lambda_handler(event, context):
                             d['ScheduleValid'] = True
 
                             # Exact Runtime Deductive Schedule Math matching firmware:
+                            # IMPORTANT: dispensed_kg is the immutable actual past dispensed feed!
                             if cur_ev > 0 and dispensed_kg > 0:
                                 rem_kg = max(0.0, target_kg - dispensed_kg)
                                 rem_ev = int(math.ceil((rem_kg * 1000.0) / fpe)) if rem_kg > 0 else 0
@@ -875,25 +906,32 @@ def lambda_handler(event, context):
                 
                 settings_table.put_item(Item=settings_item)
                 
-                # Also update device in devices table
+                # Also update device in devices table - preserving immutable dispensed feed history
+                update_expr = 'SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, TotalEventsRemaining = :ter, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv'
+                expr_vals = {
+                    ':dq': feed_qty,
+                    ':fq': feed_qty,
+                    ':fpe': feed_burst,
+                    ':dr': rate,
+                    ':sh': shour,
+                    ':sm': smin,
+                    ':eh': ehour,
+                    ':em': emin,
+                    ':te': Decimal(str(total_events)),
+                    ':ter': Decimal(str(remaining_events)),
+                    ':mt': Decimal(str(motor_time_s)),
+                    ':im': Decimal(str(interval_min)),
+                    ':sv': valid
+                }
+                if already_dispensed_kg > 0:
+                    update_expr += ', DispensedFeed_kg = :dfk, TodayFeedDispensed_kg = :tfd'
+                    expr_vals[':dfk'] = Decimal(str(round(already_dispensed_kg, 2)))
+                    expr_vals[':tfd'] = Decimal(str(round(already_dispensed_kg, 2)))
+
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, TotalEventsRemaining = :ter, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv',
-                    ExpressionAttributeValues={
-                        ':dq': feed_qty,
-                        ':fq': feed_qty,
-                        ':fpe': feed_burst,
-                        ':dr': rate,
-                        ':sh': shour,
-                        ':sm': smin,
-                        ':eh': ehour,
-                        ':em': emin,
-                        ':te': Decimal(str(total_events)),
-                        ':ter': Decimal(str(remaining_events)),
-                        ':mt': Decimal(str(motor_time_s)),
-                        ':im': Decimal(str(interval_min)),
-                        ':sv': valid
-                    }
+                    UpdateExpression=update_expr,
+                    ExpressionAttributeValues=expr_vals
                 )
                 
                 # Queue LoRaWAN Binary Downlink (CMD_SET_SETTINGS = 0xA0) to Hardware

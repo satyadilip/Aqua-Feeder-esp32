@@ -1001,7 +1001,18 @@ function loadSelectedDeviceToUI() {
     gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
   }
 
-  const rawDispensed = isBeforeSchedule ? 0.0 : (dev.dispensedKg !== undefined ? dev.dispensedKg : 0);
+  // Calculate authoritative dispensed feed: strictly the sum of feed events history
+  let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  if (dev.eventsLog && dev.eventsLog.length > 0) {
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    const todayEvents = dev.eventsLog.filter(e => !e.date || e.date === todayIso);
+    if (todayEvents.length > 0) {
+      const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
+      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
+      dev.dispensedKg = authoritativeDispensed;
+    }
+  }
+  const rawDispensed = isBeforeSchedule ? 0.0 : authoritativeDispensed;
   const targetKg = dev.targetKg ? Math.max(0.1, dev.targetKg) : 15.0;
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
@@ -1359,6 +1370,17 @@ async function renderHistoryView() {
           }
         }
         dev.eventsLog = cleanEvents;
+        const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const todayEvents = cleanEvents.filter(e => !e.date || e.date === todayIso);
+        if (todayEvents.length > 0) {
+          const sumGrams = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
+          dev.historyDispensedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
+          dev.dispensedKg = dev.historyDispensedKg;
+          const dispensedText = document.getElementById('dispensed-val-text');
+          if (dispensedText) {
+            dispensedText.textContent = dev.dispensedKg.toFixed(2);
+          }
+        }
       }
     }
   } catch (e) {
@@ -2701,8 +2723,12 @@ async function syncDevicesFromCloud() {
         }
         if (localDev) {
           if (cloudDev.Connected !== undefined) localDev.connected = Boolean(cloudDev.Connected);
-          if (cloudDev.DispensedFeed_kg !== undefined) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
-          else if (cloudDev.LastFeed_g !== undefined) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
+          const hasLocalHistory = localDev.eventsLog && localDev.eventsLog.length > 0;
+          if (cloudDev.DispensedFeed_kg !== undefined) {
+            if (!hasLocalHistory) localDev.dispensedKg = Number(cloudDev.DispensedFeed_kg);
+          } else if (cloudDev.LastFeed_g !== undefined) {
+            if (!hasLocalHistory) localDev.dispensedKg = parseFloat((cloudDev.LastFeed_g / 1000.0).toFixed(2));
+          }
           if (cloudDev.DailyTarget_kg !== undefined) localDev.targetKg = Number(cloudDev.DailyTarget_kg);
           else if (cloudDev.FeedQuantity_kg !== undefined) localDev.targetKg = Number(cloudDev.FeedQuantity_kg);
           if (cloudDev.CurrentEvent !== undefined) localDev.currentEvent = Number(cloudDev.CurrentEvent);
