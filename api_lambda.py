@@ -190,7 +190,7 @@ def lambda_handler(event, context):
                     now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
                     today_date_str = now_ist.strftime("%Y-%m-%d")
 
-                    # Authoritative Dispensed Feed Today: strictly the sum of feed events history
+                    # Authoritative Dispensed Feed Today: strictly the sum of active feed events history
                     actual_dispensed_kg = 0.0
                     try:
                         today_midnight_ist = datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0, tzinfo=timezone.utc)
@@ -198,31 +198,46 @@ def lambda_handler(event, context):
                         t_resp = telemetry_table.query(
                             KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(dev_id),
                             ScanIndexForward=False,
-                            Limit=100
+                            Limit=50
                         )
-                        events_today = {}
-                        for t_it in t_resp.get('Items', []):
-                            ts = int(t_it.get('Timestamp', 0))
-                            dt = datetime.utcfromtimestamp(ts)
-                            ev_date = dt.strftime('%Y-%m-%d')
-                            ev_num = int(t_it.get('CurrentEvent', 0))
-                            if ev_num > 0 and (ev_date == today_date_str or ts >= today_start_epoch):
+                        items = t_resp.get('Items', [])
+                        
+                        # Find the active event and hardware dispensed grams from latest telemetry
+                        active_ev = int(cur_ev)
+                        hw_disp_g = 0.0
+                        for it in items:
+                            ev = int(it.get('CurrentEvent', 0))
+                            disp_g = float(it.get('FeedDispensed_g', 0))
+                            if ev > 0:
+                                if active_ev == 0:
+                                    active_ev = ev
+                                if hw_disp_g == 0.0 and disp_g > 0:
+                                    hw_disp_g = disp_g
+                                break
+                        
+                        if hw_disp_g > 0 and active_ev > 0:
+                            actual_dispensed_kg = round(hw_disp_g / 1000.0, 2)
+                        else:
+                            # Monotonic active cycle extraction (stop at prior run boundary)
+                            events_today = {}
+                            for t_it in items:
+                                ev_num = int(t_it.get('CurrentEvent', 0))
+                                if ev_num <= 0:
+                                    continue
+                                if active_ev > 0 and ev_num > active_ev:
+                                    break  # Hit prior run boundary!
                                 if ev_num not in events_today:
-                                    eg = float(t_it.get('EventGrams', t_it.get('FeedPerEvent_g', 100)))
+                                    eg = float(t_it.get('EventGrams', t_it.get('FeedPerEvent_g', fpe)))
                                     events_today[ev_num] = eg
-                        if events_today:
-                            actual_dispensed_kg = round(sum(events_today.values()) / 1000.0, 2)
+                            if events_today:
+                                actual_dispensed_kg = round(sum(events_today.values()) / 1000.0, 2)
                     except Exception as te_err:
                         pass
 
                     # Fallbacks if telemetry query returned no events:
                     if actual_dispensed_kg == 0.0:
-                        if str(d.get('TodayDate', '')) == today_date_str and float(d.get('TodayFeedDispensed_kg', 0)) > 0:
-                            actual_dispensed_kg = float(d.get('TodayFeedDispensed_kg'))
-                        elif float(d.get('LastFeed_g', 0)) > 0:
+                        if float(d.get('LastFeed_g', 0)) > 0:
                             actual_dispensed_kg = round(float(d.get('LastFeed_g')) / 1000.0, 2)
-                        elif float(d.get('DispensedFeed_kg', 0)) > 0:
-                            actual_dispensed_kg = float(d.get('DispensedFeed_kg'))
                         elif cur_ev > 0 and fpe > 0:
                             actual_dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)
 
@@ -857,7 +872,16 @@ def lambda_handler(event, context):
                     already_dispensed_kg = today_kg if today_kg > 0 else dispensed_kg
 
                 if 'alreadyDispensed_kg' in body and float(body['alreadyDispensed_kg']) > 0:
-                    already_dispensed_kg = max(already_dispensed_kg, float(body['alreadyDispensed_kg']))
+                    cand_kg = float(body['alreadyDispensed_kg'])
+                    # Sanity-check: never allow alreadyDispensed_kg to drastically exceed what already_ran_events could physically dispense
+                    if already_ran_events > 0:
+                        max_allowed = (already_ran_events * feed_burst_float / 1000.0) * 1.5
+                        if cand_kg <= max_allowed:
+                            already_dispensed_kg = cand_kg
+                        else:
+                            already_dispensed_kg = round((already_ran_events * feed_burst_float) / 1000.0, 2)
+                    else:
+                        already_dispensed_kg = 0.0
                 if 'alreadyRanEvents' in body and int(body['alreadyRanEvents']) > 0:
                     already_ran_events = max(already_ran_events, int(body['alreadyRanEvents']))
 

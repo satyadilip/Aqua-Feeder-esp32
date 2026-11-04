@@ -422,12 +422,15 @@ def lambda_handler(event, context):
                 today_completed_ev = Decimal(str(prev_today_ev))
                 today_dispensed_kg = prev_today_kg
                 today_total_ev = Decimal(str(prev_today_tot))
-                today_status = 'COMPLETED' if (now_ist_mins >= end_mins or prev_today_status == 'COMPLETED') else prev_today_status
+                is_all_done = (prev_today_ev >= prev_today_tot or float(prev_today_kg) >= float(target_kg))
+                today_status = 'COMPLETED' if is_all_done else ('SCHEDULE ENDED' if now_ist_mins >= end_mins else prev_today_status)
                 
                 live_cur_ev = today_completed_ev
                 live_disp_kg = today_dispensed_kg
-                if now_ist_mins >= end_mins or prev_today_status == 'COMPLETED':
+                if is_all_done:
                     status_str = 'COMPLETED'
+                elif now_ist_mins >= end_mins:
+                    status_str = 'SCHEDULE ENDED'
                 elif prev_status in ['STANDBY', 'STOPPED', 'PAUSED']:
                     status_str = prev_status
                 else:

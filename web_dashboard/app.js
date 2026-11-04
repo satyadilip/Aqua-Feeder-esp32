@@ -912,13 +912,14 @@ function loadSelectedDeviceToUI() {
   const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
   const hasFeedsRanToday = (effectiveCurrent > 0 || rawDispensed > 0);
   const isTargetCompleted = !isBeforeSchedule && (effectiveCurrent >= totalEvents || (targetKg > 0 && rawDispensed >= targetKg));
-  const isTrulyCompleted = !isBeforeSchedule && (isTargetCompleted || (isPastSchedule && hasFeedsRanToday) || (dev.status === 'COMPLETED' && hasFeedsRanToday));
+  const isScheduleEnded = !isBeforeSchedule && isPastSchedule && !isTargetCompleted;
+  const isTrulyCompleted = !isBeforeSchedule && (isTargetCompleted || (dev.status === 'COMPLETED' && isTargetCompleted));
   const isFeedStopped = (dev.status === 'STANDBY' || dev.status === 'STOPPED' || dev.feedActive === false);
 
-  const displayCurrent = isTrulyCompleted ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
-  const displayTotal = isTrulyCompleted ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
+  const displayCurrent = isTargetCompleted ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
+  const displayTotal = isTargetCompleted ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
   const trueDispensePct = Math.min(100, Math.max(0, (rawDispensed / targetKg) * 100));
-  const gaugePct = (isTrulyCompleted && rawDispensed >= targetKg) ? 100 : trueDispensePct;
+  const gaugePct = (isTargetCompleted && rawDispensed >= targetKg) ? 100 : trueDispensePct;
 
   let statusText = 'STANDBY';
   let badgeClass = 'b-idle';
@@ -950,17 +951,23 @@ function loadSelectedDeviceToUI() {
     nextTimestamp = timeFormatted;
     nextSubText = `Starts today at ${timeFormatted}`;
     eventSubText = 'Ready for schedule';
-  } else if (isTrulyCompleted) {
+  } else if (isTargetCompleted) {
     statusText = 'COMPLETED';
     badgeClass = 'b-done';
     nextTimestamp = timeFormatted;
     nextSubText = `Tomorrow at ${timeFormatted}`;
-    eventSubText = "Schedule completed";
+    eventSubText = "All target feed dispensed";
+  } else if (isScheduleEnded) {
+    statusText = 'SCHEDULE ENDED';
+    badgeClass = 'b-idle';
+    nextTimestamp = timeFormatted;
+    nextSubText = `Starts tomorrow at ${timeFormatted}`;
+    eventSubText = `${displayCurrent} of ${displayTotal} completed today`;
   } else if (isFeedStopped) {
     statusText = 'STANDBY';
     badgeClass = 'b-idle';
-    nextTimestamp = '--';
-    nextSubText = 'Feed Paused / Standby';
+    nextTimestamp = isPastSchedule ? timeFormatted : '--';
+    nextSubText = isPastSchedule ? `Starts tomorrow at ${timeFormatted}` : 'Feed Paused / Standby';
     eventSubText = `${displayCurrent} of ${displayTotal} completed`;
   } else if (dev.status === 'FEEDING' || dev.status === 'ACTIVE' || (effectiveCurrent > 0 && !isPastSchedule)) {
     statusText = 'FEEDING';
@@ -1018,16 +1025,20 @@ function loadSelectedDeviceToUI() {
     gaugeCircle.style.strokeDashoffset = offset;
   }
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
-  const totalRemaining = isTrulyCompleted ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
+  const totalRemaining = (isTargetCompleted || isScheduleEnded) ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = isTrulyCompleted
-      ? `/ ${displayTotal} Events (Completed)`
-      : `/ ${displayTotal} Events Today (${totalRemaining} Remaining)`;
+    if (isTargetCompleted) {
+      gaugeHeroSub.textContent = `/ ${displayTotal} Events (Completed)`;
+    } else if (isScheduleEnded) {
+      gaugeHeroSub.textContent = `/ ${displayTotal} Events Today (Schedule Ended)`;
+    } else {
+      gaugeHeroSub.textContent = `/ ${displayTotal} Events Today (${totalRemaining} Remaining)`;
+    }
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule 
       ? `Scheduled ${timeFormatted}` 
-      : (isTrulyCompleted && rawDispensed >= targetKg ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
+      : (isTargetCompleted && rawDispensed >= targetKg ? '100% Completed' : (isScheduleEnded ? `${gaugePct.toFixed(1)}% (Partial)` : `${gaugePct.toFixed(1)}%`));
   }
 
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
@@ -1037,7 +1048,19 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${displayTotal}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted} (${displayTotal} Events)` : (isTrulyCompleted ? `All ${displayTotal} Completed Today` : `${totalRemaining} Events Remaining`));
+  if (burstCountSub) {
+    if (isPaused || isFeedEmpty) {
+      burstCountSub.textContent = eventSubText;
+    } else if (isBeforeSchedule) {
+      burstCountSub.textContent = `Starts at ${timeFormatted} (${displayTotal} Events)`;
+    } else if (isTargetCompleted) {
+      burstCountSub.textContent = `All ${displayTotal} Events Completed Today`;
+    } else if (isScheduleEnded) {
+      burstCountSub.textContent = `${displayCurrent} of ${displayTotal} Completed (Schedule Ended)`;
+    } else {
+      burstCountSub.textContent = `${totalRemaining} Events Remaining`;
+    }
+  }
 
   // Dynamic Primary Feeder Action Buttons (BUG-C08 FIX)
   const btnStart = document.getElementById('btn-remote-start');
@@ -1409,11 +1432,29 @@ async function renderHistoryView() {
     if (tRes.ok) {
       const tData = await tRes.json();
       if (tData && tData.telemetry && tData.telemetry.length > 0) {
+        // Find active session anchor and hardware cumulative grams from latest telemetry
+        let activeCurEv = dev.currentEvent || 0;
+        let hwDispGrams = 0;
+        for (const item of tData.telemetry) {
+          const ev = Math.round(Number(item.CurrentEvent || 0));
+          const disp = Math.round(Number(item.FeedDispensed_g || 0));
+          if (ev > 0) {
+            if (activeCurEv === 0) activeCurEv = ev;
+            if (hwDispGrams === 0 && disp > 0) hwDispGrams = disp;
+            break;
+          }
+        }
+
         const seenEvents = new Set();
         const cleanEvents = [];
         for (const item of tData.telemetry) {
           const evNum = Math.round(Number(item.CurrentEvent || 0));
-          if (evNum > 0 && !seenEvents.has(evNum)) {
+          if (evNum <= 0) continue;
+          // Boundary guard: Stop at prior run boundary (if evNum > activeCurEv, it belongs to an earlier superseded session)
+          if (activeCurEv > 0 && evNum > activeCurEv) {
+            break;
+          }
+          if (!seenEvents.has(evNum)) {
             seenEvents.add(evNum);
             let timeStr = item.Time || '';
             if (timeStr && timeStr.includes(':')) {
@@ -1449,10 +1490,18 @@ async function renderHistoryView() {
         dev.eventsLog = cleanEvents;
         const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
         const todayEvents = cleanEvents.filter(e => !e.date || e.date === todayIso);
-        if (todayEvents.length > 0) {
+        
+        let calculatedKg = 0.0;
+        if (hwDispGrams > 0 && activeCurEv > 0) {
+          calculatedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
+        } else if (todayEvents.length > 0) {
           const sumGrams = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-          dev.historyDispensedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
-          dev.dispensedKg = dev.historyDispensedKg;
+          calculatedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
+        }
+
+        if (calculatedKg > 0.0 || dev.dispensedKg === undefined) {
+          dev.historyDispensedKg = calculatedKg;
+          dev.dispensedKg = calculatedKg;
           const dispensedText = document.getElementById('dispensed-val-text');
           if (dispensedText) {
             dispensedText.textContent = dev.dispensedKg.toFixed(2);
@@ -2155,7 +2204,7 @@ async function saveSettingsToFeeder() {
         startMinute: dev.startMin,
         endHour: dev.endHour,
         endMinute: dev.endMin,
-        alreadyDispensed_kg: dev.dispensedKg || 0.0,
+        alreadyDispensed_kg: (dev.currentEvent > 0 && dev.dispensedKg > 0) ? Math.min(dev.dispensedKg, (dev.currentEvent * (dev.fpeGrams || 500) / 1000.0) * 1.5) : 0.0,
         alreadyRanEvents: dev.currentEvent || 0
       })
     });

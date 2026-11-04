@@ -577,3 +577,34 @@
 - **Verification:**
   - Firmware compiled successfully with `arduino-cli`: 1,213,104 bytes program storage (92%), 53,652 bytes RAM (16%), 0 errors, 0 warnings.
   - Merged binary verified: `AquaFeeder.ino.merged.bin` (16,777,216 bytes) generated and mirrored to `AquaFeeder/build/`.
+
+---
+
+### STORY-026: Eradication of Ghost Telemetry Aggregation (14.33 kg) & Resolution of Contradictory "All Completed" Status Subtext
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Aquaculture Farm Operator & Lead Systems Architect
+- **I want:**
+  1. The dashboard status screen to never contradict its own primary counters. If 3 out of 27 events completed today, the UI must never claim "All 27 Completed Today". Upon daylight operational window closure (18:00 IST), partial feeding sessions must clearly indicate `3 of 27 Completed (Schedule Ended)`.
+  2. The dispensed kilograms metric to strictly reflect the active feed cycle's true hardware kilograms (e.g., 1.50 kg for 3 events of 500g), eliminating multi-session ghost event summation that previously pulled historical telemetry packets from earlier test runs (events #140 to #175) on the same date to manufacture 14.33 kg.
+  3. The settings API endpoint (`POST /api/settings`) to sanity-bound `alreadyDispensed_kg` against `alreadyRanEvents * feedPerEvent` to prevent corrupted frontend sums from polluting DynamoDB `AquaFeeder_Devices`.
+- **Root Cause & Architectural Fixes:**
+  1. **Contradictory Completion Logic (`web_dashboard/app.js:914-922, 1040`):**
+     - *Defect:* `isTrulyCompleted` evaluated to `true` whenever `isPastSchedule && hasFeedsRanToday` was met (i.e., after 18:00 IST if even 1 event ran). Line 1040 then printed `All ${displayTotal} Completed Today` regardless of whether `displayCurrent` actually reached `displayTotal`, creating a glaring contradiction (`3 / 27` header with `All 27 Completed Today` subtext).
+     - *Fix:* Decoupled `isTargetCompleted` (`effectiveCurrent >= totalEvents || rawDispensed >= targetKg`) from `isScheduleEnded` (`isPastSchedule && !isTargetCompleted`). When the window closes on a partial session, subtext displays `${displayCurrent} of ${displayTotal} Completed (Schedule Ended)` with state badge `SCHEDULE ENDED` (or `STANDBY`). "All Completed" is only displayed when 100% of the target is genuinely dispensed.
+  2. **Ghost Telemetry Multi-Session Summation (`web_dashboard/app.js:1410-1460`, `api_lambda.py:193-228`):**
+     - *Defect:* To calculate dispensed feed, both `app.js` and `api_lambda.py` queried the last 100 telemetry entries for the date and collected every unique `CurrentEvent` number ever logged on that calendar day. Earlier in the day, test runs had logged events #5 to #35 and #140 to #175. When the device was restarted and ran events #2 and #3, the code summed all 45 disjoint event numbers together to invent 14,328g = 14.33 kg.
+     - *Fix:* Implemented monotonic active run extraction and boundary detection. Scanning backwards from the newest telemetry entry, the parser only accepts events decreasing from `activeCurEv` down to 1. If an event number jumps higher than `activeCurEv`, a prior run boundary is identified and parsing terminates. Authoritative `dev.dispensedKg` directly binds to the latest hardware packet's cumulative `FeedDispensed_g` (1500g = 1.50 kg).
+  3. **Settings Save Overwrite Clamping (`web_dashboard/app.js:2158`, `api_lambda.py:859-863`):**
+     - *Defect:* Saving settings from the UI transmitted the browser's un-sanitized `dispensedKg` in `alreadyDispensed_kg`, writing 14.33 kg directly into DynamoDB `TodayFeedDispensed_kg`.
+     - *Fix:* Clamped `alreadyDispensed_kg` on both client and backend: `max_allowed = (already_ran_events * feed_burst / 1000.0) * 1.5`. Un-physically large sums are clamped to the true physical capacity of the events that ran.
+- **Verification:**
+  - Automated test script `scratch/test_forensic_accuracy.py` passed 3/3 test suites (API response verification, telemetry run segmentation, UI text invariants).
+  - Deployed updated Lambdas (`AquaFeederApiHandler`, `AquaFeederTelemetryProcessor`) and static S3 dashboard.
+  - Headless Chrome live verification (`scratch/verify_live_logged_in.py`):
+    - Status badge: `STANDBY`
+    - Hero Sub: `/ 163 EVENTS TODAY (163 REMAINING)`
+    - Burst Count: `0 / 163`
+    - Burst Count Sub: `Starts at 06:00 AM (163 Events)`
+    - Dispensed kg: `0.00` (14.33 kg completely eradicated)
+    - 0 SEVERE browser console errors.
