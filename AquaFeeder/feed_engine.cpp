@@ -132,7 +132,7 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
 
         // Check: For mid-day start, can it finish in the remaining time today?
         if (eventsDuration_ms >= availableTime_ms) {
-            // Remaining window today is shorter than needed. Arm for tomorrow 06:00 AM!
+            // Remaining window today is shorter than needed. Arm for tomorrow at configured startHour:startMinute!
             _status->scheduleValid = true;
             _status->nextFeedEpoch = startEpochToday + 86400UL;
             unsigned long fullEvents = (unsigned long)ceil(qty_g / (float)_cfg->feedPerEvent);
