@@ -954,7 +954,7 @@ function loadSelectedDeviceToUI() {
     statusText = 'COMPLETED';
     badgeClass = 'b-done';
     nextTimestamp = timeFormatted;
-    nextSubText = 'Tomorrow morning';
+    nextSubText = `Tomorrow at ${timeFormatted}`;
     eventSubText = "Schedule completed";
   } else if (isFeedStopped) {
     statusText = 'STANDBY';
@@ -1104,7 +1104,7 @@ function loadSelectedDeviceToUI() {
     } else if (isFeedEmpty) {
       hopperNotif.textContent = 'Hopper empty! Please refill feed stock to ensure uninterrupted scheduled feeding.';
     } else if (isScheduleDone) {
-      hopperNotif.textContent = `Today's feeding completed (${rawDispensed.toFixed(1)} kg dispensed). Feeder on standby until ${String(sHour).padStart(2, '0')}:${String(sMin).padStart(2, '0')} AM tomorrow.`;
+      hopperNotif.textContent = `Today's feeding completed (${rawDispensed.toFixed(1)} kg dispensed). Feeder on standby until ${timeFormatted} tomorrow.`;
     } else {
       hopperNotif.textContent = `Feeder operational. Next scheduled feed at ${nextTimestamp}.`;
     }
@@ -1585,10 +1585,10 @@ function renderEventsLog(dev, metrics) {
     } else if (lastActiveMetric) {
       const activeLabel = lastActiveMetric.dateLabel || 'Sunday, Oct 25';
       logLabel.textContent = eventsCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at 06:00 AM)` 
-        : `Showing ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at 06:00 AM)`;
+        ? `Showing latest ${maxToDisplay} of ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)})` 
+        : `Showing ${eventsCount} feed events (Last Active: ${activeLabel} • Today starts at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)})`;
     } else {
-      logLabel.textContent = `Today's feed schedule begins at ${String(dev.startHour || 6).padStart(2, '0')}:${String(dev.startMin || 0).padStart(2, '0')} AM`;
+      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(dev.startHour || 6, dev.startMin || 0)}`;
     }
   }
 

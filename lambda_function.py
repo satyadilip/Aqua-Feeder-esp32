@@ -495,7 +495,7 @@ def lambda_handler(event, context):
                 next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m)"
             elif status_str == 'COMPLETED' or now_ist_mins >= end_mins:
                 next_feed_str = s_time_fmt
-                next_feed_sub = "Tomorrow morning"
+                next_feed_sub = f"Tomorrow at {s_time_fmt}"
             elif now_ist_mins < start_mins:
                 next_feed_str = s_time_fmt
                 next_feed_sub = f"Starts today at {s_time_fmt}"
@@ -507,7 +507,7 @@ def lambda_handler(event, context):
                 next_feed_sub = "Refill Required"
             else:
                 next_feed_str = s_time_fmt
-                next_feed_sub = f"Starts at {s_time_fmt}" if now_ist_mins < end_mins else "Tomorrow morning"
+                next_feed_sub = f"Starts at {s_time_fmt}" if now_ist_mins < end_mins else f"Tomorrow at {s_time_fmt}"
 
             dev_item = {
                 'DeviceId': dev_eui,

@@ -18,7 +18,7 @@ void TelemetryManager::queueEvent(TelemetryMsgType type) {
     event.timestamp = _status->currentEpoch;
     event.voltage_mV = (uint16_t)(_status->voltageV * 1000.0f);
     event.current_mA = (uint16_t)_status->currentMA;
-    event.feedDispensed_g = _status->currentEvent * (_cfg ? _cfg->feedPerEvent : 0);
+    event.feedDispensed_g = (_status->dispensedQuantity_g > 0.0f) ? (uint16_t)round(_status->dispensedQuantity_g) : (_status->currentEvent * (_cfg ? _cfg->feedPerEvent : 0));
     event.currentEvent = _status->currentEvent;
     event.totalEvents = _status->totalEvents;
     

@@ -399,7 +399,7 @@ def lambda_handler(event, context):
                         gap_s = base_gap_s
                         dyn_interval_m = base_interval_m
                         next_feed_str = s_time_fmt
-                        next_feed_sub = "Tomorrow morning"
+                        next_feed_sub = f"Tomorrow at {s_time_fmt}"
 
                     # Phase 3: Standby / Stopped (user commanded STOP or device in standby)
                     elif is_feed_stopped:

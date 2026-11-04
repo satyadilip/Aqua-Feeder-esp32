@@ -1836,56 +1836,25 @@ void updateSystemStatus() {
 
     sysStatus.proximityTriggered = hal.isProximityTriggered();
 
-    // Map menu state to system state
-
-    switch (currentMenu) {
-
-        case MenuState::MAIN_STATUS:
-
-        case MenuState::MENU_LIST:
-
-        case MenuState::DIAG_MENU:
-
-        case MenuState::TEST_FEED_SELECT:
-
-            sysStatus.state = sysStatus.feedActive ? SystemState::IDLE : SystemState::IDLE;
-
-            break;
-
-        case MenuState::TEST_FEED_RUNNING:
-
-            sysStatus.state = SystemState::FEED_DISPENSING;
-
-            break;
-
-        case MenuState::RUNNING:
-
-            switch (sysStatus.feedState) {
-
-                case FeedCycleState::FC_PRE:  sysStatus.state = SystemState::FEED_PRE_WARMUP; break;
-
-                case FeedCycleState::FC_DISP: sysStatus.state = SystemState::FEED_DISPENSING; break;
-
-                case FeedCycleState::FC_POST: sysStatus.state = SystemState::FEED_POST_CLEAR; break;
-
-                case FeedCycleState::FC_WAIT: sysStatus.state = SystemState::FEED_WAIT_NEXT; break;
-
-                default: sysStatus.state = SystemState::IDLE; break;
-
-            }
-
-            break;
-
-        case MenuState::PAUSED:    sysStatus.state = SystemState::FEED_PAUSED; break;
-
-        case MenuState::FINISHED:  sysStatus.state = SystemState::FEED_FINISHED; break;
-
-        default:
-            if (sysStatus.state != SystemState::FEED_FINISHED && sysStatus.state != SystemState::FEED_PAUSED) {
-                sysStatus.state = SystemState::IDLE;
-            }
-            break;
-
+    // Preserve machine state based on feed engine state rather than UI screen
+    if (currentMenu == MenuState::TEST_FEED_RUNNING) {
+        sysStatus.state = SystemState::FEED_DISPENSING;
+    } else if (sysStatus.feedActive) {
+        switch (sysStatus.feedState) {
+            case FeedCycleState::FC_PRE:  sysStatus.state = SystemState::FEED_PRE_WARMUP; break;
+            case FeedCycleState::FC_DISP: sysStatus.state = SystemState::FEED_DISPENSING; break;
+            case FeedCycleState::FC_POST: sysStatus.state = SystemState::FEED_POST_CLEAR; break;
+            case FeedCycleState::FC_WAIT: sysStatus.state = SystemState::FEED_WAIT_NEXT; break;
+            default: sysStatus.state = SystemState::FEED_WAIT_NEXT; break;
+        }
+    } else {
+        if (currentMenu == MenuState::PAUSED || sysStatus.proximityTriggered) {
+            sysStatus.state = SystemState::FEED_PAUSED;
+        } else if (currentMenu == MenuState::FINISHED || sysStatus.state == SystemState::FEED_FINISHED) {
+            sysStatus.state = SystemState::FEED_FINISHED;
+        } else if (sysStatus.state != SystemState::ERROR_FATAL) {
+            sysStatus.state = SystemState::IDLE;
+        }
     }
 
 
