@@ -932,9 +932,9 @@ function loadSelectedDeviceToUI() {
     const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
     if (dev.nextFeed) {
       nextTimestamp = dev.nextFeed;
-      nextSubText = dev.nextFeedSub || `Interval: ${dev.intervalMin || 1.4} min`;
+      nextSubText = dev.nextFeedSub || (dev.gapIntervalSec ? `Interval: ${dev.intervalMin} min (${dev.gapIntervalSec}s)` : `Interval: ${dev.intervalMin || 2.9} min`);
     } else {
-      const intervalMin = dev.intervalMin || 1.4;
+      const intervalMin = dev.intervalMin || 2.9;
       let nextMin;
       if (dev.lastEventTime) {
         try {
@@ -965,7 +965,7 @@ function loadSelectedDeviceToUI() {
   } else {
     statusText = 'ACTIVE';
     badgeClass = 'b-run';
-    const intervalMin = dev.intervalMin || 3.1;
+    const intervalMin = dev.intervalMin || 2.9;
     const nextMin = nowTotalMin + Math.round(intervalMin);
     if (nextMin >= endTotalMin) {
       nextTimestamp = timeFormatted;
@@ -993,7 +993,9 @@ function loadSelectedDeviceToUI() {
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   const totalRemaining = dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent);
   if (gaugeHeroSub) {
-    gaugeHeroSub.textContent = `/ ${displayTotal} Events Today`;
+    gaugeHeroSub.textContent = isScheduleDone
+      ? `/ ${displayTotal} Events (Completed)`
+      : `/ ${displayTotal} Events Today (${totalRemaining} Remaining)`;
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule ? `Scheduled ${timeFormatted}` : (isScheduleDone ? '100% Completed' : `${gaugePct.toFixed(1)}%`);
@@ -1008,7 +1010,7 @@ function loadSelectedDeviceToUI() {
     burstCountText.textContent = `${displayCurrent} / ${displayTotal}`;
   }
   const burstCountSub = document.getElementById('burst-count-sub');
-  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted}` : (isScheduleDone ? 'Schedule completed' : 'Events today'));
+  if (burstCountSub) burstCountSub.textContent = (isPaused || isFeedEmpty) ? eventSubText : (isBeforeSchedule ? `Starts at ${timeFormatted} (${displayTotal} Events)` : (isScheduleDone ? `All ${displayTotal} Completed Today` : `${totalRemaining} Events Remaining`));
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
@@ -1929,18 +1931,20 @@ function recalculateSchedule() {
     isValid = false;
     errorMsg = 'INVALID PARAMETERS';
   } else {
-    // Runtime Change Deduction: If feeding ran today (curEvent > 0 && dispensedKg > 0)
-    if (curEvent > 0 && dispensedKg > 0) {
+    const now = new Date();
+    const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
+    const nowTotalSec = istParts[0] * 3600 + istParts[1] * 60 + (istParts[2] || 0);
+    const nowTotalMin = Math.floor(nowTotalSec / 60);
+    const isActiveDaytimeWindow = (nowTotalMin >= startMins && nowTotalMin < endMins);
+
+    // Runtime Change Deduction: If feeding ran today and we are within the daytime window (06:00 to 18:00)
+    if (isActiveDaytimeWindow && curEvent > 0 && dispensedKg > 0) {
       const remainingKg = Math.max(0.0, qty - dispensedKg);
       remainingEvents = remainingKg > 0 ? Math.ceil((remainingKg * 1000.0) / fpe) : 0;
       totalEvents = curEvent + remainingEvents;
       subText = `${curEvent} ran + ${remainingEvents} rem`;
 
-      const now = new Date();
-      const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
-      const nowTotalSec = istParts[0] * 3600 + istParts[1] * 60 + (istParts[2] || 0);
       const endTotalSec = endMins * 60;
-
       const remainingWindowSec = Math.max(0, endTotalSec - nowTotalSec);
       const remainingCyclesSec = remainingEvents * singleEventSec;
 
@@ -1950,24 +1954,28 @@ function recalculateSchedule() {
           errorMsg = 'TIME TOO SHORT';
           intervalMin = 0.0;
         } else {
-          intervalMin = parseFloat(((remainingWindowSec - remainingCyclesSec) / (remainingEvents * 60)).toFixed(1));
+          const gapSec = Math.max(5, Math.floor((remainingWindowSec - remainingCyclesSec) / remainingEvents));
+          intervalMin = parseFloat((gapSec / 60.0).toFixed(1));
+          if (dev) dev.gapIntervalSec = gapSec;
         }
       } else {
         intervalMin = 0.0;
         subText = `${curEvent} completed (Target reached)`;
       }
     } else {
-      // Fresh start / Start of day
+      // Early morning before start, after hours for tomorrow, or fresh start: target applies to full upcoming daylight window
       totalEvents = Math.ceil((qty * 1000.0) / fpe);
       remainingEvents = totalEvents;
       const totalCyclesSec = totalEvents * singleEventSec;
-      subText = 'Events today';
+      subText = nowTotalMin >= endMins ? 'Scheduled for tomorrow' : 'Events today';
 
       if (totalCyclesSec >= windowSec) {
         isValid = false;
         errorMsg = 'TIME TOO SHORT';
       } else {
-        intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+        const gapSec = Math.max(5, Math.floor((windowSec - totalCyclesSec) / totalEvents));
+        intervalMin = parseFloat((gapSec / 60.0).toFixed(1));
+        if (dev) dev.gapIntervalSec = gapSec;
       }
     }
   }
@@ -1980,7 +1988,8 @@ function recalculateSchedule() {
 
   if (totalEventsEl) totalEventsEl.textContent = `${totalEvents}`;
   if (totalSubEl) totalSubEl.textContent = subText;
-  if (intervalEl) intervalEl.textContent = `${intervalMin} min`;
+  const gapDisplay = (dev && dev.gapIntervalSec) ? ` (${dev.gapIntervalSec}s)` : '';
+  if (intervalEl) intervalEl.textContent = `${intervalMin} min${gapDisplay}`;
   if (motorTimeEl) motorTimeEl.textContent = `${motorTimeSec.toFixed(1)} s`;
 
   if (validBadge) {
@@ -2055,6 +2064,7 @@ async function saveSettingsToFeeder() {
       const data = await res.json();
       if (data && data.calculated) {
         dev.totalEvents = data.calculated.totalEvents || dev.totalEvents;
+        dev.totalEventsRemaining = data.calculated.remainingEvents !== undefined ? data.calculated.remainingEvents : dev.totalEventsRemaining;
         dev.intervalMin = data.calculated.intervalMin || dev.intervalMin;
       }
     }
@@ -2121,7 +2131,7 @@ async function triggerRemoteAction(action) {
 
     // 4. Reset next interval timer from right now
     const now = new Date();
-    const intervalMin = dev.intervalMin || 3.1;
+    const intervalMin = dev.intervalMin || 2.9;
     const nextMs = now.getTime() + intervalMin * 60 * 1000;
     const nextDate = new Date(nextMs);
     const nH = nextDate.getHours();

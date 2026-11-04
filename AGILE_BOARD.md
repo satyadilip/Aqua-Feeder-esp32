@@ -31,6 +31,7 @@
 | | | | **STORY-017** (Cloud Architecture Hardening & Latent Defect Elimination) `CLOSED` |
 | | | | **STORY-018** (Eradicate Zero-Interval Re-Trigger & Concluded Day Auto-Start Loop) `CLOSED` |
 | | | | **STORY-019** (Deterministic Stop Feed & Daylight Window Auto-Arm for Tomorrow) `CLOSED` |
+| | | | **STORY-020** (Cloud UI Remaining Events & Dynamic Event Gap Parity) `CLOSED` |
 
 ---
 
@@ -379,3 +380,38 @@
 - **Verification:**
   - Standalone C++ test suite (`scratch/test_stop_and_sched_fix.cpp`) passed all 4 test vectors.
   - Production ESP32-S3 firmware compiled with `arduino-cli`.
+
+---
+
+### STORY-020: Cloud UI Remaining Events, Dynamic Event Gap Parity, and After-Hours Schedule Resilience
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Shrimp Farmer
+- **I want:** The Cloud UI Status screen to accurately display the exact remaining feed events (e.g. `47 Events Remaining`) alongside total scheduled events, display the precise event gap in minutes and seconds (e.g. `14.2 min (853s)`), and allow changing feed settings after operational hours (or before 6 AM) for the upcoming day without getting blocked by a false `TIME TOO SHORT` error
+- **So that:** I have complete visibility into the day's remaining pulses, know the exact gap between feeding bursts, and can freely adjust feeding targets in the evening for tomorrow without artificial blockers.
+- **Root Cause Analysis (4 Discrepancies):**
+  1. **Premature `COMPLETED` Lockout in `api_lambda.py`:** Line 340 checked `raw_status == 'COMPLETED'` without verifying if `cur_ev >= tot_ev` or `dispensed_kg >= target_kg`. For Feeder 03, because `raw_status` was `'COMPLETED'`, it entered Phase 2 and forced `live_rem_ev = 0` and `next_feed_sub = 'Tomorrow morning'` even though only 3 out of 50 events had run.
+  2. **Stale Settings Merge in `api_lambda.py`:** Line 216 had `if cur_ev == 0: fpe = s_item['FeedPerEvent_g']; tot_ev = s_item['TotalEvents']`. Whenever `cur_ev > 0`, it bypassed `s_item`, leaving `tot_ev` and `fpe` stuck on outdated DynamoDB values.
+  3. **Missing Remaining Events on Status Screen UI:** `web_dashboard/app.js` and `web_dashboard_v2/app.js` calculated `totalRemaining`, but never rendered it on `burstCountSub` (which only rendered generic `"Events today"`), and `gaugeHeroSub` only showed `"/ 50 Events Today"`.
+  4. **After-Hours Settings Blocking (`TIME TOO SHORT`):** Both `api_lambda.py` and frontend `recalculateSchedule()` applied daytime deductive math after 18:00 IST when remaining daylight time was 0 seconds, flagging `TIME TOO SHORT` and blocking farmers from saving next-day configurations in the evening.
+- **Defensive Solutions Implemented:**
+  1. **True Completion Invariant in Backend:** Only mark completed if past operational window (`now_min >= end_min`), all scheduled events finished (`cur_ev >= tot_ev`), or target weight reached (`dispensed_kg >= target_kg`).
+  2. **Authoritative Runtime Deductive Math:** Dynamic deductive schedule math applied whenever `cur_ev > 0 && dispensed_kg > 0`:
+     $$\text{rem\_kg} = \max(0.0, \text{target\_kg} - \text{dispensed\_kg})$$
+     $$\text{rem\_ev} = \lceil (\text{rem\_kg} \times 1000) / \text{fpe} \rceil$$
+     $$\text{tot\_ev} = \text{cur\_ev} + \text{rem\_ev}$$
+     $$\text{rem\_events} = \text{tot\_ev} - \text{cur\_ev}$$
+  3. **Remaining Events & Exact Seconds Display:**
+     - Hero gauge renders `3 / 50 Events Today (47 Remaining)` (or `/ 50 Events (Completed)` when done).
+     - Metric cell renders `47 Events Remaining` (or `All 50 Completed Today` when done).
+     - Settings page renders exact gap: `14.2 min (853s)`.
+  4. **Daytime vs. After-Hours Contextual Math:**
+     - During daylight hours (06:00 to 18:00 IST): deductive math calculates remaining pulses over remaining daylight time.
+     - Outside daylight hours (after 18:00 or before 06:00 IST): settings configure the full upcoming daytime window without time-short errors, displaying `Scheduled for tomorrow` and `SCHEDULE OK`.
+- **Verification:**
+  - Standalone simulation script `scratch/verify_simulation_daytime.py` passed 100%.
+  - Selenium end-to-end headless browser test on live AWS S3 production bucket:
+    - Status screen verified: `3 / 53`, `All 53 Completed Today`, `3 / 53 Events (Completed)`.
+    - Settings screen verified: `50 Events`, `14.2 min (853s)`, `SCHEDULE OK`.
+    - Dynamic edit test (25kg -> 30kg): recalculated instantly to `60 Events`, `11.8 min (709s)`.
+    - Browser console severe errors: 0.

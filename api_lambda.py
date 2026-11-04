@@ -213,11 +213,7 @@ def lambda_handler(event, context):
                         s_item = s_res.get('Item')
                         if s_item:
                             target_kg = float(s_item.get('DailyTarget_kg', s_item.get('FeedQuantity_kg', target_kg)))
-                            if cur_ev == 0:
-                                fpe = float(s_item.get('FeedPerEvent_g', fpe))
-                                tot_ev = float(s_item.get('TotalEvents', tot_ev))
-                            elif fpe <= 0:
-                                fpe = float(s_item.get('FeedPerEvent_g', 100))
+                            fpe = float(s_item.get('FeedPerEvent_g', fpe if fpe > 0 else 100))
                             d['DailyTarget_kg'] = target_kg
                             d['FeedQuantity_kg'] = target_kg
                             d['StartHour'] = int(s_item.get('StartHour', d.get('StartHour', 6)))
@@ -227,6 +223,14 @@ def lambda_handler(event, context):
                             d['DischargeRate_gs'] = int(s_item.get('DischargeRate_gs', d.get('DischargeRate_gs', 100)))
                             d['MotorTimeSec'] = float(s_item.get('MotorTimeSec', d.get('MotorTimeSec', 1.0)))
                             d['ScheduleValid'] = True
+
+                            # Exact Runtime Deductive Schedule Math matching firmware:
+                            if cur_ev > 0 and dispensed_kg > 0:
+                                rem_kg = max(0.0, target_kg - dispensed_kg)
+                                rem_ev = int(math.ceil((rem_kg * 1000.0) / fpe)) if rem_kg > 0 else 0
+                                tot_ev = float(int(cur_ev) + rem_ev)
+                            else:
+                                tot_ev = float(int(math.ceil((target_kg * 1000.0) / fpe))) if fpe > 0 else 150.0
                         d['FirmwareVersion'] = str(d.get('FirmwareVersion', 'v1.0'))
                         d['FirmwareName'] = str(d.get('FirmwareName', 'AquaFeeder Firmware'))
                     except:
@@ -325,41 +329,61 @@ def lambda_handler(event, context):
                     single_ev_s = 3.0 + m_time_s + 3.0
                     tot_ev_int = int(tot_ev)
 
-                    # Determine Operational Phase
-                    # Phase 1: Date Rollover (00:00:00 to 06:00:00 IST / now_min < start_min)
+                    # Full Window Base Gap Calculation
+                    full_window_s = max(60, (end_min - start_min) * 60)
+                    tot_dur_s = tot_ev_int * single_ev_s
+                    base_gap_s = max(5, int((full_window_s - tot_dur_s) / max(1, tot_ev_int)))
+                    base_interval_m = round(base_gap_s / 60.0, 1)
+
+                    # True completion conditions:
+                    # 1. Past operational end time (e.g. >= 18:00 IST), OR
+                    # 2. All scheduled events physically finished (cur_ev >= tot_ev_int), OR
+                    # 3. Target dispensed weight reached (dispensed_kg >= target_kg)
+                    is_truly_completed = (tot_ev_int > 0 and cur_ev >= tot_ev_int) or \
+                                         (target_kg > 0 and dispensed_kg >= target_kg) or \
+                                         (now_min >= end_min)
+
+                    # Phase 1: Date Rollover (00:00:00 to start_min IST / early morning before window)
                     if now_min < start_min:
                         actual_status = 'STANDBY'
                         live_cur_ev = 0
                         live_tot_ev = tot_ev_int
                         live_rem_ev = tot_ev_int
                         live_disp_kg = 0.0
+                        gap_s = base_gap_s
+                        dyn_interval_m = base_interval_m
                         next_feed_str = s_time_fmt
                         next_feed_sub = f"Starts today at {s_time_fmt}"
 
-                    # Phase 2: Feed Completed Today (remains frozen until 12:00 AM midnight IST)
-                    elif is_today_run and (now_min >= end_min or today_recorded_status == 'COMPLETED' or raw_status == 'COMPLETED' or today_events_done >= today_tot_events or cur_ev >= tot_ev):
+                    # Phase 2: Feed Completed Today (concluded after all pulses or past 18:00)
+                    elif is_truly_completed:
                         actual_status = 'COMPLETED'
-                        live_cur_ev = today_events_done
-                        live_tot_ev = max(today_tot_events, today_events_done)
+                        live_cur_ev = int(cur_ev)
+                        live_tot_ev = max(tot_ev_int, int(cur_ev))
                         live_rem_ev = 0
-                        live_disp_kg = today_kg_done if today_kg_done > 0 else round((today_events_done * fpe) / 1000.0, 2)
+                        live_disp_kg = dispensed_kg
+                        gap_s = base_gap_s
+                        dyn_interval_m = base_interval_m
                         next_feed_str = s_time_fmt
                         next_feed_sub = "Tomorrow morning"
 
-                    # Phase 3: Active Feeding Window (start_min <= now_min < end_min)
-                    elif is_today_run and (cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']):
+                    # Phase 3: Active Feeding Window (start_min <= now_min < end_min with events running)
+                    elif cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']:
                         actual_status = 'FEEDING'
                         live_cur_ev = int(cur_ev)
                         live_tot_ev = tot_ev_int
                         live_rem_ev = max(0, tot_ev_int - live_cur_ev)
-                        live_disp_kg = round((live_cur_ev * fpe) / 1000.0, 2)
+                        live_disp_kg = dispensed_kg
                         
                         sec_since_midnight = now_ist.hour * 3600 + now_ist.minute * 60 + now_ist.second
                         end_sec_today = e_hour * 3600 + e_min * 60
                         rem_time_s = max(0, end_sec_today - sec_since_midnight)
                         rem_calc = max(1, live_rem_ev)
                         rem_dur_s = rem_calc * single_ev_s
-                        gap_s = max(5, int((rem_time_s - rem_dur_s) / rem_calc)) if (rem_time_s > rem_dur_s and live_rem_ev > 0) else int(float(d.get('IntervalMin', 2.9)) * 60.0)
+                        if rem_time_s > rem_dur_s and live_rem_ev > 0:
+                            gap_s = max(5, int((rem_time_s - rem_dur_s) / rem_calc))
+                        else:
+                            gap_s = base_gap_s
                         dyn_interval_m = round(gap_s / 60.0, 1)
 
                         last_seen_epoch = int(d.get('LastSeenEpoch', 0))
@@ -374,10 +398,12 @@ def lambda_handler(event, context):
                     # Phase 4: Standby / Scheduled before first pulse during window
                     else:
                         actual_status = 'SCHEDULED' if now_min < end_min else 'STANDBY'
-                        live_cur_ev = 0
+                        live_cur_ev = int(cur_ev)
                         live_tot_ev = tot_ev_int
-                        live_rem_ev = tot_ev_int
-                        live_disp_kg = 0.0
+                        live_rem_ev = max(0, tot_ev_int - live_cur_ev)
+                        live_disp_kg = dispensed_kg
+                        gap_s = base_gap_s
+                        dyn_interval_m = base_interval_m
                         next_feed_str = s_time_fmt
                         next_feed_sub = f"Starts at {s_time_fmt}" if now_min < end_min else "Tomorrow morning"
 
@@ -409,6 +435,8 @@ def lambda_handler(event, context):
                     d['FeedQuantity_kg'] = target_kg
                     d['DailyTarget_kg'] = target_kg
                     d['DispensedFeed_kg'] = live_disp_kg
+                    d['IntervalMin'] = dyn_interval_m
+                    d['GapIntervalSec'] = gap_s
                     d['NextFeed'] = next_feed_str
                     d['NextFeedSub'] = next_feed_sub
                     d['ScheduleValid'] = True
@@ -789,8 +817,12 @@ def lambda_handler(event, context):
                     err = "End time must be after start time"
 
                 # Runtime Deductive Schedule Calculation:
-                # If feeding ran today, deduct already dispensed feed and calculate remaining pulses
-                if already_ran_events > 0 and already_dispensed_kg > 0:
+                # Deductive math applies strictly DURING the active daylight window (start_mins <= now < end_mins).
+                # After hours (>= end_mins) or early morning (< start_mins), settings configure the full upcoming daytime window.
+                now_ist_mins = now_ist.hour * 60 + now_ist.minute
+                is_active_daytime_window = (start_mins <= now_ist_mins < end_mins)
+
+                if is_active_daytime_window and already_ran_events > 0 and already_dispensed_kg > 0:
                     remaining_kg = max(0.0, feed_qty_float - already_dispensed_kg)
                     remaining_events = int(math.ceil((remaining_kg * 1000.0) / feed_burst_float)) if remaining_kg > 0 else 0
                     total_events = already_ran_events + remaining_events
@@ -806,7 +838,8 @@ def lambda_handler(event, context):
                             err = f"Remaining time ({rem_window_s}s) too short for {remaining_events} remaining events ({rem_cycles_s}s)"
                             interval_min = 0.0
                         else:
-                            interval_min = round((rem_window_s - rem_cycles_s) / (remaining_events * 60.0), 1)
+                            gap_s = max(5, int((rem_window_s - rem_cycles_s) / remaining_events))
+                            interval_min = round(gap_s / 60.0, 1)
                     else:
                         interval_min = 0.0
                 else:
@@ -817,7 +850,8 @@ def lambda_handler(event, context):
                         valid = False
                         err = "Feed window too short for requested events and chute clearing duration"
                     else:
-                        interval_min = round((feed_window_s - total_cycle_s) / (total_events * 60.0), 1)
+                        gap_s = max(5, int((feed_window_s - total_cycle_s) / total_events))
+                        interval_min = round(gap_s / 60.0, 1)
                 
                 now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
                 
@@ -883,6 +917,7 @@ def lambda_handler(event, context):
                     'downlinkQueued': downlink_queued,
                     'calculated': {
                         'totalEvents': total_events,
+                        'remainingEvents': remaining_events,
                         'motorTimeSec': motor_time_s,
                         'intervalMin': interval_min,
                         'valid': valid,

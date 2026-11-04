@@ -296,8 +296,8 @@ function renderActiveFeeder() {
   const isCompletedDev = dev.status === 'COMPLETED' || (dev.currentEvent >= dev.totalEvents && dev.totalEvents > 0);
   const dispCurrentDev = isCompletedDev ? (dev.currentEvent || 0) : Math.min(dev.currentEvent || 0, dev.totalEvents || 150);
   const dispTotalDev = isCompletedDev ? Math.max(dev.totalEvents || 150, dispCurrentDev) : (dev.totalEvents || 150);
-  const remEvents = isCompletedDev ? 0 : Math.max(0, dispTotalDev - dispCurrentDev);
-  if (eventsEl) eventsEl.textContent = `${dispCurrentDev} / ${dispTotalDev}`;
+  const remEvents = isCompletedDev ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, dispTotalDev - dispCurrentDev));
+  if (eventsEl) eventsEl.textContent = isCompletedDev ? `${dispTotalDev} / ${dispTotalDev} (Completed)` : `${dispCurrentDev} / ${dispTotalDev} (${remEvents} rem)`;
 
   // Next Dispense Pulse Time
   const nextPulseEl = document.getElementById('hero-next-pulse');
@@ -563,14 +563,20 @@ function recalculateSchedule() {
   const singleEventSec = (dev.fpeGrams / rate) + 6.0;
 
   let intervalMin = 0.0;
-  if (curEvent > 0 && dispensedKg > 0) {
-    const now = new Date();
-    const curMins = now.getHours() * 60 + now.getMinutes();
-    const endMins = (dev.endHour || 18) * 60 + (dev.endMin || 0);
+  let gapSec = 0;
+  const now = new Date();
+  const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
+  const curMins = istParts[0] * 60 + istParts[1];
+  const startMins = (dev.startHour || 6) * 60 + (dev.startMin || 0);
+  const endMins = (dev.endHour || 18) * 60 + (dev.endMin || 0);
+  const isActiveDaytimeWindow = (curMins >= startMins && curMins < endMins);
+
+  if (isActiveDaytimeWindow && curEvent > 0 && dispensedKg > 0) {
     const remWindowSec = Math.max(0, (endMins - curMins) * 60);
     const remCyclesSec = remainingEvents * singleEventSec;
     if (remWindowSec > remCyclesSec && remainingEvents > 0) {
-      intervalMin = parseFloat(((remWindowSec - remCyclesSec) / (remainingEvents * 60)).toFixed(1));
+      gapSec = Math.max(5, Math.floor((remWindowSec - remCyclesSec) / remainingEvents));
+      intervalMin = parseFloat((gapSec / 60.0).toFixed(1));
     } else {
       intervalMin = 0.0;
     }
@@ -578,12 +584,15 @@ function recalculateSchedule() {
     const windowSec = windowMinutes * 60;
     const totalCyclesSec = totalEvents * singleEventSec;
     if (windowSec > totalCyclesSec && totalEvents > 0) {
-      intervalMin = parseFloat(((windowSec - totalCyclesSec) / (totalEvents * 60)).toFixed(1));
+      gapSec = Math.max(5, Math.floor((windowSec - totalCyclesSec) / totalEvents));
+      intervalMin = parseFloat((gapSec / 60.0).toFixed(1));
     } else {
       intervalMin = parseFloat((windowMinutes / totalEvents).toFixed(1));
     }
   }
   dev.intervalMin = intervalMin;
+  dev.gapIntervalSec = gapSec;
+  dev.totalEventsRemaining = remainingEvents;
 
   const pulsesEl = document.getElementById('proto-calc-pulses');
   if (pulsesEl) {
@@ -591,7 +600,7 @@ function recalculateSchedule() {
   }
 
   const intervalEl = document.getElementById('proto-calc-interval');
-  if (intervalEl) intervalEl.textContent = `Every ${intervalMin} minutes`;
+  if (intervalEl) intervalEl.textContent = gapSec > 0 ? `Every ${intervalMin} min (${gapSec}s)` : `Every ${intervalMin} minutes`;
 }
 
 async function saveProtocolToDevice() {
