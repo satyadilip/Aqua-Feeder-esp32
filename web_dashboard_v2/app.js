@@ -1033,13 +1033,7 @@ function loadSelectedDeviceToUI() {
   if (gaugeHeroNum) gaugeHeroNum.textContent = displayCurrent;
   const totalRemaining = (isTargetCompleted || isScheduleEnded) ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
   if (gaugeHeroSub) {
-    if (isTargetCompleted) {
-      gaugeHeroSub.textContent = `/ ${displayTotal} Events (Completed)`;
-    } else if (isScheduleEnded) {
-      gaugeHeroSub.textContent = `/ ${displayTotal} Events Today (Schedule Ended)`;
-    } else {
-      gaugeHeroSub.textContent = `/ ${displayTotal} Events Today (${totalRemaining} Remaining)`;
-    }
+    gaugeHeroSub.textContent = `/ ${displayTotal} Events Today`;
   }
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule 
@@ -1058,13 +1052,13 @@ function loadSelectedDeviceToUI() {
     if (isPaused || isFeedEmpty) {
       burstCountSub.textContent = eventSubText;
     } else if (isBeforeSchedule) {
-      burstCountSub.textContent = `Starts at ${timeFormatted} (${displayTotal} Events)`;
+      burstCountSub.textContent = `Starts at ${timeFormatted}`;
     } else if (isTargetCompleted) {
-      burstCountSub.textContent = `All ${displayTotal} Events Completed Today`;
+      burstCountSub.textContent = 'All Completed Today';
     } else if (isScheduleEnded) {
-      burstCountSub.textContent = `${displayCurrent} of ${displayTotal} Completed (Schedule Ended)`;
+      burstCountSub.textContent = 'Schedule Ended';
     } else {
-      burstCountSub.textContent = `${totalRemaining} Events Remaining`;
+      burstCountSub.textContent = 'Daily Feed Schedule';
     }
   }
 
