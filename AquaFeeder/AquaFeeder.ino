@@ -245,6 +245,10 @@ void cbOnFeedStop() {
 
     feedEng.stopFeed();
 
+    sysStatus.state = SystemState::FEED_FINISHED;
+
+    sysStatus.feedActive = false;
+
     currentMenu = MenuState::MAIN_STATUS;
 
     Serial.println("[MAIN] Feed stopped!");
@@ -457,17 +461,19 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
 
         Serial.println("[MAIN] [DOWNLINK] Received CMD_STOP_FEED from Cloud!");
 
-        if (feedEng.isActive() || currentMenu == MenuState::RUNNING || currentMenu == MenuState::PAUSED) {
+        cbOnFeedStop();
 
-            cbOnFeedStop();
+        sysStatus.state = SystemState::FEED_FINISHED;
 
-            currentMenu = MenuState::MAIN_STATUS;
+        sysStatus.feedActive = false;
 
-            telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
+        currentMenu = MenuState::MAIN_STATUS;
 
-            Serial.println("[MAIN] Feed stopped successfully via Cloud Downlink!");
+        telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
 
-        }
+        telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+
+        Serial.println("[MAIN] Feed stopped successfully via Cloud Downlink!");
 
     }
 
@@ -944,9 +950,9 @@ void handleButtonNavigation() {
 
                     case 1: // Start or Stop Feeding
 
-                        if (feedEng.isActive()) {
+                        if (feedEng.isActive() || sysStatus.feedActive) {
 
-                            feedEng.stopFeed();
+                            cbOnFeedStop();
 
                             telMgr.queueEvent(TelemetryMsgType::FEED_STOPPED);
 
@@ -957,6 +963,8 @@ void handleButtonNavigation() {
                             lcd.showMessage("Feeding Stopped", "Motors Turned OFF", 1500);
 
                         } else {
+
+                            sysStatus.state = SystemState::IDLE;
 
                             uint32_t epoch = rtcMgr.getEpoch();
 
@@ -1446,7 +1454,7 @@ void handleButtonNavigation() {
 
                 currentMenu = MenuState::MENU_LIST;
 
-                menuCursorIdx = 0; // Highlight the first option (Check Tray)
+                menuCursorIdx = 1; // Highlight Stop Feeding directly for fast stop
 
             }
 

@@ -30,6 +30,7 @@
 | | | | **STORY-016** (Zero Stale Data Flash on Page Refresh via Pre-Hydration & Storage Persistence) `CLOSED` |
 | | | | **STORY-017** (Cloud Architecture Hardening & Latent Defect Elimination) `CLOSED` |
 | | | | **STORY-018** (Eradicate Zero-Interval Re-Trigger & Concluded Day Auto-Start Loop) `CLOSED` |
+| | | | **STORY-019** (Deterministic Stop Feed & Daylight Window Auto-Arm for Tomorrow) `CLOSED` |
 
 ---
 
@@ -355,4 +356,26 @@
   5. **Zero-Interval Hardware Interlock (`FC_WAIT`):** Clamped `intervalMs` to minimum 5000 ms; `FC_WAIT` strictly enforces `nowMs - _fcTimer >= 5000UL` before any motor relay can re-energize.
 - **Verification:**
   - Standalone simulation `scratch/test_crazy_loop_fix.cpp` compiled and executed with 0 errors, validating all 5 defensive layers.
+  - Production ESP32-S3 firmware compiled with `arduino-cli`.
+
+---
+
+### STORY-019: Deterministic Stop Feed & Daylight Window Auto-Arm for Tomorrow
+- **Status:** `CLOSED`
+- **Closed Commit:** `HEAD`
+- **As a:** Commercial Shrimp Farmer
+- **I want:** The feeder to immediately stop all motor operations and halt all feeding when I command STOP (from either the cloud or the LCD menu), and to cleanly arm for tomorrow morning when remaining daylight hours cannot fit the full cycle
+- **So that:** Feed is never dumped unexpectedly, motors stop reliably on demand, and late-afternoon schedule calculations transition gracefully to tomorrow's 06:00 AM window without infinite loops or serial flood.
+- **Root Cause Analysis:**
+  1. **Stop Feed Auto-Start Re-Trigger:** `stopFeed()` set `feedActive = false` but did not lock `state = FEED_FINISHED`. When returning to `MAIN_STATUS`, the main loop Section 7 (`shouldAutoStart`) observed `!feedActive && state != FEED_FINISHED` during daytime hours and immediately auto-restarted the feed.
+  2. **17:57 "Time Too Short" Spam Loop:** In `calcSchedule()`, when remaining daylight time until 18:00 was less than the required feed duration, it returned `false` without arming for tomorrow. In `shouldAutoStart()`, `!scheduleValid` triggered `calcSchedule()` on every CPU cycle, printing thousands of error lines per second.
+  3. **Conditional Downlink Rejection:** In `AquaFeeder.ino`, `CMD_STOP_FEED` was wrapped in `if (feedEng.isActive() || ...)`. If the engine was idle or in a scheduling state, the cloud stop downlink was completely ignored.
+- **Defensive Solutions Implemented:**
+  1. **Autonomous Arming for Tomorrow:** In `feed_engine.cpp` (`calcSchedule`), if `eventsDuration_ms >= availableTime_ms`, the engine marks `scheduleValid = true`, sets `nextFeedEpoch` to tomorrow 06:00 AM (`startEpochToday + 86400UL`), pre-calculates tomorrow's gap interval, and logs a clean notice.
+  2. **Auto-Start Rate Limiting:** Added a 10-second throttle in `shouldAutoStart()` for schedule recalculation, preventing CPU flood under any edge condition.
+  3. **Irrevocable Stop Invariant:** `stopFeed()` and `cbOnFeedStop()` unconditionally set `sysStatus.state = SystemState::FEED_FINISHED;`, completely inhibiting autonomous re-triggering for the rest of the calendar day.
+  4. **Unconditional Cloud Stop:** Removed restrictive conditional checks from `CMD_STOP_FEED`; downlinks immediately kill motor power, set `FEED_FINISHED`, and report status back to cloud.
+  5. **Quick-Stop Menu Navigation:** On `MenuState::RUNNING`, pressing SELECT immediately targets cursor index 1 ("Stop Feeding"), allowing farm technicians to stop motors in 2 button presses.
+- **Verification:**
+  - Standalone C++ test suite (`scratch/test_stop_and_sched_fix.cpp`) passed all 4 test vectors.
   - Production ESP32-S3 firmware compiled with `arduino-cli`.

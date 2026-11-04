@@ -132,9 +132,16 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
 
         // Check: For mid-day start, can it finish in the remaining time today?
         if (eventsDuration_ms >= availableTime_ms) {
-            strncpy(_status->schedError, "Time Too Short", sizeof(_status->schedError)-1);
-            Serial.println("[SCHED] Error: Remaining operational window is shorter than required total cycle time!");
-            return false;
+            // Remaining window today is shorter than needed. Arm for tomorrow 06:00 AM!
+            _status->scheduleValid = true;
+            _status->nextFeedEpoch = startEpochToday + 86400UL;
+            unsigned long fullEvents = (unsigned long)ceil(qty_g / (float)_cfg->feedPerEvent);
+            unsigned long fullEventsDur = fullEvents * singleEvent_ms;
+            _status->intervalMs = (fullEventsDur < fullWindow_ms && fullEvents > 0) ? ((fullWindow_ms - fullEventsDur) / fullEvents) : 5000UL;
+            if (_status->intervalMs < 5000UL) _status->intervalMs = 5000UL;
+            Serial.printf("[SCHED] Remaining window today (%lu s) too short for %lu s feed. Next daily feed armed for tomorrow at %02d:%02d (epoch %lu, gap %lu s).\n",
+                          (availableTime_ms / 1000UL), (eventsDuration_ms / 1000UL), startMins / 60, startMins % 60, _status->nextFeedEpoch, (_status->intervalMs / 1000UL));
+            return true;
         }
     }
     
@@ -194,6 +201,7 @@ void FeedEngine::stopFeed() {
     if (_status) {
         _status->feedActive = false;
         _status->feedState = FeedCycleState::FC_IDLE;
+        _status->state = SystemState::FEED_FINISHED;
     }
     _fcState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
@@ -493,8 +501,12 @@ bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
             return false;
         }
 
+        static unsigned long lastSchedAttemptMs = 0;
         if (!_status->scheduleValid) {
-            calcSchedule(nowEpoch);
+            if (millis() - lastSchedAttemptMs > 10000UL) {
+                lastSchedAttemptMs = millis();
+                calcSchedule(nowEpoch);
+            }
         }
         if (_status->scheduleValid && _status->intervalMs > 0 && nowEpoch >= _status->nextFeedEpoch) {
             return true;
