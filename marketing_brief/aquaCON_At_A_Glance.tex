@@ -1,7 +1,9 @@
 \documentclass[10pt,a4paper]{article}
 
 % --- Core Geometry and Page Setup ---
-\usepackage[a4paper, left=1.2cm, right=1.2cm, top=1.1cm, bottom=1.1cm, footskip=14pt]{geometry}
+% Printable height: 841.9 - 1.1cm - 1.8cm = 759.7pt. Footer is at 804pt.
+% Content terminating at ~760pt guarantees ~40-45pt clearance above footer (ZERO OVERLAP).
+\usepackage[a4paper, left=1.2cm, right=1.2cm, top=1.1cm, bottom=1.8cm, footskip=18pt]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{helvet}
@@ -45,8 +47,8 @@
 \pagestyle{fancy}
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
-\fancyfoot[L]{\fontsize{7.5}{9}\selectfont \textcolor{TextMuted}{\textbf{Athena Engineering Corp} $\bullet$ Kakinada, Andhra Pradesh, India $\bullet$ \textbf{aquaCON\textsuperscript{\tiny TM}}}}
-\fancyfoot[C]{\fontsize{7.5}{9}\selectfont \textcolor{TealPrimary}{\textbf{COMMERCIAL PRODUCT BRIEF $\vert$ FOR PROSPECTIVE CLIENTS}}}
+\fancyfoot[L]{\fontsize{7.5}{9}\selectfont \textcolor{TextMuted}{\textbf{Athena Engineering Corp} $\vert$ Kakinada, AP, India}}
+\fancyfoot[C]{\fontsize{7.5}{9}\selectfont \textcolor{TealPrimary}{\textbf{aquaCON\textsuperscript{\tiny TM} Commercial Solution Brief}}}
 \fancyfoot[R]{\fontsize{7.5}{9}\selectfont \textcolor{TextMuted}{\textbf{Page \thepage\ of \pageref{LastPage}}}}
 
 \setlength{\parindent}{0pt}
@@ -55,7 +57,7 @@
 \begin{document}
 
 % ==============================================================================
-% PAGE 1: EXECUTIVE BRIEF, PROBLEM/SOLUTION, HERO VISUAL & HARDWARE SPECS
+% PAGE 1: EXECUTIVE BRIEF, PROBLEM/SOLUTION, HERO VISUAL & FEEDER SPECS
 % ==============================================================================
 
 % --- Enterprise Header Banner with Official Athena Logo ---
@@ -66,11 +68,11 @@
   colupper=white,
   arc=2.5mm,
   boxrule=0pt,
-  left=14pt, right=14pt, top=8pt, bottom=8pt
+  left=14pt, right=14pt, top=9pt, bottom=9pt
 ]
   \begin{minipage}[c]{0.70\linewidth}
-    {\fontsize{8}{10}\selectfont \textbf{\textcolor{CyanAccent}{COMMERCIAL SOLUTION BRIEF}} $\vert$ ADVANCED AQUACULTURE TECHNOLOGIES}\\[3pt]
-    {\fontsize{18}{22}\selectfont \textbf{aquaCON\textsuperscript{\tiny TM} Intelligent Solar Feeder System}}\\[3pt]
+    {\fontsize{8.5}{11}\selectfont \textbf{\textcolor{CyanAccent}{COMMERCIAL SOLUTION BRIEF}} $\vert$ ADVANCED AQUACULTURE TECHNOLOGIES}\\[3pt]
+    {\fontsize{19}{23}\selectfont \textbf{aquaCON\textsuperscript{\tiny TM} Intelligent Solar Feeder System}}\\[3pt]
     {\fontsize{9.5}{12}\selectfont \textcolor{BorderLight}{Autonomous Precision Dosing, Long-Range LoRaWAN\textsuperscript{\tiny \textregistered}\ Mesh \& Real-Time Cloud Intelligence}}
   \end{minipage}\hfill
   \begin{minipage}[c]{0.28\linewidth}
@@ -83,9 +85,9 @@
       boxrule=0pt,
       halign=center,
       valign=center,
-      top=3pt, bottom=3pt, left=6pt, right=6pt
+      top=3pt, bottom=3pt, left=5pt, right=5pt
     ]
-      \includegraphics[height=1.25cm, keepaspectratio=true]{athena_logo.png}
+      \includegraphics[height=1.3cm, keepaspectratio=true]{athena_logo.png}
     \end{tcolorbox}
   \end{minipage}
 \end{tcolorbox}
@@ -99,36 +101,36 @@
   colframe=BorderLight,
   arc=2mm,
   boxrule=0.8pt,
-  left=4pt, right=4pt, top=7pt, bottom=7pt
+  left=4pt, right=4pt, top=8pt, bottom=8pt
 ]
   \begin{minipage}[t]{0.19\linewidth}
     \centering
-    {\fontsize{14}{16}\selectfont \textbf{\textcolor{EmeraldGreen}{15\% -- 22\%}}}\\[2pt]
-    {\fontsize{7.5}{9}\selectfont \textbf{FCR Improvement}\\(Saves 8--10 Tons Feed)}
+    {\fontsize{14.5}{17}\selectfont \textbf{\textcolor{EmeraldGreen}{15\% -- 22\%}}}\\[3pt]
+    {\fontsize{7.5}{9.5}\selectfont \textbf{FCR Improvement}\\(Saves 8--10 Tons Feed)}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.19\linewidth}
     \centering
-    {\fontsize{14}{16}\selectfont \textbf{\textcolor{TealPrimary}{100\% Solar}}}\\[2pt]
-    {\fontsize{7.5}{9}\selectfont \textbf{Zero Shore Cabling}\\(LiFePO4 Powerplant)}
+    {\fontsize{14.5}{17}\selectfont \textbf{\textcolor{TealPrimary}{100\% Solar}}}\\[3pt]
+    {\fontsize{7.5}{9.5}\selectfont \textbf{Zero Shore Cabling}\\(LiFePO4 Powerplant)}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.19\linewidth}
     \centering
-    {\fontsize{14}{16}\selectfont \textbf{\textcolor{NavyPrimary}{15 km Range}}}\\[2pt]
-    {\fontsize{7.5}{9}\selectfont \textbf{LoRaWAN\textsuperscript{\tiny \textregistered}\ Telemetry}\\(Farm-Wide Coverage)}
+    {\fontsize{14.5}{17}\selectfont \textbf{\textcolor{NavyPrimary}{15 km Range}}}\\[3pt]
+    {\fontsize{7.5}{9.5}\selectfont \textbf{LoRaWAN\textsuperscript{\tiny \textregistered}\ Telemetry}\\(Farm-Wide Coverage)}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.19\linewidth}
     \centering
-    {\fontsize{14}{16}\selectfont \textbf{\textcolor{EmeraldGreen}{\rupee 0 / Feeder}}}\\[2pt]
-    {\fontsize{7.5}{9}\selectfont \textbf{Zero Feeder SIMs}\\(1 Central Gateway)}
+    {\fontsize{14.5}{17}\selectfont \textbf{\textcolor{EmeraldGreen}{\rupee 0 / Feeder}}}\\[3pt]
+    {\fontsize{7.5}{9.5}\selectfont \textbf{Zero Feeder SIMs}\\(1 Central Gateway)}
   \end{minipage}\hfill
   \begin{minipage}[t]{0.19\linewidth}
     \centering
-    {\fontsize{14}{16}\selectfont \textbf{\textcolor{AmberDark}{$<$ 1 Crop}}}\\[2pt]
-    {\fontsize{7.5}{9}\selectfont \textbf{Full Payback}\\(ROI in 90--120 Days)}
+    {\fontsize{14.5}{17}\selectfont \textbf{\textcolor{AmberDark}{$<$ 1 Crop}}}\\[3pt]
+    {\fontsize{7.5}{9.5}\selectfont \textbf{Full Payback}\\(ROI in 90--120 Days)}
   \end{minipage}
 \end{tcolorbox}
 
-\vspace{6pt}
+\vspace{5pt}
 
 % --- The Problem vs The Solution (Two Balanced Cards with Maximum Contrast) ---
 \begin{minipage}[t]{0.488\linewidth}
@@ -143,9 +145,9 @@
     colbacktitle=AmberDark,
     top=7pt, bottom=7pt, left=8pt, right=8pt
   ]
-    {\fontsize{7.8}{10.4}\selectfont \textcolor{TextPrimary}{
+    {\fontsize{7.8}{10.8}\selectfont \textcolor{TextPrimary}{
     Feed accounts for \textbf{50\% to 70\% of total operational expenditure} in commercial aquaculture. Traditional manual hand-feeding and dumb timer dispensers suffer from crippling flaws:
-    \begin{itemize}[leftmargin=11pt, itemsep=2.5pt, topsep=3pt, parsep=0pt]
+    \begin{itemize}[leftmargin=11pt, itemsep=3.5pt, topsep=3pt, parsep=0pt]
       \item \textbf{Feed Wastage \& High FCR:} Hand-broadcast feeding is irregular. Uneaten feed accumulates on pond bottoms, rotting into toxic ammonia spikes and causing severe shrimp mortality.
       \item \textbf{Blind Conventional Dispensers:} Mechanical timers dump feed blindly during hopper jams or empty feed situations, burning out motors and leaving shrimp starved.
       \item \textbf{Dangerous Underwater Cabling:} Running 230V AC shore power across saline water creates severe electrocution hazards, frequent tripping, and expensive pond trenching.
@@ -167,9 +169,9 @@
     colbacktitle=TealPrimary,
     top=7pt, bottom=7pt, left=8pt, right=8pt
   ]
-    {\fontsize{7.8}{10.4}\selectfont \textcolor{TextPrimary}{
+    {\fontsize{7.8}{10.8}\selectfont \textcolor{TextPrimary}{
     \textbf{aquaCON\textsuperscript{\tiny TM}} is an industrial-grade automated feeding system engineered specifically to slash Feed Conversion Ratio (FCR) and maximize farm profitability:
-    \begin{itemize}[leftmargin=11pt, itemsep=2.5pt, topsep=3pt, parsep=0pt]
+    \begin{itemize}[leftmargin=11pt, itemsep=3.5pt, topsep=3pt, parsep=0pt]
       \item \textbf{Dynamic Schedule Recalculation:} If a pause occurs or the hopper is refilled mid-day, the smart edge processor recalculates remaining intervals to dispense the exact target quota before dusk.
       \item \textbf{Optical \& Inductive Jam Interlocks:} Rotary stroke sensors verify full paddle discharge; automatic reverse-clearance pulses eliminate feed chute bridging.
       \item \textbf{Acoustic Parabolic Distribution:} High-velocity precision impeller broadcasts pellets smoothly in a calibrated 8--15\,m arc with zero crumble.
@@ -179,7 +181,7 @@
   \end{tcolorbox}
 \end{minipage}
 
-\vspace{6pt}
+\vspace{5pt}
 
 % --- Hero Visual Showcase with Key Engineering Innovations ---
 \begin{tcolorbox}[
@@ -190,32 +192,32 @@
   boxrule=0.8pt,
   top=6pt, bottom=6pt, left=8pt, right=8pt
 ]
-  \begin{minipage}[c]{0.53\linewidth}
-    \includegraphics[width=\linewidth, height=5.1cm, keepaspectratio=false]{hero_feeder.jpg}
-    \vspace{2pt}
+  \begin{minipage}[c]{0.52\linewidth}
+    \includegraphics[width=\linewidth, height=5.5cm, keepaspectratio=false]{hero_feeder.jpg}
+    \vspace{2.5pt}
     \centering
     {\fontsize{7}{8.5}\selectfont \textcolor{TextMuted}{\textbf{Figure 1:} aquaCON\textsuperscript{\tiny TM} Solar Smart Feeder broadcasting calibrated feed pellets across pond water surface at dawn with long-range LoRaWAN\textsuperscript{\tiny \textregistered}\ RF telemetry link.}}
   \end{minipage}\hfill
-  \begin{minipage}[c]{0.44\linewidth}
+  \begin{minipage}[c]{0.45\linewidth}
     {\fontsize{8.5}{11}\selectfont \textbf{\textcolor{NavyDark}{Key Engineering Innovations:}}}\\[3pt]
-    {\fontsize{7.5}{10}\selectfont \textcolor{TextPrimary}{
+    {\fontsize{7.5}{10.4}\selectfont \textcolor{TextPrimary}{
     \textbf{\textcolor{TealPrimary}{$\blacktriangleright$ Sub-Gram Dosing Precision:}}\\
-    Calibrated micro-dosing (50\,g to 500\,g per burst) with $\pm$1.5\% repeatability ensures shrimp consume feed instantaneously without nutrient leaching.\\[3pt]
+    Calibrated micro-dosing (50\,g to 500\,g per burst) with $\pm$1.5\% repeatability ensures shrimp consume feed instantaneously without nutrient leaching.\\[3.5pt]
     \textbf{\textcolor{TealPrimary}{$\blacktriangleright$ Anti-Bridging Chute Geometry:}}\\
-    Specialized low-friction hopper cone with integrated agitator prevents pellet compaction across all pellet sizes (0.8\,mm to 3.5\,mm).\\[3pt]
+    Specialized low-friction hopper cone with integrated agitator prevents pellet compaction across all pellet sizes (0.8\,mm to 3.5\,mm).\\[3.5pt]
     \textbf{\textcolor{TealPrimary}{$\blacktriangleright$ Long-Range LoRaWAN\textsuperscript{\tiny \textregistered}\ Telemetry:}}\\
-    Transmits dispensed kilograms, battery health, solar charging, and motor status up to 15\,km line-of-sight to the central farm gateway.\\[3pt]
+    Transmits dispensed kilograms, battery health, solar charging, and motor status up to 15\,km line-of-sight to the central farm gateway.\\[3.5pt]
     \textbf{\textcolor{TealPrimary}{$\blacktriangleright$ Heavy-Duty Marine Ingress Protection:}}\\
     UV-stabilized virgin polymer hopper and 316 stainless steel chassis engineered for corrosive coastal saline environments.
     }}
   \end{minipage}
 \end{tcolorbox}
 
-\vspace{6pt}
+\vspace{5pt}
 
-% --- Feeder Hardware Specifications Table (Full Width, Uniform & Pristine) ---
-{\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{NavyDark}{aquaCON\textsuperscript{\tiny TM} Feeder Node Hardware Specifications}}}
-\vspace{2pt}
+% --- Feeder Hardware Specifications Table (Placed on Page 1 to Fill Naturally) ---
+{\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{NavyDark}{aquaCON\textsuperscript{\tiny TM} Feeder Hardware Specifications}}}
+\vspace{2.5pt}
 
 \begin{tcolorbox}[
   enhanced,
@@ -225,7 +227,8 @@
   boxrule=0.9pt,
   left=0pt, right=0pt, top=0pt, bottom=0pt
 ]
-  \fontsize{7.3}{9.2}\selectfont
+  \renewcommand{\arraystretch}{1.3}
+  \fontsize{7.3}{9.3}\selectfont
   \begin{tabularx}{\linewidth}{@{}p{2.6cm} X p{2.6cm} X@{}}
     \rowcolor{TableStripe}
     \textbf{Hopper Capacity:} & 120\,kg / 250\,kg UV Virgin Polymer & \textbf{Dosing Precision:} & 50\,g -- 500\,g per burst ($\pm$1.5\%)\\
@@ -242,7 +245,7 @@
 \newpage
 
 % ==============================================================================
-% PAGE 2: ARCHITECTURE, COMPETITIVE MATRIX, ROI (INR) & CORPORATE PROFILE
+% PAGE 2: ARCHITECTURE, COMPETITIVE MATRIX, GATEWAY SPECS & ROI (INR)
 % ==============================================================================
 
 % --- Page 2 Top Header Banner ---
@@ -256,7 +259,7 @@
   left=14pt, right=14pt, top=8pt, bottom=8pt
 ]
   \begin{minipage}[c]{0.70\linewidth}
-    {\fontsize{13}{16}\selectfont \textbf{Enterprise Architecture \& Competitive Differentiation}}\\[2pt]
+    {\fontsize{13.5}{16.5}\selectfont \textbf{Enterprise Architecture \& Competitive Differentiation}}\\[2.5pt]
     {\fontsize{8.5}{11}\selectfont \textcolor{CyanAccent}{From Pond Edge to Executive Cloud: Complete Visibility, Zero SIM Overhead, Proven ROI}}
   \end{minipage}\hfill
   \begin{minipage}[c]{0.28\linewidth}
@@ -277,27 +280,27 @@
   boxrule=0.8pt,
   top=6pt, bottom=6pt, left=8pt, right=8pt
 ]
-  \begin{minipage}[c]{0.45\linewidth}
-    \includegraphics[width=\linewidth, height=4.5cm, keepaspectratio=false]{solution_architecture.jpg}
+  \begin{minipage}[c]{0.44\linewidth}
+    \includegraphics[width=\linewidth, height=4.8cm, keepaspectratio=false]{solution_architecture.jpg}
   \end{minipage}\hfill
-  \begin{minipage}[c]{0.52\linewidth}
-    {\fontsize{8.5}{11}\selectfont \textbf{\textcolor{NavyDark}{3-Tier Scalable IoT Farm Ecosystem:}}}\\[2pt]
-    {\fontsize{7.5}{9.8}\selectfont \textcolor{TextPrimary}{
+  \begin{minipage}[c]{0.53\linewidth}
+    {\fontsize{8.5}{11}\selectfont \textbf{\textcolor{NavyDark}{3-Tier Scalable IoT Farm Ecosystem:}}}\\[3pt]
+    {\fontsize{7.5}{10.2}\selectfont \textcolor{TextPrimary}{
     \textbf{\textcolor{TealPrimary}{Tier 1: Intelligent Feeder Nodes (Pond-Side):}}\\
-    Autonomous solar feeders located on pond piers or floating frames. Each node continuously monitors battery status, solar harvesting, motor drive current, and dispense cycle completions, broadcasting lightweight telemetry packets over LoRaWAN\textsuperscript{\tiny \textregistered}.\\[3pt]
+    Autonomous solar feeders located on pond piers or floating frames. Each node continuously monitors battery status, solar harvesting, motor drive current, and dispense cycle completions, broadcasting lightweight telemetry packets over LoRaWAN\textsuperscript{\tiny \textregistered}.\\[4pt]
     \textbf{\textcolor{TealPrimary}{Tier 2: Central Industrial Gateway (Farm Mast):}}\\
-    A single high-gain industrial gateway mounted on a central mast covers \textbf{50 to 200+ ponds across a 15\,km radius}. Aggregates all pond uplinks and bridges to the cloud via \textbf{tri-redundant Wi-Fi, Industrial Ethernet, or 4G LTE cellular}. Eliminates per-feeder cellular SIM costs.\\[3pt]
+    A single high-gain industrial gateway mounted on a central mast covers \textbf{50 to 200+ ponds across a 15\,km radius}. Aggregates all pond uplinks and bridges to the cloud via \textbf{tri-redundant Wi-Fi, Industrial Ethernet, or 4G LTE cellular}. Eliminates per-feeder cellular SIM costs.\\[4pt]
     \textbf{\textcolor{TealPrimary}{Tier 3: aquaCON\textsuperscript{\tiny TM} Cloud Intelligence Platform:}}\\
     Enterprise cloud infrastructure provides real-time supervisor dashboards, automatic daily schedule calculation, historical event auditing, and instant SMS/call alerts for hopper empty or jam events.
     }}
   \end{minipage}
 \end{tcolorbox}
 
-\vspace{6pt}
+\vspace{5pt}
 
 % --- Redesigned High-Impact Competitive Differentiation Matrix ---
 {\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{NavyDark}{Competitive Differentiation Matrix: Why aquaCON\textsuperscript{\tiny TM} Outperforms}}}
-\vspace{2pt}
+\vspace{2.5pt}
 
 \begin{tcolorbox}[
   enhanced,
@@ -308,7 +311,7 @@
   left=0pt, right=0pt, top=0pt, bottom=0pt
 ]
   \renewcommand{\arraystretch}{1.3}
-  \fontsize{7.2}{9.0}\selectfont
+  \fontsize{7.2}{9.1}\selectfont
   \begin{tabularx}{\linewidth}{@{}p{3.8cm} >{\centering\arraybackslash}p{4.0cm} >{\centering\arraybackslash}p{4.2cm} >{\centering\arraybackslash}X@{}}
     \rowcolor{NavyDark}
     \textcolor{white}{\textbf{Core Capability}} &
@@ -358,7 +361,33 @@
   \end{tabularx}
 \end{tcolorbox}
 
-\vspace{6pt}
+\vspace{5pt}
+
+% --- Central Gateway & Cloud Infrastructure Specifications (Fills Page 2 Harmoniously) ---
+{\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{NavyDark}{Central Industrial Gateway \& Cloud Infrastructure Specifications}}}
+\vspace{2.5pt}
+
+\begin{tcolorbox}[
+  enhanced,
+  colback=CardBg,
+  colframe=TealPrimary,
+  arc=2mm,
+  boxrule=0.9pt,
+  left=0pt, right=0pt, top=0pt, bottom=0pt
+]
+  \renewcommand{\arraystretch}{1.3}
+  \fontsize{7.3}{9.2}\selectfont
+  \begin{tabularx}{\linewidth}{@{}p{2.6cm} X p{2.6cm} X@{}}
+    \rowcolor{TableStripe}
+    \textbf{Gateway Coverage:} & Up to 15\,km Radius Line-of-Sight & \textbf{Farm Capacity:} & Supports 50 to 200+ Feeder Nodes\\
+    \textbf{Backhaul Network:} & Tri-Redundant 4G LTE, Ethernet, Wi-Fi & \textbf{SIM Requirement:} & Only 1 Single Central SIM for Entire Farm\\
+    \rowcolor{TableStripe}
+    \textbf{Power System:} & Industrial Solar PV + Battery Backup & \textbf{Cloud Platform:} & AWS IoT Telemetry Core \& DynamoDB\\
+    \textbf{Security:} & End-to-End AES-128 Encryption & \textbf{Alert Dispatch:} & Instant SMS / Voice Alerts for Jam / Empty\\
+  \end{tabularx}
+\end{tcolorbox}
+
+\vspace{5pt}
 
 % --- Bottom Row: Financial Impact in Indian Rupees (INR) vs Authentic Corporate Contact ---
 \begin{minipage}[t]{0.488\linewidth}
@@ -371,9 +400,9 @@
     title={\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{white}{Customer ROI Model: 10-Hectare Farm (Indian Rupees)}}},
     coltitle=white,
     colbacktitle=EmeraldGreen,
-    top=7pt, bottom=7pt, left=8pt, right=8pt
+    top=6pt, bottom=6pt, left=8pt, right=8pt
   ]
-    {\fontsize{7.4}{9.6}\selectfont \textcolor{TextPrimary}{
+    {\fontsize{7.5}{9.8}\selectfont \textcolor{TextPrimary}{
     \textbf{Commercial baseline: 10 ponds consuming 40,000\,kg feed per crop:}
     \begin{itemize}[leftmargin=10pt, itemsep=2.5pt, topsep=2pt, parsep=0pt]
       \item \textbf{Feed Cost Savings:} Reducing FCR from 1.60 to 1.30 saves \textbf{7,500\,kg of commercial feed} per harvest. At \rupee 100/kg, this delivers \textbf{\rupee 7,50,000 to \rupee 10,00,000 direct cash savings per crop}.
@@ -395,16 +424,16 @@
     title={\fontsize{8.5}{10.5}\selectfont \textbf{\textcolor{white}{Athena Engineering Corp $\vert$ Kakinada, India}}},
     coltitle=white,
     colbacktitle=NavyDark,
-    top=7pt, bottom=7pt, left=8pt, right=8pt
+    top=6pt, bottom=6pt, left=8pt, right=8pt
   ]
-    {\fontsize{7.4}{9.6}\selectfont \textcolor{TextPrimary}{
+    {\fontsize{7.5}{9.8}\selectfont \textcolor{TextPrimary}{
     \textbf{Turnkey Farm Deployments \& Direct Support:}
     \begin{itemize}[leftmargin=10pt, itemsep=2pt, topsep=2pt, parsep=0pt]
       \item \textbf{On-Farm Pilot Deployments:} Turnkey installation of solar feeders and central gateway with on-site technician calibration.
       \item \textbf{Multi-Species Precision:} Calibrated for Vannamei shrimp, Black Tiger shrimp, Tilapia, and high-density marine cages.
       \item \textbf{Enterprise SLA \& Warranty:} 3-year hardware warranty with local engineering support from Kakinada.
     \end{itemize}
-    \vspace{4pt}
+    \vspace{3pt}
     \begin{tcolorbox}[
       enhanced,
       colback=NavyDark,
