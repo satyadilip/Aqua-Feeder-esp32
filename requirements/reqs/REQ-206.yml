@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Pre-Dawn Dispensed Weight Integrity
+level: 13.6
+links: []
+method: Test
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: k7pk7vjRgWO9p8KAybMpfkMe1FoTILVHSOXXzpq7SJ8=
+status: PENDING
+test_notes: ''
+text: |
+  Between 00:00 and 06:00 IST, the Dispensed Today metric card SHALL display **`0.00 kg`** (never yesterday's accumulated weight).
+verified_date: ''

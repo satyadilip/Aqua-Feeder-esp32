@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Cloud Command Pending Pill
+level: 13.15
+links: []
+method: Demo
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: 3b9836P6Lqd_R-Bl14ZGIe4O3lNq3OrOrMtioFz-jFk=
+status: PENDING
+test_notes: ''
+text: |
+  While a downlink command is queued in DynamoDB awaiting delivery, the UI SHALL display a pulsing indicator: `⏳ Command Sync Pending`.
+verified_date: ''

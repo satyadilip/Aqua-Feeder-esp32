@@ -22,7 +22,7 @@ DEVEUI_TO_WIRELESS_ID = {
     'e072a1fffef5ba08': '9cd8879c-4265-4ddf-bda1-ab71e80a90a3',
     'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
     'e072a1fffef64134': '144c9bac-2316-4b35-8262-aa297d03805d',
-    'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f',
+    'e072a1fffef5bac0': '1a4212eb-63ab-4f7a-b0f2-8fe8f78ee59b',
     'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
     'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
 }
@@ -60,11 +60,11 @@ def send_lora_downlink(dev_eui, downlink_bytes, fport=1):
     if not w_id:
         return False, f"Device {dev_eui} not registered in Wireless Device mapping"
     try:
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
-        # Class C immediate blast during daytime feeding window (06:00 to 18:00 IST)
-        # TransmitMode=1 causes AWS IoT Core Wireless to immediately downlink over gateway without waiting for uplink
-        # TransmitMode=0 queues for Class A reception (night time / deep sleep)
-        tx_mode = 1 if (6 <= now_ist.hour < 18) else 0
+        # LoRaWAN Class A queued transmission:
+        # AquaFeeder nodes operate in Class A low-power mode with RX1/RX2 receive windows after uplinks.
+        # TransmitMode=0 instructs AWS IoT Core Wireless to reliably queue the downlink in the device queue
+        # and transmit it immediately in the RX1/RX2 window following the next uplink transmission.
+        tx_mode = 0
         down_b64 = base64.b64encode(downlink_bytes).decode('ascii')
         iw_client.send_data_to_wireless_device(
             Id=w_id,
@@ -72,8 +72,7 @@ def send_lora_downlink(dev_eui, downlink_bytes, fport=1):
             PayloadData=down_b64,
             WirelessMetadata={'LoRaWAN': {'FPort': fport}}
         )
-        mode_desc = "Class C immediate" if tx_mode == 1 else "Class A queued"
-        return True, f"Downlink sent ({mode_desc}) for {dev_eui} ({w_id})"
+        return True, f"Downlink queued (Class A RX1/RX2) for {dev_eui} ({w_id})"
     except Exception as err:
         return False, str(err)
 
@@ -193,8 +192,8 @@ def lambda_handler(event, context):
                     # Authoritative Dispensed Feed Today: strictly the sum of active feed events history
                     actual_dispensed_kg = 0.0
                     try:
-                        today_midnight_ist = datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0, tzinfo=timezone.utc)
-                        today_start_epoch = int(today_midnight_ist.timestamp())
+                        today_midnight_ist = datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0)
+                        today_start_epoch = int(datetime(now_ist.year, now_ist.month, now_ist.day, 0, 0, 0, tzinfo=timezone.utc).timestamp())
                         t_resp = telemetry_table.query(
                             KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(dev_id),
                             ScanIndexForward=False,
@@ -202,10 +201,13 @@ def lambda_handler(event, context):
                         )
                         items = t_resp.get('Items', [])
                         
-                        # Find the active event and hardware dispensed grams from latest telemetry
-                        active_ev = int(cur_ev)
+                        # Find the active event and hardware dispensed grams from latest telemetry of TODAY (IST)
+                        active_ev = 0
                         hw_disp_g = 0.0
                         for it in items:
+                            ts = int(it.get('Timestamp', 0))
+                            if ts < today_start_epoch:
+                                continue
                             ev = int(it.get('CurrentEvent', 0))
                             disp_g = float(it.get('FeedDispensed_g', 0))
                             if ev > 0:
@@ -218,9 +220,12 @@ def lambda_handler(event, context):
                         if hw_disp_g > 0 and active_ev > 0:
                             actual_dispensed_kg = round(hw_disp_g / 1000.0, 2)
                         else:
-                            # Monotonic active cycle extraction (stop at prior run boundary)
+                            # Monotonic active cycle extraction (strictly today's items)
                             events_today = {}
                             for t_it in items:
+                                ts = int(t_it.get('Timestamp', 0))
+                                if ts < today_start_epoch:
+                                    break
                                 ev_num = int(t_it.get('CurrentEvent', 0))
                                 if ev_num <= 0:
                                     continue
@@ -235,11 +240,19 @@ def lambda_handler(event, context):
                         pass
 
                     # Fallbacks if telemetry query returned no events:
-                    if actual_dispensed_kg == 0.0:
-                        if float(d.get('LastFeed_g', 0)) > 0:
-                            actual_dispensed_kg = round(float(d.get('LastFeed_g')) / 1000.0, 2)
-                        elif cur_ev > 0 and fpe > 0:
-                            actual_dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)
+                    # ONLY use device table fallbacks if TodayDate matches today's date!
+                    if str(d.get('TodayDate', '')).strip() == today_date_str:
+                        if actual_dispensed_kg == 0.0:
+                            if float(d.get('TodayFeedDispensed_kg', 0)) > 0:
+                                actual_dispensed_kg = round(float(d.get('TodayFeedDispensed_kg')), 2)
+                            elif float(d.get('DispensedFeed_kg', 0)) > 0:
+                                actual_dispensed_kg = round(float(d.get('DispensedFeed_kg')), 2)
+                            elif cur_ev > 0 and fpe > 0:
+                                actual_dispensed_kg = round((cur_ev * fpe) / 1000.0, 2)
+                    else:
+                        # Day rollover: reset today's active counter if recorded date is from a previous calendar day
+                        cur_ev = 0
+                        actual_dispensed_kg = 0.0
 
                     dispensed_kg = actual_dispensed_kg
                     target_kg = float(d.get('FeedQuantity_kg', round((tot_ev * fpe) / 1000.0, 1)))
@@ -269,13 +282,33 @@ def lambda_handler(event, context):
                             d['DischargeRate_gs'] = int(s_item.get('DischargeRate_gs', d.get('DischargeRate_gs', 100)))
                             d['MotorTimeSec'] = float(s_item.get('MotorTimeSec', d.get('MotorTimeSec', 1.0)))
                             d['ScheduleValid'] = True
+                            d['SettingsSyncStatus'] = str(s_item.get('SettingsSyncStatus', d.get('SettingsSyncStatus', 'IN_SYNC')))
+                            d['SettingsPushedAt'] = str(s_item.get('SettingsPushedAt', d.get('SettingsPushedAt', '')))
+                            d['SettingsConfirmedAt'] = str(s_item.get('SettingsConfirmedAt', d.get('SettingsConfirmedAt', '')))
+                            if 'PendingDailyTarget_kg' in s_item and s_item['PendingDailyTarget_kg'] is not None:
+                                d['PendingDailyTarget_kg'] = float(s_item['PendingDailyTarget_kg'])
+                            if 'ReportedDailyTarget_kg' in s_item and s_item['ReportedDailyTarget_kg'] is not None:
+                                d['ReportedDailyTarget_kg'] = float(s_item['ReportedDailyTarget_kg'])
+                            d['PendingCommand'] = d.get('PendingCommand', None)
+                            d['CommandPushedAt'] = str(d.get('CommandPushedAt', ''))
+                            d['CommandConfirmedAt'] = str(d.get('CommandConfirmedAt', ''))
 
                             # Exact Runtime Deductive Schedule Math matching firmware:
-                            # IMPORTANT: dispensed_kg is the immutable actual past dispensed feed!
-                            if cur_ev > 0 and dispensed_kg > 0:
+                            # Deductive math ONLY applies during the ACTIVE daylight feeding window for an unfinished cycle.
+                            # After hours (>= end_mins), early morning (< start_mins), or when already COMPLETED:
+                            # Today's run is finished! target_kg represents the upcoming / next cycle target.
+                            start_mins_dev = int(s_item.get('StartHour', 6)) * 60 + int(s_item.get('StartMinute', 0))
+                            end_mins_dev = int(s_item.get('EndHour', 18)) * 60 + int(s_item.get('EndMinute', 0))
+                            now_ist_mins_dev = now_ist.hour * 60 + now_ist.minute
+                            is_active_feeding = (start_mins_dev <= now_ist_mins_dev < end_mins_dev) and str(d.get('Status', '')).upper() not in ['COMPLETED', 'SCHEDULE ENDED']
+
+                            if is_active_feeding and cur_ev > 0 and dispensed_kg > 0:
                                 rem_kg = max(0.0, target_kg - dispensed_kg)
                                 rem_ev = int(math.ceil((rem_kg * 1000.0) / fpe)) if rem_kg > 0 else 0
                                 tot_ev = float(int(cur_ev) + rem_ev)
+                            elif str(d.get('Status', '')).upper() == 'COMPLETED' or now_ist_mins_dev >= end_mins_dev:
+                                # Today's cycle has ended! Today's completed events is locked to what ran today.
+                                tot_ev = float(int(cur_ev)) if cur_ev > 0 else float(int(math.ceil((target_kg * 1000.0) / fpe)))
                             else:
                                 tot_ev = float(int(math.ceil((target_kg * 1000.0) / fpe))) if fpe > 0 else 150.0
                         d['FirmwareVersion'] = str(d.get('FirmwareVersion', 'v1.0'))
@@ -390,9 +423,13 @@ def lambda_handler(event, context):
                                          (target_kg > 0 and dispensed_kg >= target_kg) or \
                                          (now_min >= end_min and (cur_ev > 0 or dispensed_kg > 0))
 
+                    is_inside_schedule = (start_min <= now_min < end_min)
                     is_feed_stopped = (raw_status in ['STANDBY', 'STOPPED']) or (d.get('FeedActive') is False)
+                    # Bit 5 (0x20) is SD Card Fault, NOT Feed Active!
+                    # Feeder is ONLY actively feeding if inside operational daylight window and not stopped
+                    is_active_feed = (raw_status in ['FEEDING', 'ACTIVE']) and is_inside_schedule and not is_feed_stopped
 
-                    # Phase 1: Date Rollover (00:00:00 to start_min IST / early morning before window)
+                    # Phase 1: Date Rollover / Pre-dawn (00:00:00 to start_min IST before window)
                     if now_min < start_min:
                         actual_status = 'STANDBY'
                         live_cur_ev = 0
@@ -405,19 +442,28 @@ def lambda_handler(event, context):
                         next_feed_sub = f"Starts today at {s_time_fmt}"
 
                     # Phase 2: Feed Completed Today (concluded after all pulses or past 18:00 with feeds delivered)
-                    elif is_truly_completed:
-                        actual_status = 'COMPLETED'
-                        live_cur_ev = int(cur_ev)
-                        live_tot_ev = max(tot_ev_int, int(cur_ev))
-                        live_rem_ev = 0
-                        live_disp_kg = dispensed_kg
+                    elif (is_truly_completed or now_min >= end_min) and not is_active_feed:
+                        if now_min >= end_min and not is_today_run and cur_ev == 0:
+                            actual_status = 'STANDBY'
+                            live_cur_ev = 0
+                            live_tot_ev = tot_ev_int
+                            live_rem_ev = tot_ev_int
+                            live_disp_kg = 0.0
+                            next_feed_str = s_time_fmt
+                            next_feed_sub = f"Starts tomorrow at {s_time_fmt}"
+                        else:
+                            actual_status = 'COMPLETED'
+                            live_cur_ev = int(cur_ev)
+                            live_tot_ev = max(tot_ev_int, int(cur_ev))
+                            live_rem_ev = 0
+                            live_disp_kg = dispensed_kg
+                            next_feed_str = s_time_fmt
+                            next_feed_sub = f"Starts tomorrow at {s_time_fmt}"
                         gap_s = base_gap_s
                         dyn_interval_m = base_interval_m
-                        next_feed_str = s_time_fmt
-                        next_feed_sub = f"Tomorrow at {s_time_fmt}"
 
                     # Phase 3: Standby / Stopped (user commanded STOP or device in standby)
-                    elif is_feed_stopped:
+                    elif is_feed_stopped or raw_status == 'STANDBY':
                         actual_status = 'STANDBY'
                         live_cur_ev = int(cur_ev)
                         live_tot_ev = tot_ev_int
@@ -428,8 +474,8 @@ def lambda_handler(event, context):
                         next_feed_str = "--"
                         next_feed_sub = "Feed Paused / Standby"
 
-                    # Phase 4: Active Feeding Window (start_min <= now_min < end_min with events running)
-                    elif cur_ev > 0 or raw_status in ['FEEDING', 'ACTIVE']:
+                    # Phase 4: Active Feeding Window (motor or feed cycle physically active during operational window)
+                    elif is_active_feed and is_inside_schedule:
                         actual_status = 'FEEDING'
                         live_cur_ev = int(cur_ev)
                         live_tot_ev = tot_ev_int
@@ -555,44 +601,52 @@ def lambda_handler(event, context):
             
             print(f"Executing command '{cmd}' for device '{device_id}'")
             
+            now_ist_dt = datetime.utcnow() + timedelta(hours=5, minutes=30)
+            pushed_ist_str = now_ist_dt.strftime("%Y-%m-%d %I:%M:%S %p IST")
+
             if cmd in ['START', 'FEED']:
+                # STRICT NIGHT GUARD: Prohibit manual/remote start outside operational daylight hours
+                try:
+                    dev_res = devices_table.get_item(Key={'DeviceId': device_id})
+                    dev_item = dev_res.get('Item', {})
+                    shour = int(dev_item.get('StartHour', 6))
+                    smin = int(dev_item.get('StartMinute', 0))
+                    ehour = int(dev_item.get('EndHour', 18))
+                    emin = int(dev_item.get('EndMinute', 0))
+                    now_ist_mins = now_ist_dt.hour * 60 + now_ist_dt.minute
+                    start_mins = shour * 60 + smin
+                    end_mins = ehour * 60 + emin
+                    if now_ist_mins < start_mins or now_ist_mins >= end_mins:
+                        s_ampm = "PM" if shour >= 12 else "AM"
+                        s_disph = 12 if shour % 12 == 0 else shour % 12
+                        e_ampm = "PM" if ehour >= 12 else "AM"
+                        e_disph = 12 if ehour % 12 == 0 else ehour % 12
+                        err_msg = f"Strict Night Guard: Feeding is prohibited outside daylight hours ({s_disph:02d}:{smin:02d} {s_ampm} - {e_disph:02d}:{emin:02d} {e_ampm}). Scheduled feeding will start automatically at {s_disph:02d}:{smin:02d} {s_ampm}."
+                        print(f"[REJECT_START] {device_id}: {err_msg}")
+                        return build_response(400, {'error': err_msg})
+                except Exception as guard_err:
+                    print("Night guard check error:", guard_err)
+
                 # Real LoRaWAN Downlink: CMD_START_FEED (0xA4)
                 downlink_bytes = struct.pack('<B11s', 0xA4, b'\x00' * 11)
                 dl_success, dl_msg = send_lora_downlink(device_id, downlink_bytes, fport=1)
                 print(f"[DOWNLINK] Queued CMD_START_FEED for {device_id}: {dl_success} ({dl_msg})")
 
-                # User pressed start feed: counted as ONE EVENT DONE in the entire feed cycle
-                cur_ev = int(body.get('currentEvent', 0))
-                disp_kg = Decimal(str(body.get('dispensedKg', '0.0')))
-                fpe_g = int(body.get('feedGrams', 100))
-                
-                if cur_ev == 0:
-                    item_res = devices_table.get_item(Key={'DeviceId': device_id})
-                    existing = item_res.get('Item', {})
-                    cur_ev = int(existing.get('CurrentEvent', 0)) + 1
-                    tot_ev = int(existing.get('TotalEvents', 235))
-                    fpe_g = int(existing.get('FeedPerEvent_g', 100))
-                    disp_kg = Decimal(str(existing.get('DispensedFeed_kg', 0))) + Decimal(str(fpe_g / 1000.0))
-
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET #st = :st, CurrentEvent = :ce, DispensedFeed_kg = :df, LastFeed_g = :lf, LastSeen = :ls, LastEventTime = :lt, FeedAvailable = :fa',
-                    ExpressionAttributeNames={'#st': 'Status'},
+                    UpdateExpression='SET PendingCommand = :cmd, CommandPushedAt = :pat, DownlinkQueued = :dq',
                     ExpressionAttributeValues={
-                        ':st': 'FEEDING',
-                        ':ce': cur_ev,
-                        ':df': disp_kg,
-                        ':lf': fpe_g,
-                        ':ls': now_ts,
-                        ':lt': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%SZ'),
-                        ':fa': True
+                        ':cmd': 'START',
+                        ':pat': pushed_ist_str,
+                        ':dq': dl_success
                     }
                 )
                 return build_response(200, {
-                    'status': 'success',
-                    'message': f'Feed event #{cur_ev} executed (+{fpe_g}g counted in cycle)',
-                    'currentEvent': cur_ev,
-                    'dispensedKg': float(disp_kg)
+                    'status': 'queued',
+                    'pendingCommand': 'START',
+                    'pushedAt': pushed_ist_str,
+                    'downlinkQueued': dl_success,
+                    'message': f'Feed START command queued. Waiting for feeder radio window...'
                 })
 
             elif cmd in ['TEST_LOADER', 'TEST_R1']:
@@ -680,11 +734,20 @@ def lambda_handler(event, context):
 
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls',
-                    ExpressionAttributeNames={'#st': 'Status'},
-                    ExpressionAttributeValues={':st': 'STANDBY', ':fa': False, ':ls': now_ts}
+                    UpdateExpression='SET PendingCommand = :cmd, CommandPushedAt = :pat, DownlinkQueued = :dq',
+                    ExpressionAttributeValues={
+                        ':cmd': 'STOP',
+                        ':pat': pushed_ist_str,
+                        ':dq': dl_success
+                    }
                 )
-                return build_response(200, {'status': 'success', 'message': f'Feeder stop queued on {device_id}', 'downlinkQueued': dl_success, 'state': 'STANDBY'})
+                return build_response(200, {
+                    'status': 'queued',
+                    'pendingCommand': 'STOP',
+                    'pushedAt': pushed_ist_str,
+                    'downlinkQueued': dl_success,
+                    'message': f'Feed STOP command queued. Waiting for feeder confirmation...'
+                })
 
             elif cmd == 'RESUME':
                 # Real LoRaWAN Downlink: CMD_RESUME_FEED (0xA6)
@@ -694,11 +757,20 @@ def lambda_handler(event, context):
 
                 devices_table.update_item(
                     Key={'DeviceId': device_id},
-                    UpdateExpression='SET #st = :st, FeedActive = :fa, LastSeen = :ls, FeedAvailable = :fa_avail',
-                    ExpressionAttributeNames={'#st': 'Status'},
-                    ExpressionAttributeValues={':st': 'FEEDING', ':fa': True, ':ls': now_ts, ':fa_avail': True}
+                    UpdateExpression='SET PendingCommand = :cmd, CommandPushedAt = :pat, DownlinkQueued = :dq',
+                    ExpressionAttributeValues={
+                        ':cmd': 'RESUME',
+                        ':pat': pushed_ist_str,
+                        ':dq': dl_success
+                    }
                 )
-                return build_response(200, {'status': 'success', 'message': f'Feeder resume queued on {device_id}', 'downlinkQueued': dl_success, 'state': 'FEEDING'})
+                return build_response(200, {
+                    'status': 'queued',
+                    'pendingCommand': 'RESUME',
+                    'pushedAt': pushed_ist_str,
+                    'downlinkQueued': dl_success,
+                    'message': f'Feed RESUME command queued. Waiting for feeder radio window...'
+                })
             else:
                 return build_response(400, {'error': f'Unsupported command {cmd}'})
 
@@ -759,10 +831,13 @@ def lambda_handler(event, context):
         elif path.startswith('/api/telemetry/') and http_method == 'GET':
             device_id = path.split('/')[-1]
             try:
-                items = []
+                now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                today_date_str = now_ist.strftime("%Y-%m-%d")
+
+                raw_items = []
                 lek = None
                 pages = 0
-                while len(items) < 100 and pages < 30:
+                while len(raw_items) < 400 and pages < 10:
                     pages += 1
                     q_args = {
                         'KeyConditionExpression': boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
@@ -772,33 +847,47 @@ def lambda_handler(event, context):
                     if lek:
                         q_args['ExclusiveStartKey'] = lek
                     response = telemetry_table.query(**q_args)
-                    for it in response.get('Items', []):
-                        if int(it.get('CurrentEvent', 0)) > 0:
-                            items.append(it)
-                            if len(items) >= 100:
-                                break
+                    cur_items = response.get('Items', [])
+                    reached_yesterday = False
+                    for it in cur_items:
+                        ts = int(it.get('Timestamp', 0))
+                        dt = datetime.utcfromtimestamp(ts)
+                        d_str = dt.strftime("%Y-%m-%d")
+                        if d_str == today_date_str:
+                            raw_items.append(it)
+                        elif d_str < today_date_str:
+                            reached_yesterday = True
+                            break
                     lek = response.get('LastEvaluatedKey')
-                    if not lek:
+                    if reached_yesterday or not lek:
                         break
-                
-                # If no feed pulses found, return the most recent telemetry rows
-                if not items:
-                    response = telemetry_table.query(
-                        KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
-                        ScanIndexForward=False,
-                        Limit=20
-                    )
-                    items = response.get('Items', [])
-                # Recover true physical event grams from cumulative hardware counter FeedDispensed_g
+
+                # Deduplicate by CurrentEvent:
+                # Standby heartbeats in the evening repeat the last CurrentEvent (e.g. Event 100).
+                # To ensure the event record reflects when feed was ACTUALLY dispensed (during daylight feeding hours)
+                # and NOT an evening standby heartbeat, we pick the true daytime dispensing record for each event.
                 distinct_by_ev = {}
-                for it in items:
+                for it in raw_items:
                     ev = int(it.get('CurrentEvent', 0))
                     if ev > 0:
-                        fg = int(it.get('FeedDispensed_g', 0))
-                        if ev not in distinct_by_ev or fg > int(distinct_by_ev[ev].get('FeedDispensed_g', 0)):
+                        raw_ts = int(it.get('Timestamp', 0))
+                        dt = datetime.utcfromtimestamp(raw_ts)
+                        is_daytime = (dt.hour * 60 + dt.minute <= 18 * 60 + 5)
+                        if ev not in distinct_by_ev:
                             distinct_by_ev[ev] = it
+                        else:
+                            prev_ts = int(distinct_by_ev[ev].get('Timestamp', 0))
+                            prev_dt = datetime.utcfromtimestamp(prev_ts)
+                            prev_is_daytime = (prev_dt.hour * 60 + prev_dt.minute <= 18 * 60 + 5)
+                            if is_daytime and not prev_is_daytime:
+                                distinct_by_ev[ev] = it
+                            elif is_daytime and prev_is_daytime and raw_ts < prev_ts:
+                                # Retain the earliest daytime packet (the exact moment event was dispensed, not later heartbeats/resumes)
+                                distinct_by_ev[ev] = it
 
                 sorted_ev_nums = sorted(distinct_by_ev.keys())
+
+                # Recover physical pulse deltas from cumulative hardware counter FeedDispensed_g
                 prev_fg = None
                 calculated_pulse_grams = {}
                 for ev in sorted_ev_nums:
@@ -808,15 +897,15 @@ def lambda_handler(event, context):
                         calculated_pulse_grams[ev] = fg - prev_fg
                     prev_fg = fg
 
-                for it in items:
+                for ev in sorted_ev_nums:
+                    it = distinct_by_ev[ev]
                     ev_num = int(it.get('CurrentEvent', 0))
                     if ev_num in calculated_pulse_grams:
                         it['EventGrams'] = calculated_pulse_grams[ev_num]
                     elif 'EventGrams' not in it or it['EventGrams'] is None or int(it.get('EventGrams', 0)) == 0:
-                        it['EventGrams'] = it.get('FeedPerEvent_g', 100)
+                        it['EventGrams'] = int(it.get('FeedPerEvent_g', 250))
                     raw_ts = int(it.get('Timestamp', 0))
                     if 1700000000 <= raw_ts <= 2000000000:
-                        # Device timestamp is DS3231 IST pseudo-epoch (UTC + 19800)
                         dt = datetime.utcfromtimestamp(raw_ts)
                         nh = dt.hour
                         nm = dt.minute
@@ -829,7 +918,10 @@ def lambda_handler(event, context):
                     else:
                         it['Time'] = ""
                         it['Date'] = ""
+
+                items = [distinct_by_ev[ev] for ev in reversed(sorted_ev_nums)]
             except Exception as e:
+                print(f"Telemetry history fetch error: {e}")
                 items = []
             return build_response(200, {'deviceId': device_id, 'telemetry': items})
 
@@ -845,6 +937,10 @@ def lambda_handler(event, context):
                 ehour = Decimal(str(body.get('endHour', 18)))
                 emin = Decimal(str(body.get('endMinute', 0)))
                 
+                feed_qty_float = float(feed_qty)
+                feed_burst_float = float(feed_burst)
+                rate_float = float(rate) if float(rate) > 0.1 else 100.0
+
                 # Fetch existing device state to account for already dispensed feed today
                 existing_dev = {}
                 try:
@@ -884,10 +980,6 @@ def lambda_handler(event, context):
                         already_dispensed_kg = 0.0
                 if 'alreadyRanEvents' in body and int(body['alreadyRanEvents']) > 0:
                     already_ran_events = max(already_ran_events, int(body['alreadyRanEvents']))
-
-                feed_qty_float = float(feed_qty)
-                feed_burst_float = float(feed_burst)
-                rate_float = float(rate) if float(rate) > 0.1 else 100.0
 
                 motor_time_s = round(feed_burst_float / rate_float, 2)
                 single_event_s = 3.0 + motor_time_s + 3.0  # 3s PRE warmup + motor + 3s POST clearance
@@ -946,7 +1038,20 @@ def lambda_handler(event, context):
                         interval_min = round(gap_s / 60.0, 1)
                 
                 now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-                
+                pushed_ist_str = now_ist.strftime("%Y-%m-%d %I:%M:%S %p IST")
+
+                # Fetch existing settings to preserve last confirmed reported values
+                existing_settings = {}
+                try:
+                    s_cur = settings_table.get_item(Key={'DeviceId': device_id})
+                    existing_settings = s_cur.get('Item', {})
+                except Exception:
+                    pass
+
+                reported_qty = existing_settings.get('ReportedDailyTarget_kg', existing_dev.get('ReportedDailyTarget_kg', existing_dev.get('DailyTarget_kg', feed_qty)))
+                reported_fpe = existing_settings.get('ReportedFeedPerEvent_g', existing_dev.get('ReportedFeedPerEvent_g', existing_dev.get('FeedPerEvent_g', feed_burst)))
+                last_confirmed_at = existing_settings.get('SettingsConfirmedAt', existing_dev.get('SettingsConfirmedAt', ''))
+
                 settings_item = {
                     'DeviceId': device_id,
                     'DailyTarget_kg': feed_qty,
@@ -962,13 +1067,20 @@ def lambda_handler(event, context):
                     'IntervalMin': Decimal(str(interval_min)),
                     'ScheduleValid': valid,
                     'ScheduleError': err,
+                    'SettingsSyncStatus': 'PENDING',
+                    'SettingsPushedAt': pushed_ist_str,
+                    'SettingsConfirmedAt': last_confirmed_at,
+                    'PendingDailyTarget_kg': feed_qty,
+                    'PendingFeedPerEvent_g': feed_burst,
+                    'ReportedDailyTarget_kg': reported_qty,
+                    'ReportedFeedPerEvent_g': reported_fpe,
                     'LastUpdated': now_str
                 }
                 
                 settings_table.put_item(Item=settings_item)
                 
                 # Also update device in devices table - preserving immutable dispensed feed history
-                update_expr = 'SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, TotalEventsRemaining = :ter, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv'
+                update_expr = 'SET DailyTarget_kg = :dq, FeedQuantity_kg = :fq, FeedPerEvent_g = :fpe, DischargeRate_gs = :dr, StartHour = :sh, StartMinute = :sm, EndHour = :eh, EndMinute = :em, TotalEvents = :te, TotalEventsRemaining = :ter, MotorTimeSec = :mt, IntervalMin = :im, ScheduleValid = :sv, SettingsSyncStatus = :sync, SettingsPushedAt = :spat, PendingDailyTarget_kg = :pdq, PendingFeedPerEvent_g = :pfpe, ReportedDailyTarget_kg = :rdq, ReportedFeedPerEvent_g = :rfpe'
                 expr_vals = {
                     ':dq': feed_qty,
                     ':fq': feed_qty,
@@ -982,7 +1094,13 @@ def lambda_handler(event, context):
                     ':ter': Decimal(str(remaining_events)),
                     ':mt': Decimal(str(motor_time_s)),
                     ':im': Decimal(str(interval_min)),
-                    ':sv': valid
+                    ':sv': valid,
+                    ':sync': 'PENDING',
+                    ':spat': pushed_ist_str,
+                    ':pdq': feed_qty,
+                    ':pfpe': feed_burst,
+                    ':rdq': reported_qty,
+                    ':rfpe': reported_fpe
                 }
                 if already_dispensed_kg > 0:
                     update_expr += ', DispensedFeed_kg = :dfk, TodayFeedDispensed_kg = :tfd'
@@ -1014,6 +1132,21 @@ def lambda_handler(event, context):
                     'status': 'saved',
                     'deviceId': device_id,
                     'downlinkQueued': downlink_queued,
+                    'syncStatus': 'PENDING',
+                    'settingsPushedAt': pushed_ist_str,
+                    'settingsConfirmedAt': last_confirmed_at,
+                    'pendingSettings': {
+                        'dailyTarget_kg': float(feed_qty),
+                        'feedPerEvent_g': int(feed_burst),
+                        'startHour': int(shour),
+                        'startMinute': int(smin),
+                        'endHour': int(ehour),
+                        'endMinute': int(emin)
+                    },
+                    'reportedSettings': {
+                        'dailyTarget_kg': float(reported_qty),
+                        'feedPerEvent_g': int(reported_fpe)
+                    },
                     'calculated': {
                         'totalEvents': total_events,
                         'remainingEvents': remaining_events,

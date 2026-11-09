@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Hopper Empty Debounce Window
+level: 9.3
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: a2zZ0sZ1-v7q198uB54NkE7LZsxyL0FY9Y2YJxYkjDk=
+status: PENDING
+test_notes: ''
+text: |
+  GPIO 16 must remain continuously HIGH for $\ge 100\text{ ms}$ before triggering `FEED EMPTY` to eliminate pellet bounce noise.
+verified_date: ''

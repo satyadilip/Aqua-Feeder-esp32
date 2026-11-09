@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feeding Action Button Mapping
+level: 13.9
+links: []
+method: Demo
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: RRnUpH8HCBZiB-r_awOwFMLLtABdpOsSUoS_doDdw9A=
+status: PENDING
+test_notes: ''
+text: |
+  When feeder is in `FEEDING`, the primary button SHALL display **`FEED BURST NOW`** and secondary button SHALL display **`STOP FEEDING`** (active red).
+verified_date: ''

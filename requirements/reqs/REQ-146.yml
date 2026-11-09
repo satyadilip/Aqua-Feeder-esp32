@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Proximity Sensor Hardware Input
+level: 9.1
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: BIckBewMeJZnO3PO1jH3SD8QhyT0YcbYwRJrXrSNwlI=
+status: PENDING
+test_notes: ''
+text: |
+  The hopper level sensor SHALL be monitored via GPIO 16 through a PC817 optocoupler with a 10kΩ pull-up.
+verified_date: ''

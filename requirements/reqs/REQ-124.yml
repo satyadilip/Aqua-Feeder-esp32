@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Dispense Telemetry Event Generation
+level: 7.9
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: 0XRC3-vNraEzqXJyXEdpUHrr5u2ewR_Yyl0-JxX0g1A=
+status: PENDING
+test_notes: ''
+text: |
+  Upon completion of Phase 3, the system SHALL immediately queue a `LoRaUplinkPayload` with MsgType `0x21` (Event Report).
+verified_date: ''

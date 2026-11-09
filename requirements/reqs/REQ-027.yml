@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Post-Clear Text
+level: 2.9
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: FmvVuVnp3yhV83ne3ASo3Iy-GvK_i4GuhDLcXXjjY-c=
+status: PENDING
+test_notes: ''
+text: |
+  During chute clear spin, Row 1 SHALL display `State: POST-CLEAR  `.
+verified_date: ''

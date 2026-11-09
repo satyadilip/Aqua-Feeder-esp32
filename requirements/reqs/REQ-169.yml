@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Check Tray Weight Non-Deduction
+level: 10.9
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: GN7HZa97ZWcNLlNqe1c1oO3KO2iisydZjvpZCws3Rik=
+status: PENDING
+test_notes: ''
+text: |
+  Pellets dispensed during `Check Tray` SHALL be tracked under `trayCheckGrams` and SHALL NOT deduct from the scheduled daily target.
+verified_date: ''

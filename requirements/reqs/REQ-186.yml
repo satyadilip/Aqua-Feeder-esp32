@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Uplink Packet Size
+level: 12.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: fr4vhmxb_Btuj3z6-1UKGi0DI4rPHKhET6JFfrnF7kg=
+status: PENDING
+test_notes: ''
+text: |
+  The binary LoRaWAN uplink payload SHALL strictly measure **16 bytes** with `__attribute__((packed))` struct alignment.
+verified_date: ''

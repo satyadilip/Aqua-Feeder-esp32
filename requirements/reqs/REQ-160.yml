@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Pellets Refilled Telemetry
+level: 9.15
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: Xd9jUXAh-AGSmxT3TPIzyHys2f6IdZx1fGLtf8_h9Ao=
+status: PENDING
+test_notes: ''
+text: |
+  When hopper is refilled and resumed, an uplink with Bit 3 (`0x08`) cleared SHALL be transmitted within $\le 2\text{ seconds}$.
+verified_date: ''

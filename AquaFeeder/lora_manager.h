@@ -4,6 +4,19 @@
 #include <RadioLib.h>
 #include "config.h"
 
+// Custom LoRaWANNode subclass providing runtime access to protected rxDelays
+class CustomLoRaWANNode : public LoRaWANNode {
+public:
+    CustomLoRaWANNode(PhysicalLayer* phy, const LoRaWANBand_t* band) : LoRaWANNode(phy, band) {}
+    void setRxDelay1(uint32_t delaySec) {
+        rxDelays[1] = (RadioLibTime_t)delaySec * 1000;
+        rxDelays[2] = rxDelays[1] + 1000;
+    }
+    uint32_t getRxDelay1() const {
+        return rxDelays[1];
+    }
+};
+
 class LoRaManager {
 public:
     LoRaManager();
@@ -13,8 +26,8 @@ public:
     bool isAvailable();
     ConnStatus getStatus();
     
-    // OTAA join. Blocking up to LORA_JOIN_TIMEOUT_S. Return success.
-    bool join(const uint8_t* devEUI, const uint8_t* appEUI, const uint8_t* appKey);
+    // LoRaWAN network join (0 = AUTO_FALLBACK, 1 = OTAA_ONLY, 2 = ABP_ONLY)
+    bool join(const uint8_t* devEUI, const uint8_t* appEUI, const uint8_t* appKey, uint8_t mode = 0);
     
     // Key Extraction for CLI
     uint32_t getDevAddr();
@@ -49,6 +62,6 @@ private:
     ConnStatus _status;
     int8_t _lastRSSI;
     float _lastSNR;
-    LoRaWANNode* _node;
+    CustomLoRaWANNode* _node;
     void (*_downlinkCb)(const LoRaDownlinkPayload&);
 };

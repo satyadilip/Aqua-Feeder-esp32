@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Strict Night Window Motor Lockdown
+level: 6.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: kYbRhCR2FJ3BNtymxb7Bcr4dQsTvcnl_n20G1OBL8jQ=
+status: PENDING
+test_notes: ''
+text: |
+  From `18:00:00` to `06:00:00 IST`, the FeedEngine SHALL enforce `state = IDLE` and lock Relays 1 and 2 de-energized.
+verified_date: ''

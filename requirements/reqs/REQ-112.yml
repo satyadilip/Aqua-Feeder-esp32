@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Telemetry Heartbeat in Gap Delay
+level: 6.17
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: 1WUxmDr3mqjAmBbgeLrMfF7XtvD-qSPz2F2TbHkhRUk=
+status: PENDING
+test_notes: ''
+text: |
+  During `FC_WAIT`, the system SHALL suppress rapid telemetry bursts and transmit periodic heartbeats at $60\text{s}$ intervals.
+verified_date: ''

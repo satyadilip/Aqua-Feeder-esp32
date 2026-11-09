@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Long-Press Repeat Rate
+level: 3.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: TAf-mg62Tl_ab2X7_kgKDqs6Q3ntgWDm_Sm-p7LzdPE=
+status: PENDING
+test_notes: ''
+text: |
+  Subsequent repeated button events during continuous hold SHALL fire at a deterministic rate of $100\text{ ms}$ ($10\text{ Hz}$).
+verified_date: ''

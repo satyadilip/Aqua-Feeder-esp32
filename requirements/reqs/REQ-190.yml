@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Bit 5 Diagnostic Isolation
+level: 12.5
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: CzKaoxjgfG-1scLQ6VoXVnCCQbFGVop4u0E1MWyA5ME=
+status: PENDING
+test_notes: ''
+text: |
+  In the LoRa binary payload, `Bit 5` (`0x20`) of `statusFlags` SHALL strictly denote **SD Card Fault / Missing Card**.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Keypad Noise Debounce
+level: 3.2
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: o9Y5bgcbu-Uc2ULQo04FDknfova92G7Qsh-9rBGOyQ0=
+status: PENDING
+test_notes: ''
+text: |
+  A button state change SHALL only be registered after maintaining a stable physical state for $\ge 20\text{ ms}$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Current Sensor Communication Loss
+level: 8.15
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: LMHbmTTdwBpvrxBQYl2DJXJQcWYJU-qHBFBFrV9JObM=
+status: PENDING
+test_notes: ''
+text: |
+  If INA219 fails to acknowledge on I2C during dispense, the system SHALL limit maximum pulse time to $2.0 \times t_{\text{meter}}$ as a failsafe.
+verified_date: ''

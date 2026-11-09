@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Solar Overvoltage Protection
+level: 8.12
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: 3wrkSBiR9kXzmMk-T9aTlQrqSdFBM0Lmok1BCVcq6Ro=
+status: PENDING
+test_notes: ''
+text: |
+  If voltage exceeds $16.0\text{V}$, the system SHALL log a warning and clamp charging indicators.
+verified_date: ''

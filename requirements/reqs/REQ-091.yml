@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Overfill Window Prevention
+level: 5.16
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: sWOt6aK6mKuAi5HrRlyEB2u4UAjki5P5RFx9dLawODk=
+status: PENDING
+test_notes: ''
+text: |
+  If $\text{TotalEvents} \times t_{\text{event}} \ge (\text{EndMin} - \text{StartMin}) \times 60$, the system SHALL flag `Schedule Error: Exceeds Window` on LCD.
+verified_date: ''

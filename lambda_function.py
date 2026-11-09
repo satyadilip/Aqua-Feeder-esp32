@@ -20,7 +20,7 @@ DEVEUI_TO_WIRELESS_ID = {
     'e072a1fffef5ba08': '9cd8879c-4265-4ddf-bda1-ab71e80a90a3',
     'e072a1fffef6249c': '503bec00-b0f5-4533-b4e0-9d21fbc28dea',
     'e072a1fffef64134': '144c9bac-2316-4b35-8262-aa297d03805d',
-    'e072a1fffef5bac0': 'e27420b7-5d0f-4b60-a033-15fbac63365f',
+    'e072a1fffef5bac0': 'cbe0dee9-fa2d-49e0-9ba7-3da4e239e442',
     'e072a1f6249c0005': '8e499bee-df06-49cb-8ca8-903c0bdf1e3a',
     'e072a1f6249c0001': 'd7feffe3-7eb1-461a-a128-be43271f826f'
 }
@@ -42,7 +42,7 @@ def auto_sync_rtc_if_needed(dev_eui, reported_ts, now_epoch):
                 down_b64 = base64.b64encode(down_bytes).decode('ascii')
                 iw_client.send_data_to_wireless_device(
                     Id=w_id,
-                    TransmitMode=1,
+                    TransmitMode=0, # LoRaWAN Class A queued mode for RX1/RX2 window
                     PayloadData=down_b64,
                     WirelessMetadata={'LoRaWAN': {'FPort': 1}}
                 )
@@ -117,6 +117,9 @@ def lambda_handler(event, context):
                 else:
                     interval_min = 2.8
                 
+                now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+                confirmed_time_str = now_ist.strftime("%Y-%m-%d %I:%M:%S %p IST")
+
                 settings_table.put_item(
                     Item={
                         'DeviceId': dev_eui,
@@ -132,6 +135,10 @@ def lambda_handler(event, context):
                         'IntervalMin': Decimal(str(interval_min)),
                         'MotorTimeSec': Decimal(str(motor_time_s)),
                         'ScheduleValid': True,
+                        'SettingsSyncStatus': 'IN_SYNC',
+                        'SettingsConfirmedAt': confirmed_time_str,
+                        'ReportedDailyTarget_kg': feed_qty_kg,
+                        'ReportedFeedPerEvent_g': fpe_g,
                         'LastUpdated': date_str
                     }
                 )
@@ -140,7 +147,7 @@ def lambda_handler(event, context):
                 try:
                     devices_table.update_item(
                         Key={'DeviceId': dev_eui},
-                        UpdateExpression="SET DailyTarget_kg=:dq, FeedQuantity_kg=:q, FeedPerEvent_g=:f, StartHour=:sh, StartMinute=:sm, EndHour=:eh, EndMinute=:em, DischargeRate_gs=:r, TotalEvents=:te, IntervalMin=:im, ScheduleValid=:sv",
+                        UpdateExpression="SET DailyTarget_kg=:dq, FeedQuantity_kg=:q, FeedPerEvent_g=:f, StartHour=:sh, StartMinute=:sm, EndHour=:eh, EndMinute=:em, DischargeRate_gs=:r, TotalEvents=:te, IntervalMin=:im, ScheduleValid=:sv, SettingsSyncStatus=:sync, SettingsConfirmedAt=:scat, ReportedDailyTarget_kg=:rdq, ReportedFeedPerEvent_g=:rfpe REMOVE PendingDailyTarget_kg, PendingFeedPerEvent_g",
                         ExpressionAttributeValues={
                             ':dq': feed_qty_kg,
                             ':q': feed_qty_kg,
@@ -152,13 +159,17 @@ def lambda_handler(event, context):
                             ':r': rate_gs,
                             ':te': Decimal(str(total_events)),
                             ':im': Decimal(str(interval_min)),
-                            ':sv': True
+                            ':sv': True,
+                            ':sync': 'IN_SYNC',
+                            ':scat': confirmed_time_str,
+                            ':rdq': feed_qty_kg,
+                            ':rfpe': fpe_g
                         }
                     )
                 except Exception as sync_err:
                     print("Devices table sync error:", sync_err)
 
-                print(f"Stored valid Settings from SETTINGS_REPORT for {dev_eui}: {feed_qty_kg}kg, {shour}:{smin} to {ehour}:{emin}, interval {interval_min}m")
+                print(f"[SETTINGS_SYNC] Hardware confirmed settings for {dev_eui}: {feed_qty_kg}kg, status marked IN_SYNC at {confirmed_time_str}")
             else:
                 print(f"Payload too small for SETTINGS_REPORT: {len(payload_bytes)}")
                 
@@ -238,7 +249,12 @@ def lambda_handler(event, context):
                 event_grams = 0
 
             # 3. Store raw telemetry with 15-day TTL and frozen event settings (STORY-007 & STORY-008)
-            should_store_telemetry = (cur_ev_int > 0) or (status_flags != prev_flags) or (now_epoch - int(existing_dev.get('LastTelemetryHeartbeat', 0)) >= 3600)
+            # Standby heartbeats at night/standby should NOT create duplicate telemetry records for the same completed event
+            is_new_feed_pulse = (cur_ev_int > prev_ev) or (total_dispensed_g > prev_disp)
+            is_state_transition = (status_flags != prev_flags)
+            is_special_report = (msg_type not in [0x01, 0x03])
+            is_hourly_health_check = (now_epoch - int(existing_dev.get('LastTelemetryHeartbeat', 0)) >= 3600)
+            should_store_telemetry = is_new_feed_pulse or is_state_transition or is_special_report or is_hourly_health_check
             if should_store_telemetry:
                 ttl_epoch = Decimal(str(now_epoch + (15 * 86400))) # 15 days retention
                 telemetry_table.put_item(
@@ -325,8 +341,8 @@ def lambda_handler(event, context):
             is_feed_stop    = (msg_type == 0x06)
             is_tray_check   = (msg_type == 0x0A)
             
-            # Events that update the timeline anchor / event timestamp
-            is_event_report = (msg_type in [0x02, 0x03, 0x04, 0x05, 0x06, 0x0A] or is_feed_advance)
+            # Events that update the timeline anchor / event timestamp (strictly actual feed pulses or start)
+            is_event_report = (msg_type == 0x02 or is_feed_advance)
 
             # Check if existing device record has a feed event from today (IST)
             existing_last_ev_str = str(existing_dev.get('LastEventTime', '')).strip()
@@ -341,8 +357,12 @@ def lambda_handler(event, context):
                 except Exception:
                     pass
 
+            # Authoritative scheduled target total events from user settings
+            authoritative_tot_ev = int(math.ceil((float(target_kg) * 1000.0) / float(fpe_g))) if float(fpe_g) > 0 else (tot_ev_int if tot_ev_int > 0 else 150)
+            is_target_completed = (cur_ev_int >= authoritative_tot_ev and authoritative_tot_ev > 0) or (float(dispensed_kg) >= float(target_kg))
+
             # State transition engine:
-            if is_feed_finish or (cur_ev_int >= tot_ev_int and tot_ev_int > 0 and is_inside_schedule):
+            if is_feed_finish or (is_target_completed and is_inside_schedule):
                 status_str = 'COMPLETED'
                 feed_available = True
                 effective_flags = status_flags
@@ -362,19 +382,14 @@ def lambda_handler(event, context):
                 status_str = 'FEED EMPTY'
                 feed_available = False
                 effective_flags = status_flags if status_flags > 0 else 8
-            elif is_feed_start:
-                feed_available = True
-                status_str = 'FEEDING'
-                effective_flags = status_flags & ~0x10
             elif not is_inside_schedule:
                 status_str = 'STANDBY'
                 feed_available = True
                 effective_flags = status_flags
-            elif cur_ev_int > 0 and cur_ev_int < tot_ev_int and is_inside_schedule:
-                # Live dispense underway or in wait gap
-                status_str = 'FEEDING'
+            elif is_feed_start or (is_feed_resume and is_inside_schedule):
                 feed_available = True
-                effective_flags = status_flags
+                status_str = 'FEEDING'
+                effective_flags = status_flags & ~0x10
             elif msg_type == 0x01: # PERIODIC_HEARTBEAT
                 if prev_status == 'FEEDING' and is_inside_schedule:
                     status_str = 'FEEDING'
@@ -405,8 +420,9 @@ def lambda_handler(event, context):
             prev_today_status = str(existing_dev.get('TodayStatus', 'STANDBY'))
 
             is_same_day = (prev_today_date == date_str)
+            is_all_done = (status_str == 'COMPLETED' or is_target_completed)
 
-            if cur_ev_int > 0:
+            if cur_ev_int > 0 and is_inside_schedule:
                 # Live feeding is advancing - use hardware cumulative grams if reported
                 live_cur_ev = Decimal(str(cur_ev_int))
                 live_disp_kg = Decimal(str(round(int(feed_disp) / 1000.0, 2))) if int(feed_disp) > 0 else Decimal(str(round((cur_ev_int * fpe_g) / 1000.0, 2)))
@@ -463,15 +479,21 @@ def lambda_handler(event, context):
             fpe_val = float(saved_fpe) if float(saved_fpe) > 0 else 100.0
             target_val = float(target_kg) if float(target_kg) > 0 else 15.0
             
-            if int(live_cur_ev) > 0 and float(live_disp_kg) > 0:
+            is_active_run = (status_str == 'FEEDING' or (is_inside_schedule and status_str not in ['COMPLETED', 'SCHEDULE ENDED', 'STANDBY']))
+
+            if is_active_run and int(live_cur_ev) > 0 and float(live_disp_kg) > 0:
                 rem_kg = max(0.0, target_val - float(live_disp_kg))
                 remaining_events = int(math.ceil((rem_kg * 1000.0) / fpe_val)) if rem_kg > 0 else 0
-                tot_ev_calc = int(live_cur_ev) + remaining_events
+                tot_ev_calc = max(authoritative_tot_ev, int(live_cur_ev) + remaining_events)
+            elif status_str == 'COMPLETED' or is_all_done or (now_ist_mins >= end_mins and status_str != 'FEEDING'):
+                # Today's run has finished! Keep authoritative total events intact.
+                remaining_events = 0
+                tot_ev_calc = max(authoritative_tot_ev, int(live_cur_ev))
             else:
-                tot_ev_calc = int(math.ceil((target_val * 1000.0) / fpe_val))
+                tot_ev_calc = authoritative_tot_ev
                 remaining_events = tot_ev_calc
 
-            if status_str == 'COMPLETED' or now_ist_mins >= end_mins or float(live_disp_kg) >= target_val or (tot_ev_calc > 0 and int(live_cur_ev) >= tot_ev_calc):
+            if status_str == 'COMPLETED' or is_all_done or (now_ist_mins >= end_mins and status_str != 'FEEDING') or float(live_disp_kg) >= target_val or (tot_ev_calc > 0 and int(live_cur_ev) >= tot_ev_calc):
                 remaining_events = 0
 
             tot_ev_int = tot_ev_calc
@@ -492,7 +514,7 @@ def lambda_handler(event, context):
             s_disph = 12 if shour_val % 12 == 0 else shour_val % 12
             s_time_fmt = f"{s_disph:02d}:{smin_val:02d} {s_ampm}"
             
-            if status_str == 'FEEDING':
+            if status_str == 'FEEDING' and is_inside_schedule:
                 next_ist_dt = now_ist_dt + timedelta(seconds=dynamic_gap_sec)
                 next_feed_str = next_ist_dt.strftime("%I:%M %p")
                 next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m)"
@@ -542,7 +564,7 @@ def lambda_handler(event, context):
                 'FeedAvailable': feed_available,
                 'Status': status_str,
                 'LastEventGrams': Decimal(str(event_grams)),
-                'FeedActive': False if status_str in ['STANDBY', 'COMPLETED', 'PAUSED'] else existing_dev.get('FeedActive', True),
+                'FeedActive': True if status_str == 'FEEDING' else (False if status_str in ['STANDBY', 'COMPLETED', 'PAUSED'] else existing_dev.get('FeedActive', True)),
                 'TodayDate': today_date,
                 'TodayEventsCompleted': today_completed_ev,
                 'TodayFeedDispensed_kg': today_dispensed_kg,
@@ -552,6 +574,18 @@ def lambda_handler(event, context):
                 'FirmwareVersion': fw_version,
                 'FirmwareName': 'AquaFeeder Firmware'
             }
+            # Command Sync Handshake (START, STOP, RESUME)
+            pending_cmd = existing_dev.get('PendingCommand')
+            if pending_cmd in ['START', 'RESUME'] and (status_str == 'FEEDING' or msg_type in [0x01, 0x05, 0x22]):
+                print(f"[COMMAND_ACK] {pending_cmd} command confirmed by device {dev_eui} via LoRaWAN!")
+                dev_item['CommandConfirmedAt'] = now_ist_dt.strftime("%Y-%m-%d %I:%M:%S %p IST")
+            elif pending_cmd == 'STOP' and (status_str in ['STANDBY', 'COMPLETED', 'SCHEDULE ENDED'] or msg_type in [0x06, 0x22]):
+                print(f"[COMMAND_ACK] STOP command confirmed by device {dev_eui} via LoRaWAN!")
+                dev_item['CommandConfirmedAt'] = now_ist_dt.strftime("%Y-%m-%d %I:%M:%S %p IST")
+            elif pending_cmd:
+                dev_item['PendingCommand'] = pending_cmd
+                dev_item['CommandPushedAt'] = existing_dev.get('CommandPushedAt', '')
+
             if msg_type == 0x0A:
                 dev_item['LastTrayCheck'] = now_iso
                 dev_item['LastTrayCheckEpoch'] = Decimal(str(now_epoch))

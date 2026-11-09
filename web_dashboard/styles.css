@@ -878,6 +878,69 @@ html.user-authenticated #main-app-shell {
   transform: none !important;
 }
 
+.btn-ctrl.btn-loading-pending {
+  background: var(--brand-amber-light) !important;
+  color: #B87808 !important;
+  border: 1px solid rgba(234, 163, 22, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(234, 163, 22, 0.25) !important;
+  opacity: 1 !important;
+  cursor: wait !important;
+  pointer-events: none;
+}
+
+/* Remote Command Sync Waiting Banner */
+.command-sync-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 8px);
+  background: #FFFDF5;
+  border: 1px solid rgba(234, 163, 22, 0.35);
+  color: #92400E;
+  margin-top: 10px;
+  animation: fadeIn 0.25s ease;
+}
+
+.command-sync-title-clean {
+  font-size: 13px;
+  font-weight: 600;
+  color: #92400E;
+}
+
+.command-sync-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: #FFFFFF;
+  color: #D98200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(234, 163, 22, 0.2);
+}
+
+.command-sync-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.command-sync-text strong {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9A5B00;
+}
+
+.command-sync-text span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
 .btn-start.btn-resume {
   background: #10B981 !important;
   color: #FFFFFF !important;
@@ -1177,6 +1240,188 @@ html.user-authenticated #main-app-shell {
   margin: 6px 16px 14px;
   box-shadow: var(--shadow-card);
   border: 1px solid var(--card-border);
+}
+
+/* Settings Sync Status Twin Badges & Handshake Banners */
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+
+.sync-badge-synced {
+  background: var(--brand-sage-light);
+  color: var(--brand-sage);
+  border: 1px solid rgba(22, 152, 104, 0.25);
+}
+
+.sync-badge-pending {
+  background: var(--brand-amber-light);
+  color: #B87808;
+  border: 1px solid rgba(234, 163, 22, 0.4);
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.sync-badge-pending .sync-dot {
+  background: #EAA316;
+  box-shadow: 0 0 0 0 rgba(234, 163, 22, 0.7);
+  animation: pulse-amber-glow 1.8s infinite;
+}
+
+@keyframes pulse-amber-glow {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 163, 22, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(234, 163, 22, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(234, 163, 22, 0); }
+}
+
+.sync-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: var(--radius-md);
+  margin: 10px 0 16px 0;
+  transition: all 0.3s ease;
+}
+
+.sync-banner-synced {
+  background: linear-gradient(135deg, #F8FCFA, #EBF8F2);
+  border: 1px solid rgba(22, 152, 104, 0.25);
+}
+
+.sync-banner-pending {
+  background: linear-gradient(135deg, #FFFDF9, #FEF8E7);
+  border: 1px solid rgba(234, 163, 22, 0.4);
+}
+
+.sync-banner-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.sync-banner-synced .sync-banner-icon {
+  background: #FFFFFF;
+  color: var(--brand-sage);
+  box-shadow: 0 2px 6px rgba(22, 152, 104, 0.15);
+}
+
+.sync-banner-pending .sync-banner-icon {
+  background: #FFFFFF;
+  color: #D98200;
+  box-shadow: 0 2px 6px rgba(234, 163, 22, 0.2);
+}
+
+.sync-banner-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sync-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 3px;
+}
+
+.sync-banner-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sync-banner-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: var(--font-code);
+}
+
+.sync-banner-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.sync-banner-diff {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(234, 163, 22, 0.35);
+  flex-wrap: wrap;
+}
+
+.diff-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.diff-pending {
+  background: #FFF3D6;
+  color: #9A5B00;
+  font-weight: 600;
+}
+
+.diff-active {
+  background: #FFFFFF;
+  color: var(--text-secondary);
+  border: 1px solid #E8ECF2;
+}
+
+.diff-arrow {
+  font-size: 13px;
+  color: #D98200;
+  font-weight: 700;
+}
+
+.pill-sync-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: var(--brand-amber-light);
+  color: #B87808;
+  border: 1px solid rgba(234, 163, 22, 0.4);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+@keyframes spin {
+  100% { transform: rotate(360deg); }
 }
 
 .slider-group {

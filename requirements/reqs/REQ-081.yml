@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Start Minute Range
+level: 5.6
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: AdofgvSsarn0Y7RSPTpd3PPrR9qqV7KiWMuh2Uxur9w=
+status: PENDING
+test_notes: ''
+text: |
+  The Schedule Start Minute setting SHALL be bounded between $00$ and $59$ in increments of $1\text{ minute}$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 2 Running Text
+level: 2.16
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 1hlyvUR9-tOH1IIsTkXz0LJ5QJ_3IFj-XU3zu9Zrihw=
+status: PENDING
+test_notes: ''
+text: |
+  During active motor spinning, Row 2 SHALL display `E:XXX/YYY RUN       `.
+verified_date: ''

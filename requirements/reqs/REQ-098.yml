@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Night Arming Behavior
+level: 6.3
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: H6_A-qlijaiZ-QijalVNI1LAnsbmjMJ11lIVXkK52Yc=
+status: PENDING
+test_notes: ''
+text: |
+  If `START FEEDING` is commanded between `18:00` and `06:00`, the engine SHALL set `hasBeenRun = true`, arm for `06:00 AM`, and remain in `STANDBY`.
+verified_date: ''

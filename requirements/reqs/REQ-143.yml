@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Thermal Cutoff Protection
+level: 8.13
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: OieWu1IjHhaM6NSHQbUB-0PxCjc2WCBhTpu0-GJpbv8=
+status: PENDING
+test_notes: ''
+text: |
+  If DS3231 internal temperature sensor reports $> 70^\circ\text{C}$, motor dispense operations SHALL be paused until temperature $\le 60^\circ\text{C}$.
+verified_date: ''

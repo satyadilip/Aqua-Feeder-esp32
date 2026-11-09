@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home to Menu Navigation
+level: 3.6
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: pcwnby5Ey5kdTF2sZRvEtCRQ8ZkyY_cEn0ga3cU8SIo=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[SELECT]` (SW3) from the Home Screen SHALL instantly transition `currentMenu` to `MenuState::MENU_LIST` with `menuCursorIdx = 0`.
+verified_date: ''

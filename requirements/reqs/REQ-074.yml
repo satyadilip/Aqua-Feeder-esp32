@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 4: Menu System Pagination & Submenus'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Diagnostics Submenu Items
+level: 4.16
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: vWAlrsfPnTJPH7A8eRZrFfitz_X90gjfX2xao6GXo3g=
+status: PENDING
+test_notes: ''
+text: |
+  Selecting `Diagnostics` SHALL open a submenu containing: `Test Feed (30-120s)`, `Test Spreader (2s)`, `Test Loader (2s)`, `Test Hooter (1s)`, `Ping Gateway`, and `< Back`.
+verified_date: ''

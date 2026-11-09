@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Immediate Actuator Cutoff on Trip
+level: 8.2
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: Nc7_TnTLTWdn08D8_FnTDLq8VmiqpsltEre4cEzDqbg=
+status: PENDING
+test_notes: ''
+text: |
+  Upon Overcurrent Trip, GPIO 10 and GPIO 11 SHALL be forced LOW within $\le 5\text{ ms}$.
+verified_date: ''

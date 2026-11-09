@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Acoustic Overcurrent Alarm
+level: 8.3
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: EefM1DeOKjKaFrJ2fIzO-yF_eNJH1RRYU2KaSap0Le8=
+status: PENDING
+test_notes: ''
+text: |
+  Upon Overcurrent Trip, the piezo hooter (GPIO 42) SHALL sound continuously for $3.0\text{ seconds}$.
+verified_date: ''

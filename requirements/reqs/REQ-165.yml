@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Immediate Pulse on Extended Resume
+level: 10.5
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: OUEPy5h8SsjS5_zjI8UyokBzC_VQd4wuKfhP71aiDjU=
+status: PENDING
+test_notes: ''
+text: |
+  In Scenario B, the feeder SHALL fire a compensatory feed pulse within $\le 1.0\text{ second}$ of resume confirmation.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Completed Text
+level: 2.12
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: tzH6H2v31MTr0OMaDjcbFqsAZBs3_vzBHWdlIhgS9SA=
+status: PENDING
+test_notes: ''
+text: |
+  When today's target is 100% completed, Row 1 SHALL display `State: COMPLETED   `.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Target Event Count Completion
+level: 6.13
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: DAh78-L908Xbr8tkp68mp9p8D1APNYUi3gA42DtfvaY=
+status: PENDING
+test_notes: ''
+text: |
+  When `currentEvent >= TotalEvents`, the engine SHALL set `state = FEED_FINISHED` and cease pulsing for the day.
+verified_date: ''

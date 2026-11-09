@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Unarmed First Boot Invariant
+level: 6.2
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: wzF-YH_EKnCT8FAOyJi2lMUL_OjGIAIB6Vz0yfZ-xvk=
+status: PENDING
+test_notes: ''
+text: |
+  On initial power-on or new flash, the feeder SHALL NOT start automated feeding until explicitly started by operator (`hasBeenRun == false`).
+verified_date: ''

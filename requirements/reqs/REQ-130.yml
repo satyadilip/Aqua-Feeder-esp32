@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Watchdog Refresh in Dispense Loop
+level: 7.15
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: aEwtxqnSWPGksRUvetBuQm9bISXgTSIerT1AgPHmM3Y=
+status: PENDING
+test_notes: ''
+text: |
+  The FreeRTOS feed task SHALL pet the hardware watchdog timer every $\le 100\text{ ms}$ throughout the dispensing sequence.
+verified_date: ''

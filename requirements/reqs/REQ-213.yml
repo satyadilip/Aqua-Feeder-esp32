@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Auto-Refresh Polling Cycle
+level: 13.13
+links: []
+method: Test
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: O81Sa9S-tcN28G0nQ51maCCDS_xd40mwVsPBN5uEPqE=
+status: PENDING
+test_notes: ''
+text: |
+  The dashboard SHALL poll `GET /api/devices` every $5.0\text{ seconds}$ to reflect near-real-time farm telemetry.
+verified_date: ''

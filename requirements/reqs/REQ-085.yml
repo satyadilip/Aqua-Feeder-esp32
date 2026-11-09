@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Chronological Ordering Rule
+level: '5.10'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: FZw1-IuaF-3OdEX9u7tFaNEkdzEozmZf7kbHUAu-n-g=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL reject any configuration where $(\text{EndHour} \times 60 + \text{EndMin}) \le (\text{StartHour} \times 60 + \text{StartMin})$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Proximity Active Low Config Option
+level: '9.10'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: R0aP9l6t5MGxBq7TTUPFXW4Vs8yMJ9U1r5SbwXle_ZQ=
+status: PENDING
+test_notes: ''
+text: |
+  If `config.proxAlarmHigh == false`, the active level logic SHALL be inverted to support normally-closed proximity switches.
+verified_date: ''

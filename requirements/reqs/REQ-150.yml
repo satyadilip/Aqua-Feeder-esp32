@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  System State on Empty
+level: 9.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: GGbMe4vT7xHwS80GiDfTKvEKCikQx2Wsn3coKQwqyww=
+status: PENDING
+test_notes: ''
+text: |
+  The system state SHALL transition to `SystemState::FEED_PAUSED`.
+verified_date: ''

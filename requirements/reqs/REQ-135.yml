@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  System State Latch on Trip
+level: 8.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: aYzkZlJxHoAZtmtpTNE-x-IDew3lZPEYYGvxJxoriMg=
+status: PENDING
+test_notes: ''
+text: |
+  The system state SHALL transition to `SystemState::ERROR_FATAL` with error code `ERR_OVERCURRENT`.
+verified_date: ''

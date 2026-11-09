@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 0 Clock Format
+level: 2.2
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: sJC93xt7ytzegMub75JlYjsZqvrR9HEsnsBRnIP_2RY=
+status: PENDING
+test_notes: ''
+text: |
+  Row 0 of the Home Screen SHALL display `AquaFeeder  HH:MM:SS` (10 chars title, 2 spaces, 8 chars formatted time) when RTC is valid.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Auto-Resume Prohibition
+level: 9.14
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: gJE_6kfsUfJm1q_L15HDiZvQixD2gPG04BNP8bWi3uQ=
+status: PENDING
+test_notes: ''
+text: |
+  The feeder SHALL NOT automatically resume dispensing when pellets are refilled without operator confirmation (LCD SEL or Cloud Downlink).
+verified_date: ''

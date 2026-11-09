@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 State Prefix
+level: 2.4
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 2wFMp0GcA01sBm2os9RADJssjfUfzkJizA3BhXBwegA=
+status: PENDING
+test_notes: ''
+text: |
+  Row 1 of the Home Screen SHALL strictly begin with the 7-character prefix `State: `.
+verified_date: ''

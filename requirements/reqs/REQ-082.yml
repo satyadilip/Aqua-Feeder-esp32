@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  End Hour Range
+level: 5.7
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: jYXvSUAFZpALwvlIxCclQkVpPV7UiepfBWOznxVE0Lo=
+status: PENDING
+test_notes: ''
+text: |
+  The Schedule End Hour setting SHALL be bounded between $07\text{ (7 AM)}$ and $18\text{ (6 PM)}$.
+verified_date: ''

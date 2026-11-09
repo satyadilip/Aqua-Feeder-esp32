@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Menu Escape to Home
+level: '3.10'
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: TYNcKxYf0kBamGhV2o1pQuhuvyBjTUzew7wcUUxAk3E=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[BACK]` (SW4) in `MENU_LIST` SHALL immediately return `currentMenu` to `MenuState::MAIN_STATUS` without altering settings.
+verified_date: ''

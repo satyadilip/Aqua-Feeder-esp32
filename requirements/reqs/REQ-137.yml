@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Cloud Alert Uplink on Trip
+level: 8.7
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: -BCX34pTiYBkKhmZhiwqLaHmPeDsOkAOoQgsQ6_77SE=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL immediately transmit an emergency uplink packet with MsgType `0x04` (Feed Paused / Alarm).
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Paused Screen Line 2
+level: 2.21
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 4rG_UAGDfKmiLvo9RH6q3aZ7WvZAXcZdFWyGXkWo_FM=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD Paused screen SHALL display `[SEL]: Resume       ` (exactly 20 characters) on Row 2.
+verified_date: ''

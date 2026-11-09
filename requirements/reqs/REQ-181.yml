@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Cloud Time Synchronization Downlink
+level: 11.6
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: hZ--d77vcrYo_9OzpFvvzVe_bcxVhCKZPDTcqp8iyqU=
+status: PENDING
+test_notes: ''
+text: |
+  The cloud Lambda SHALL evaluate device clock on every uplink. If `abs(DeviceEpoch - CloudEpoch) > 120 seconds`, a Downlink `0xA4` SHALL be queued.
+verified_date: ''

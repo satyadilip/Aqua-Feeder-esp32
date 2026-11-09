@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Feed Paused Text
+level: 2.11
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 3OHnTAX6nDxK7jojin7_RiKA2E7isjjrsxQYh8kxvy0=
+status: PENDING
+test_notes: ''
+text: |
+  When feed is paused, Row 1 SHALL display `State: FEED PAUSED `.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 4: Menu System Pagination & Submenus'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Menu Item 10 Text
+level: 4.14
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: g31dffDFUIjMJ_LTXbkKDffPUuJJMluOE8ZvkdyIx_k=
+status: PENDING
+test_notes: ''
+text: |
+  Item 10 in the menu registry SHALL display `Power Monitor`.
+verified_date: ''

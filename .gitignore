@@ -8,3 +8,11 @@ __pycache__/
 
 # Agent local tooling
 .agents/
+
+# Temporary files and binaries
+scratch/
+*.bin
+*.zip
+__pycache__/
+*.elf
+*.map

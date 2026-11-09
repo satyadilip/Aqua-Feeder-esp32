@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Edit Cancel Discard
+level: 3.15
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: goEUsaBVatC2oAS2TDMPM6vbLg73mdB9rAKNfiCAdlA=
+status: PENDING
+test_notes: ''
+text: |
+  In edit screens, pressing `[BACK]` SHALL discard all modified temporary values and return to `MENU_LIST` with original NVS values intact.
+verified_date: ''

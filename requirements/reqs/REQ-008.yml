@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Splash Screen Line 1
+level: 1.8
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: pQh-qTtZKI3s3og0tgQZeq8TAT1wetA6a87_vUAitQY=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD SHALL display `    aquaCON(TM)     ` (exactly 4 leading spaces, `aquaCON(TM)`, 5 trailing spaces) on Row 1 during bootup.
+verified_date: ''

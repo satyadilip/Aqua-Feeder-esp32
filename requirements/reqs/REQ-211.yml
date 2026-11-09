@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Completed Action Button Mapping
+level: 13.11
+links: []
+method: Demo
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: E3NU-eXmU00dkX8Vt2uVoSfzqXpLAgElsziX418iCKc=
+status: PENDING
+test_notes: ''
+text: |
+  When feeder is in `COMPLETED`, the primary button SHALL display **`START FEEDING`** (armed for tomorrow) and secondary button SHALL be disabled.
+verified_date: ''

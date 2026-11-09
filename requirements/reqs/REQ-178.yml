@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Firmware Epoch Derivation
+level: 11.3
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: JS-ryNG9EsDrZqo5Y1rr4GxCzu2zjLvf4sLr7BNgvJQ=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware function `rtcMgr.getEpoch()` SHALL compute seconds from `1970-01-01` assuming stored RTC fields are local time components.
+verified_date: ''

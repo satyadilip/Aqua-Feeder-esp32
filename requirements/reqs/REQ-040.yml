@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Paused Screen Line 3
+level: 2.22
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 6Q1dGPSzERQFKyCyn4UtI9Qd5jX4TQM1TQPxAkbfUCc=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD Paused screen SHALL display `[BACK]: Cancel      ` (exactly 20 characters) on Row 3.
+verified_date: ''

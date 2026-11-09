@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Manual Check Tray Invocation
+level: 10.7
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: H5XXuRBa-Fn9gbZXlAiPCR3NvtCG9zFi45aDcXOByz4=
+status: PENDING
+test_notes: ''
+text: |
+  Selecting `Check Tray` from `MENU_LIST` SHALL initiate a single 1-pulse feed burst regardless of current gap delay state.
+verified_date: ''

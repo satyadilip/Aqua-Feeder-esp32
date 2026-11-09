@@ -48,7 +48,7 @@ void ConfigManager::loadConfig(DeviceConfig& cfg) {
     if (prefs.getBytesLength("appKey") == 16) prefs.getBytes("appKey", cfg.loraAppKey, 16);
     else memcpy(cfg.loraAppKey, defaultAppKey, 16);
 
-    cfg.loraOTAA = prefs.getBool("loraOTAA", true);
+    cfg.loraMode = prefs.getUChar("loraMode", 0); // 0 = AUTO_FALLBACK
     
     prefs.getString("wSSID", WIFI_AP_SSID_DEFAULT).toCharArray(cfg.wifiSSID, sizeof(cfg.wifiSSID));
     prefs.getString("wPass", WIFI_AP_PASS_DEFAULT).toCharArray(cfg.wifiPass, sizeof(cfg.wifiPass));
@@ -88,7 +88,7 @@ void ConfigManager::saveConfig(const DeviceConfig& cfg) {
     prefs.putBytes("devEUI", cfg.loraDevEUI, 8);
     prefs.putBytes("appEUI", cfg.loraAppEUI, 8);
     prefs.putBytes("appKey", cfg.loraAppKey, 16);
-    prefs.putBool("loraOTAA", cfg.loraOTAA);
+    prefs.putUChar("loraMode", cfg.loraMode);
     
     prefs.putString("devId", cfg.deviceId);
     prefs.putUShort("ocLimit", cfg.overcurrentLimit);
@@ -153,7 +153,7 @@ void ConfigManager::resetToDefaults(DeviceConfig& cfg) {
     memcpy(cfg.loraDevEUI, defaultDevEUI, 8);
     memcpy(cfg.loraAppEUI, defaultAppEUI, 8);
     memcpy(cfg.loraAppKey, defaultAppKey, 16);
-    cfg.loraOTAA = true;
+    cfg.loraMode = 0; // 0 = AUTO_FALLBACK
     
     strncpy(cfg.wifiSSID, WIFI_AP_SSID_DEFAULT, sizeof(cfg.wifiSSID));
     strncpy(cfg.wifiPass, WIFI_AP_PASS_DEFAULT, sizeof(cfg.wifiPass));

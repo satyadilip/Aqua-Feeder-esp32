@@ -90,10 +90,10 @@ def main():
     search_dirs = [script_dir, parent_dir, root_dir, os.getcwd()]
 
     # Locate main app binary
-    bin_file = find_binary(["AquaFeeder.bin", "AquaFeeder_v4.0.0.bin", "AquaFeeder.ino.bin"], search_dirs)
+    bin_file = find_binary(["AquaFeeder.bin", "AquaFeeder.ino.bin"], search_dirs)
     bootloader_file = find_binary(["AquaFeeder.ino.bootloader.bin", "bootloader.bin"], search_dirs)
     partitions_file = find_binary(["AquaFeeder.ino.partitions.bin", "partitions.bin"], search_dirs)
-    merged_file = find_binary(["AquaFeeder_merged_v1.0.bin", "AquaFeeder.ino.merged.bin", "AquaFeeder_v4.0.0.merged.bin"], search_dirs)
+    merged_file = find_binary(["AquaFeeder_merged.bin", "AquaFeeder_merged_v1.0.bin", "AquaFeeder.ino.merged.bin"], search_dirs)
 
     if not bin_file and not merged_file:
         print("\n[ERROR] Could not find AquaFeeder firmware binary (.bin)!")

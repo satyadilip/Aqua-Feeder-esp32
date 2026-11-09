@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Relay Non-Overlap Failsafe
+level: '7.10'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: lZ8PUil9Sd-NTvaAdrixxkcoFec7pO5mZrADAhWjuFw=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL guarantee that the Loader Relay (GPIO 11) is NEVER energized while the Spreader Relay (GPIO 10) is de-energized.
+verified_date: ''

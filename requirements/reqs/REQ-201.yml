@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Zero Jargon Presentation
+level: 13.1
+links: []
+method: Inspect
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: 6Lj7yST7o3tCzFFZmV731AuMT7zVUazy0Bw2oEhp5e4=
+status: PENDING
+test_notes: ''
+text: |
+  The dashboard SHALL display human-friendly state badges (`STANDBY`, `FEEDING`, `PAUSED`, `COMPLETED`, `OFFLINE`). Hex codes SHALL NOT be displayed.
+verified_date: ''

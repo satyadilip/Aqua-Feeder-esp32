@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  RTC Fault Telemetry Flag
+level: 11.8
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: CzJacQElrXWqhtYhlvJL4UlRTfYVj-jHlpPf6vY7DIM=
+status: PENDING
+test_notes: ''
+text: |
+  If the DS3231 oscillator stop flag (OSF) is asserted, the firmware SHALL assert `Bit 2` (`0x04` RTC Fault) in `statusFlags`.
+verified_date: ''

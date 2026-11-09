@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Phase 3 Loader Cutoff
+level: 7.4
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: E9INWl3OM2XyiS77ilw5vEW_kqiIAgcocVKdsQaNTjQ=
+status: PENDING
+test_notes: ''
+text: |
+  At $T = 3.0 + t_{\text{meter}}$, the system SHALL de-energize GPIO 11 (Loader Relay LOW).
+verified_date: ''

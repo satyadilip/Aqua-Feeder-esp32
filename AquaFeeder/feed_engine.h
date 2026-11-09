@@ -31,8 +31,10 @@ private:
     FeedCycleState _fcState;
     FeedCycleState _prePauseFCState;
     bool _fcEntered;
+    bool _isPaused;
     unsigned long _fcTimer;
     unsigned long _lastCurrentCheckMs;
+    unsigned long _pauseStartMs;
     uint32_t _lastFedDay;
 
     void (*_setRelay)(int relay, bool on);

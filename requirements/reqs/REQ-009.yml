@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Splash Screen Line 2
+level: 1.9
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: VdYthG_lv9LUzqNec6o8wckbC9U7nQz_UWcxyr42Xw0=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD SHALL display ` Smart Aqua Feeder  ` (exactly 1 leading space, `Smart Aqua Feeder`, 2 trailing spaces) on Row 2 during bootup.
+verified_date: ''

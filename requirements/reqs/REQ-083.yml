@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  End Minute Range
+level: 5.8
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: QceTqM3HuB_WNfEH61DcLufO0sa-GJU-fAF9EvGUdjg=
+status: PENDING
+test_notes: ''
+text: |
+  The Schedule End Minute setting SHALL be bounded between $00$ and $59$ in increments of $1\text{ minute}$.
+verified_date: ''

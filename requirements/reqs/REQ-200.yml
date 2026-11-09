@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Link Quality Telemetry
+level: 12.15
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: Cnv70h7BEuD6V_HGFqmxryqRcgdrHUza4rGvcm4Us_M=
+status: PENDING
+test_notes: ''
+text: |
+  The feeder SHALL record and uplink RSSI and SNR metrics to enable RF network health analytics on the farm dashboard.
+verified_date: ''

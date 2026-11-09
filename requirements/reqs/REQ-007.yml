@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Splash Screen Line 0
+level: 1.7
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: QCc3NvE47CeMQWKtlbnzy-QhrnCKC-03OWwrzyLGOJM=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD SHALL display `====================` (exactly 20 `=` characters) on Row 0 during bootup.
+verified_date: ''

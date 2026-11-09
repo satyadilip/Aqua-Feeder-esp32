@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Daylight Savings Immunity
+level: '11.10'
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: cMgrNp73u-8Ncyx6gLNueDfxsqgV_BwsFealoFZY0Ts=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL NOT implement daylight savings adjustments, operating on continuous UTC+5:30 year-round.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Day/Night LoRaWAN Class Switching
+level: 12.7
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: T_RRtYoJnSOsJNdrMzVVFcDSteg8BdhLyitFGtknnVQ=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL operate in **Class C** (Continuous RX) between 06:00 and 18:00, and switch to **Class A** (Power conservation) between 18:00 and 06:00.
+verified_date: ''

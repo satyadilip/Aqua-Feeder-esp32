@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Minimum Inter-Pulse Gap
+level: '6.10'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: ihZn6vgRK5TgfyEYTnS5QWmDh3-97ij0elit8MDt0vI=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL enforce an absolute minimum wait gap of $\ge 5\text{ seconds}$ between feed events to prevent motor thermal overload.
+verified_date: ''

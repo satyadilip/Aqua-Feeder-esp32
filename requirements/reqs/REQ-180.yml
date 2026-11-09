@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Software RTC Synchronization
+level: 11.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: i3YvUCbxsIrd4ltgbAOwlbgt5KGakwUs2sh0dLsZW8E=
+status: PENDING
+test_notes: ''
+text: |
+  The Software RTC fallback timer SHALL synchronize with DS3231 on every successful read to eliminate millisecond drift.
+verified_date: ''

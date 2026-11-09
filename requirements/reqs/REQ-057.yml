@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Paused Resume Keypad Action
+level: 3.17
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: 6kHJyYpd3LmATcoM2FSPRU3KqLOfz0djxHWAB9VWams=
+status: PENDING
+test_notes: ''
+text: |
+  On the `FEED_PAUSED` screen, pressing `[SELECT]` SHALL invoke `feedEng.resumeFeed()` if proximity sensor reports cleared.
+verified_date: ''

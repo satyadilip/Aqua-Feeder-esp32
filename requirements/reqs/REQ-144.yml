@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Relay Weld Detection
+level: 8.14
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: K5B_hlp0ZUMkqYf6i5evK5jj3ia2HN30gjQnIboJvNE=
+status: PENDING
+test_notes: ''
+text: |
+  If current $> 100\text{ mA}$ is detected when both relays are commanded OFF, system SHALL latch `RELAY HARDWARE FAULT`.
+verified_date: ''

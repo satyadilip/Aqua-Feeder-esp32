@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Total Actuation Relay De-energize
+level: 7.6
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: NwEFUlY_fXoe-hha0SyBf90eCKP-HQm1I2payy_0xKU=
+status: PENDING
+test_notes: ''
+text: |
+  At $T = 3.0 + t_{\text{meter}} + 3.0$, the system SHALL de-energize GPIO 10 (Spreader Relay LOW), completing the pulse.
+verified_date: ''

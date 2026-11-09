@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Calendar Day Index Formula
+level: 11.4
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: LaNXmp3-hOHGfG1N8-SGZrGhozREGr79Qg21fXkK3yw=
+status: PENDING
+test_notes: ''
+text: |
+  The calendar day index SHALL be calculated as $\text{CurrentDay} = \lfloor \text{LocalEpoch} / 86400 \rfloor$, guaranteeing midnight rollover at exactly 00:00:00 IST.
+verified_date: ''

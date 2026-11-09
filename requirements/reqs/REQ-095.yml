@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Factory Reset Key Combo
+level: '5.20'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: pIaROAytiWqdZuyM14Pj7pM1mRovqy6TeoJEChbk-Ss=
+status: PENDING
+test_notes: ''
+text: |
+  Holding `[BACK]` and `[SELECT]` simultaneously for $> 10\text{ seconds}$ at boot SHALL erase NVS and restore factory defaults.
+verified_date: ''

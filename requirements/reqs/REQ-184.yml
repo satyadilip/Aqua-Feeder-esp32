@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 11: Real-Time Clock, UTC/IST & Time Synchronization'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Smooth Schedule Realignment
+level: 11.9
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/rtc_manager.cpp
+reviewed: rSUQy9jXAWl7VLo3ryAtiMN0i4eqRqSIeSxDKqy2YRs=
+status: PENDING
+test_notes: ''
+text: |
+  When RTC is updated by cloud downlink, ongoing wait delays SHALL NOT jump erratically; `nextFeedEpoch` SHALL be recomputed smoothly.
+verified_date: ''

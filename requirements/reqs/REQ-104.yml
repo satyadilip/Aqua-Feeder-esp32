@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Dynamic Gap Ceiling
+level: 6.9
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: EkclO_TSNPVeHtsCdCQde2Ur220XZAe9jlDKB3B7Zlw=
+status: PENDING
+test_notes: ''
+text: |
+  If remaining time exceeds schedule requirements, $t_{\text{dyn\_gap}}$ SHALL be capped such that no feed occurs past `EndHour:EndMinute`.
+verified_date: ''

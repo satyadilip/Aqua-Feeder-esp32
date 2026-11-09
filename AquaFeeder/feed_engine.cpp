@@ -6,8 +6,10 @@ void FeedEngine::begin(SystemStatus* status, DeviceConfig* cfg) {
     _fcState = FeedCycleState::FC_IDLE;
     _prePauseFCState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
+    _isPaused = false;
     _fcTimer = 0;
     _lastCurrentCheckMs = 0;
+    _pauseStartMs = 0;
     _lastFedDay = (_status && _status->lastFedDay > 0) ? _status->lastFedDay : 0;
     
     _setRelay = nullptr;
@@ -97,8 +99,9 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
         uint32_t endEpochToday   = midnightEpoch + ((uint32_t)endMins * 60UL);
 
         // If today's feed is concluded (target reached, all events done, or state is FEED_FINISHED), schedule for tomorrow!
+        // Completed today strictly if full daily target quantity or all events were dispensed
         bool isCompletedToday = (isSameDay && _status->currentEvent > 0 && 
-                                (_status->dispensedQuantity_g >= qty_g || _status->currentEvent >= _status->totalEvents || _status->state == SystemState::FEED_FINISHED));
+                                (_status->dispensedQuantity_g >= qty_g || _status->currentEvent >= _status->totalEvents));
 
         if (isCompletedToday || currentMins >= endMins) {
             // Concluded for today -> Arm/schedule for tomorrow's start time at startHour:startMinute!
@@ -117,16 +120,14 @@ bool FeedEngine::calcSchedule(uint32_t nowEpoch) {
             if (endSecToday > secSinceMidnight) {
                 availableTime_ms = (endSecToday - secSinceMidnight) * 1000UL;
             }
-            if (_status->currentEvent == 0) {
-                _status->nextFeedEpoch = nowEpoch;
-            }
+            _status->nextFeedEpoch = nowEpoch; // Mid-day trigger: initiate feed immediately
             Serial.printf("[SCHED] Mid-day start at %02d:%02d. Remaining window: %lu s until %02d:%02d\n",
                           currentMins / 60, currentMins % 60, (availableTime_ms / 1000UL), endMins / 60, endMins % 60);
         } else {
             // Out of feeding hours (early morning before start time) -> Arm/schedule for today's start time!
             availableTime_ms = fullWindow_ms;
             _status->nextFeedEpoch = startEpochToday;
-            Serial.printf("[SCHED] Early morning start at %02d:%02d: Feeding scheduled for today at %02d:%02d.\n",
+            Serial.printf("[SCHED] Pre-dawn check at %02d:%02d: Feeder in STANDBY. Daily feed armed for today at %02d:%02d.\n",
                           currentMins / 60, currentMins % 60, startMins / 60, startMins % 60);
         }
 
@@ -158,7 +159,7 @@ void FeedEngine::startFeed(uint32_t nowEpoch) {
     if (!_status || !_cfg) return;
     if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
 
-    // Guard: Prevent auto-restart on the same day if today's feed is already complete
+    // Guard 1: Prevent auto-restart on the same day if today's feed is already complete
     if (nowEpoch > 0) {
         uint32_t currentDay = nowEpoch / 86400;
         float target_g = _cfg->feedQuantity * 1000.0f;
@@ -169,34 +170,65 @@ void FeedEngine::startFeed(uint32_t nowEpoch) {
             _status->feedActive = false;
             return;
         }
+
+        // Guard 2: STRICT NIGHT GUARD - strictly prohibit dispensing outside configured operational hours (e.g. 06:00 - 18:00)
+        uint32_t secSinceMidnight = nowEpoch % 86400;
+        uint32_t startSecToday = (_cfg->startHour * 3600UL) + (_cfg->startMinute * 60UL);
+        uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
+        if (secSinceMidnight < startSecToday || secSinceMidnight >= endSecToday) {
+            Serial.printf("[FEED] [STRICT NIGHT GUARD] Start feed requested outside daylight window (%02lu:%02lu). Feeder ARMED for start time (%02d:%02d)!\n",
+                          (unsigned long)(secSinceMidnight / 3600), (unsigned long)((secSinceMidnight % 3600) / 60),
+                          _cfg->startHour, _cfg->startMinute);
+            if (_cfg && !_cfg->hasBeenRun) {
+                _cfg->hasBeenRun = true;
+                if (_saveState) _saveState();
+            }
+            _status->feedActive = false;
+            _status->state = SystemState::IDLE;
+            calcSchedule(nowEpoch);
+            return;
+        }
     }
 
+    uint32_t currentDay = (nowEpoch > 0) ? (nowEpoch / 86400) : 0;
+    bool isSameDayContinuation = (_lastFedDay != 0 && currentDay == _lastFedDay && _status->currentEvent > 0);
+
+    if (_cfg && !_cfg->hasBeenRun) {
+        _cfg->hasBeenRun = true;
+        if (_saveState) _saveState();
+    }
+    _isPaused = false;
     _status->feedActive = true;
-    _status->currentEvent = 0;
-    _status->dispensedQuantity_g = 0.0f;
     _fcEntered = false;
+    _prePauseFCState = FeedCycleState::FC_IDLE;
+
+    if (!isSameDayContinuation) {
+        _status->currentEvent = 0;
+        _status->dispensedQuantity_g = 0.0f;
+    } else {
+        Serial.printf("[FEED] Continuing existing cycle for today (%d events already done, %.1fg dispensed).\n",
+                      _status->currentEvent, _status->dispensedQuantity_g);
+        recalcDynamic(nowEpoch);
+    }
+
     if (nowEpoch > 0) {
-        _lastFedDay = nowEpoch / 86400;
+        _lastFedDay = currentDay;
         if (_status) _status->lastFedDay = _lastFedDay;
     }
 
-    // If start time is in the future, wait in FC_WAIT
-    if (nowEpoch > 0 && _status->nextFeedEpoch > nowEpoch) {
-        _fcState = FeedCycleState::FC_WAIT;
-        _status->feedState = FeedCycleState::FC_WAIT;
-        _status->state = SystemState::FEED_WAIT_NEXT;
-        Serial.printf("[FEED] Start queued: waiting in gap until scheduled epoch %lu\n", _status->nextFeedEpoch);
-    } else {
-        _status->feedState = FeedCycleState::FC_IDLE;
-        _fcState = FeedCycleState::FC_IDLE;
-        Serial.println("[FEED] Start feed: initiating cycle immediately");
-    }
+    // Manual / Remote Start: Initiate dispense cycle immediately without delay
+    _status->nextFeedEpoch = nowEpoch;
+    _status->feedState = FeedCycleState::FC_IDLE;
+    _fcState = FeedCycleState::FC_IDLE;
+    _fcTimer = millis() - 10000UL; // Bypass gap delay so first pulse starts immediately
+    Serial.println("[FEED] Start feed: initiating cycle immediately");
 
     if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_STARTED);
     if (_saveState) _saveState();
 }
 
 void FeedEngine::stopFeed() {
+    _isPaused = false;
     if (_motorsOff) _motorsOff();
     if (_status) {
         _status->feedActive = false;
@@ -204,38 +236,80 @@ void FeedEngine::stopFeed() {
         _status->state = SystemState::FEED_FINISHED;
     }
     _fcState = FeedCycleState::FC_IDLE;
+    _prePauseFCState = FeedCycleState::FC_IDLE;
     _fcEntered = false;
     if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_STOPPED);
     if (_saveState) _saveState();
 }
 
 void FeedEngine::pauseFeed() {
-    if (_fcState != FeedCycleState::FC_IDLE && _status && _status->feedActive) {
-        _prePauseFCState = _fcState;
+    if (_isPaused) return; // Prevent duplicate pause calls
+    if (_status && _status->feedActive) {
+        _isPaused = true;
+        _prePauseFCState = (_fcState != FeedCycleState::FC_IDLE) ? _fcState : FeedCycleState::FC_WAIT;
+        _pauseStartMs = millis();
         if (_motorsOff) _motorsOff();
         _status->state = SystemState::FEED_PAUSED;
         _fcState = FeedCycleState::FC_IDLE; // wait in idle while paused
+        _fcEntered = false;
         if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_PAUSED);
+        if (_saveState) _saveState();
+        Serial.println("[FEED] Feed engine PAUSED. Pre-pause state latched.");
     }
 }
 
 void FeedEngine::resumeFeed(uint32_t nowEpoch) {
-    if (_status && _status->state == SystemState::FEED_PAUSED) {
+    if (!_status) return;
+    if (_isPaused || _status->state == SystemState::FEED_PAUSED || _status->proximityTriggered || _status->feedActive) {
+        _isPaused = false;
+        _status->feedActive = true;
         _status->proximityTriggered = false;
-        _fcState = _prePauseFCState;
-        _fcEntered = false; // re-enter the state to restart timers/relays
-        _status->state = (_fcState == FeedCycleState::FC_WAIT) ? SystemState::FEED_WAIT_NEXT : SystemState::FEED_DISPENSING;
         
-        // Dynamically recalculate pending feed and remaining daylight window!
         if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
-        if (nowEpoch > 0) {
-            recalcDynamic(nowEpoch);
-            // Trigger dispense immediately upon resuming so user sees instant feed
-            if (_fcState == FeedCycleState::FC_WAIT) {
-                _status->nextFeedEpoch = nowEpoch;
+
+        // Architectural check: Did the pause & resume occur within the existing FC_WAIT window?
+        bool canResumeInWaitGap = false;
+        if (_prePauseFCState == FeedCycleState::FC_WAIT) {
+            if (nowEpoch > 0 && _status->nextFeedEpoch > nowEpoch) {
+                // Absolute RTC time: We are still inside the original wait gap!
+                canResumeInWaitGap = true;
+            } else if (nowEpoch == 0 && _status->intervalMs > 0) {
+                // Fallback millis: check if pause elapsed time still fits within intervalMs
+                unsigned long pauseDurationMs = millis() - _pauseStartMs;
+                unsigned long elapsedBeforePause = (_pauseStartMs > _fcTimer) ? (_pauseStartMs - _fcTimer) : 0;
+                if ((elapsedBeforePause + pauseDurationMs) < _status->intervalMs) {
+                    _fcTimer += pauseDurationMs; // Shift gap timer forward by pause duration
+                    canResumeInWaitGap = true;
+                }
             }
         }
 
+        if (canResumeInWaitGap) {
+            // SCENARIO 1: Paused and resumed within the same wait cycle!
+            // No daylight feeding time was lost. Return directly to FC_WAIT.
+            // Do NOT recalculate schedule. Do NOT fire motor prematurely.
+            _fcState = FeedCycleState::FC_WAIT;
+            _fcEntered = false;
+            _status->state = SystemState::FEED_WAIT_NEXT;
+            Serial.printf("[FEED] Resumed within wait window. Event %d scheduled at epoch %lu (%ld s remaining, no recalc needed).\n",
+                          _status->currentEvent + 1, _status->nextFeedEpoch, 
+                          (nowEpoch > 0 && _status->nextFeedEpoch > nowEpoch) ? (long)(_status->nextFeedEpoch - nowEpoch) : 0);
+        } else {
+            // SCENARIO 2: Paused during motor pulse, OR pause duration exceeded the wait gap.
+            // Feeding time was lost or pulse was interrupted: recalculate dynamic schedule and initiate dispense cycle immediately!
+            _fcState = FeedCycleState::FC_IDLE;
+            _fcEntered = false;
+            _fcTimer = millis() - 10000UL; // Bypass gap delay so pulse starts immediately
+            _status->state = SystemState::FEED_WAIT_NEXT;
+            
+            if (nowEpoch > 0) {
+                recalcDynamic(nowEpoch);
+                _status->nextFeedEpoch = nowEpoch;
+            }
+            Serial.println("[FEED] Resumed after wait gap elapsed or during pulse: recalculated dynamic schedule & initiated cycle.");
+        }
+
+        _prePauseFCState = FeedCycleState::FC_IDLE; // Reset pre-pause latch
         if (_sendEvent) _sendEvent(TelemetryMsgType::FEED_RESUMED);
         if (_saveState) _saveState();
     }
@@ -245,23 +319,29 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
     if (!_status) return;
     if (nowEpoch == 0 && _status->currentEpoch > 0) nowEpoch = _status->currentEpoch;
 
-    // Autonomous day rollover for daily recurring feed
-    if (nowEpoch > 0 && !_status->feedActive) {
+    // Autonomous day rollover for daily recurring feed (evaluates every midnight regardless of state)
+    if (nowEpoch > 0) {
         uint32_t currentDay = nowEpoch / 86400;
         if (_lastFedDay != 0 && currentDay > _lastFedDay) {
+            _status->feedActive = false;
             _status->currentEvent = 0;
             _status->dispensedQuantity_g = 0.0f;
             _status->state = SystemState::IDLE;
+            _fcState = FeedCycleState::FC_IDLE;
+            _fcEntered = false;
             _lastFedDay = currentDay;
             _status->lastFedDay = currentDay;
             calcSchedule(nowEpoch);
             if (_saveState) _saveState();
             Serial.printf("[SCHED] Day rolled over to calendar day %lu. Daily counters reset.\r\n", currentDay);
+        } else if (_lastFedDay == 0) {
+            _lastFedDay = currentDay;
+            if (_status) _status->lastFedDay = currentDay;
         }
     }
 
     if (!_status->feedActive) return;
-    if (_status->state == SystemState::FEED_PAUSED) return;
+    if (_isPaused || _status->state == SystemState::FEED_PAUSED) return;
     
     _status->feedState = _fcState;
     
@@ -280,6 +360,16 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 _fcTimer = nowMs;
                 _fcEntered = true;
                 _status->state = SystemState::FEED_PRE_WARMUP;
+            }
+            // Check for jammed spreader after 500ms initial inrush
+            if (_readCurrent && (nowMs - _fcTimer >= 500UL)) {
+                float current = _readCurrent();
+                if (current > (_cfg ? _cfg->overcurrentLimit : OVERCURRENT_LIMIT_MA)) {
+                    Serial.printf("[FEED] Spreader stalled during pre-warmup! (%.1f mA)\n", current);
+                    pauseFeed();
+                    if (_sendEvent) _sendEvent(TelemetryMsgType::ALARM_OVERCURRENT);
+                    return;
+                }
             }
             if (nowMs - _fcTimer >= MOTOR_PRE_RUN_MS) {
                 _fcState = FeedCycleState::FC_DISP;
@@ -362,16 +452,18 @@ void FeedEngine::update(unsigned long nowMs, uint32_t nowEpoch) {
                 _status->state = SystemState::FEED_WAIT_NEXT;
                 _fcEntered = true;
             }
-            // Check if 6:00 PM window has arrived while waiting in gap
+            // STRICT NIGHT GUARD: Check if operational window boundary has arrived while waiting in gap
             if (nowEpoch > 0) {
                 uint32_t secSinceMidnight = nowEpoch % 86400;
+                uint32_t startSecToday = (_cfg->startHour * 3600UL) + (_cfg->startMinute * 60UL);
                 uint32_t endSecToday = (_cfg->endHour * 3600UL) + (_cfg->endMinute * 60UL);
-                if (secSinceMidnight >= endSecToday) {
+                if (secSinceMidnight < startSecToday || secSinceMidnight >= endSecToday) {
                     if (_motorsOff) _motorsOff();
                     _status->state = SystemState::FEED_FINISHED;
                     _status->feedActive = false;
                     _fcState = FeedCycleState::FC_IDLE;
-                    Serial.println("[FEED] 6:00 PM operational window reached during gap wait. Feeding concluded for today.");
+                    Serial.printf("[FEED] [STRICT NIGHT GUARD] Operational window boundary reached (%02lu:%02lu). Feeding halted for the night.\n",
+                                  (unsigned long)(secSinceMidnight / 3600), (unsigned long)((secSinceMidnight % 3600) / 60));
                     if (_sendEvent) _sendEvent(TelemetryMsgType::SESSION_COMPLETE);
                     if (_saveState) _saveState();
                     if (_cfg && _cfg->hasBeenRun && nowEpoch > 0) calcSchedule(nowEpoch);
@@ -517,8 +609,7 @@ bool FeedEngine::shouldAutoStart(uint32_t nowEpoch) {
         if (_lastFedDay == currentDay) {
             float target_g = _cfg->feedQuantity * 1000.0f;
             if (_status->dispensedQuantity_g >= target_g || 
-                (_status->totalEvents > 0 && _status->currentEvent >= _status->totalEvents) ||
-                _status->state == SystemState::FEED_FINISHED) {
+                (_status->totalEvents > 0 && _status->currentEvent >= _status->totalEvents)) {
                 return false;
             }
         }
@@ -547,7 +638,7 @@ bool FeedEngine::isActive() const {
 }
 
 bool FeedEngine::isPaused() const {
-    return _status && _status->state == SystemState::FEED_PAUSED;
+    return _isPaused || (_status && _status->state == SystemState::FEED_PAUSED);
 }
 
 void FeedEngine::setRelayCallback(void (*setRelay)(int relay, bool on)) { _setRelay = setRelay; }

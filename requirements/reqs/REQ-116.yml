@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Phase 1 Spreader Pre-Warmup
+level: 7.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: Gw2N6VozdRNSFjj3alUTWwyVbNcfksPgjYMiwV4R_P8=
+status: PENDING
+test_notes: ''
+text: |
+  Upon pulse trigger, the system SHALL assert GPIO 10 (Spreader Relay) HIGH for exactly $3.0\text{ seconds} \pm 50\text{ ms}$ while Loader remains LOW.
+verified_date: ''

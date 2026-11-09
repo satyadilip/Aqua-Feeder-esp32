@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 0 No-Clock Fallback
+level: 2.3
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: qZW3CMIVprmp4_7Q4l07YCDOWkvZFP5Fao4RJTQ-XO8=
+status: PENDING
+test_notes: ''
+text: |
+  Row 0 of the Home Screen SHALL display `AquaFeeder  NO-CLOCK` (10 chars title, 2 spaces, 8 chars warning) when RTC is invalid.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Same-Window Resume Invariant
+level: 10.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: HKuJQJwKyQ8qMW48frgU5rQ7QQq61niNjvgK_KZPfh0=
+status: PENDING
+test_notes: ''
+text: |
+  If paused and resumed within the SAME wait cycle ($t_{\text{pause}} < t_{\text{gap}}$), the engine SHALL NOT recalculate intervals and retain `nextFeedEpoch`.
+verified_date: ''

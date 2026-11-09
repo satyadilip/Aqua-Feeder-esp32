@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Downlink Port Mapping
+level: 12.3
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: OST89L7mxIyWJhAGpANRmL4O21qjhsQYUolidSsBdtE=
+status: PENDING
+test_notes: ''
+text: |
+  All cloud commands and configuration downlinks SHALL be received on LoRaWAN **FPort 2**.
+verified_date: ''

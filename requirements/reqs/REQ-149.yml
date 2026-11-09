@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feed Empty Mid-Pulse Abort
+level: 9.4
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: vMISV3t-0tsgblnhJop8xGY8wawGdeb7D41uPD7Z62o=
+status: PENDING
+test_notes: ''
+text: |
+  If `FEED EMPTY` triggers during Phase 1, Phase 2, or Phase 3, the Loader Relay SHALL de-energize immediately, followed by a 3s Spreader clear.
+verified_date: ''

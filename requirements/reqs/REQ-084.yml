@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Operational Daylight Enclosure
+level: 5.9
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: bhG4N-F8W1DWEApPX3yjj6DBtyxlS02AWn4S251fq_M=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL enforce that `startHour >= 6` and `(endHour < 18 or (endHour == 18 and endMinute == 0))`.
+verified_date: ''

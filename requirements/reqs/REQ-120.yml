@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Phase 3 Spreader Post-Clear Duration
+level: 7.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: eMBGyeQ0iOvZrLCssw6xSbgWX9Frh0JyaiBI-W1MjYs=
+status: PENDING
+test_notes: ''
+text: |
+  GPIO 10 (Spreader Relay) SHALL remain energized for exactly $3.0\text{ seconds} \pm 50\text{ ms}$ following Loader cutoff.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Time Drift Realignment
+level: 6.18
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: LbZ48g92WrU5_UEnCI-cBsdsY8m4WSChrRiqVREaAEw=
+status: PENDING
+test_notes: ''
+text: |
+  If the RTC time is adjusted mid-cycle by $> 60\text{ seconds}$, the engine SHALL immediately recalculate dynamic schedule math.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feed Session Cancel Action
+level: 10.6
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: 4XyWYyNss7a7lrjvNvja79zdQBZWOHhPgn4HJ8HNfIA=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[BACK]` on the Paused Screen SHALL set `state = IDLE`, disable `feedActive`, and cancel all remaining pulses for the day.
+verified_date: ''

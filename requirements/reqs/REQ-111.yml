@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Next Feed Epoch Projection
+level: 6.16
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: bSRPpPLJbCwVq8m6l9h1Dqs77450BsD3lHElHb_UxX4=
+status: PENDING
+test_notes: ''
+text: |
+  During `FC_WAIT`, `nextFeedEpoch` SHALL equal $T_{\text{pulse\_end}} + t_{\text{gap}}$.
+verified_date: ''

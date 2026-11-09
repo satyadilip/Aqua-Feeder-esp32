@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 3 Connectivity
+level: 2.17
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: jy9uWGizm_YYqcRvDyiRf1vZAmoQjSiHK12H3tVr72I=
+status: PENDING
+test_notes: ''
+text: |
+  Row 3 of the Home Screen SHALL display `LR:ss WF:ss GM:ss 12V` where `ss` represents 2-character connection codes (`OK`, `CN`, `DC`, `--`, `ER`).
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Extended Pause Dynamic Recalculation
+level: 10.4
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: _lbvlIDyDIIZcl9Bll3xoIvZmM4Tw1BZOPFGlM38onM=
+status: PENDING
+test_notes: ''
+text: |
+  In Scenario B, the engine SHALL invoke `recalcDynamic()`, re-distributing remaining kilograms across remaining daylight minutes until `EndHour:EndMin`.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Remaining Events Deduction
+level: 6.7
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: zyOxZ8xPsJgqANQ3ZImtXMuuKzAye3blsGdC77TjcEM=
+status: PENDING
+test_notes: ''
+text: |
+  In active runs, remaining events SHALL be calculated dynamically as $N_{\text{rem}} = \max(0, \text{TotalEvents} - \text{CurrentEvent})$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Refusal on Uncleared Sensor
+level: 9.12
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: HEZtsqdIITVuwSkHl4Lpr4moBwshMRbIq-8X5Y0xIPE=
+status: PENDING
+test_notes: ''
+text: |
+  If `[SELECT]` is pressed while sensor is still dry (hopper empty), the hooter SHALL emit a negative double-buzz and remain paused.
+verified_date: ''

@@ -1,8 +1,35 @@
+param(
+    [Parameter(Position=0)]
+    [string]$Port = ""
+)
+
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host "   AQUA FEEDER / LORAWAN - 100% SAFE FAULT-TOLERANT READER" -ForegroundColor Cyan
 Write-Host "=================================================================`n"
 
-$targetPort = "COM9"
+$availablePorts = [System.IO.Ports.SerialPort]::GetPortNames()
+
+if ([string]::IsNullOrWhiteSpace($Port)) {
+    if ($availablePorts.Count -eq 1) {
+        $targetPort = $availablePorts[0]
+        Write-Host "[+] Auto-detected single serial port: $targetPort" -ForegroundColor Yellow
+    } elseif ($availablePorts -contains "COM9") {
+        $targetPort = "COM9"
+    } elseif ($availablePorts.Count -gt 0) {
+        # Check for USB/ESP32 ports
+        Write-Host "[!] Available COM Ports on this system: $($availablePorts -join ', ')" -ForegroundColor Yellow
+        $targetPort = $availablePorts[-1]
+        Write-Host "[+] Selecting port: $targetPort (You can specify port via: .\read_keys.ps1 -Port <COM_NAME>)" -ForegroundColor Yellow
+    } else {
+        $targetPort = "COM9"
+    }
+} else {
+    $targetPort = $Port.ToUpper()
+    if (-not $targetPort.StartsWith("COM")) {
+        $targetPort = "COM" + $targetPort
+    }
+}
+
 Write-Host "[+] Connecting to $targetPort at 115200 baud..." -ForegroundColor Green
 
 $sp = New-Object System.IO.Ports.SerialPort $targetPort, 115200, None, 8, One
@@ -71,5 +98,11 @@ try {
 
 } catch {
     Write-Host "`n[!] ERROR accessing $targetPort : $($_.Exception.Message)" -ForegroundColor Red
+    if ($availablePorts.Count -gt 0) {
+        Write-Host "    Currently detected active COM Ports: $($availablePorts -join ', ')" -ForegroundColor Yellow
+        Write-Host "    Usage example: .\read_keys.ps1 -Port $($availablePorts[0])" -ForegroundColor Yellow
+    } else {
+        Write-Host "    No COM ports detected. Please connect your USB cable." -ForegroundColor Yellow
+    }
     if ($sp.IsOpen) { $sp.Close() }
 }

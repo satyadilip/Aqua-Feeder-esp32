@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Pre-Dawn Progress Bar Integrity
+level: 13.5
+links: []
+method: Test
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: x5hcvpeAE6IVWj7BUuv3PJQF3tC2sY2zcmPNUJH0xD8=
+status: PENDING
+test_notes: ''
+text: |
+  Between 00:00 and 06:00 IST on a new calendar day, the central circular gauge SHALL display **`0 / 50 EVENTS TODAY (0.0%)`**.
+verified_date: ''

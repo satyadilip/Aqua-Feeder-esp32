@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Keypad Locking on Splash
+level: 1.12
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: V5mOfGIHAPku9Ai4O4_lRAAtACV1ZVsN1V_7KPRypEM=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL ignore all pushbutton events (UP, DOWN, SELECT, BACK) while the splash screen is displayed.
+verified_date: ''

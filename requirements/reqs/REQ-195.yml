@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Uplink Queue Depth
+level: '12.10'
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: J33OdyGxpQEuDy5phjcH8ysy2aWm_R_5v1Osr0HbtEE=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware telemetry queue SHALL hold a minimum of 20 unacknowledged events (`TELEMETRY_QUEUE_SIZE >= 20`) in FreeRTOS memory.
+verified_date: ''

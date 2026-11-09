@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  LCD Motor Jam Notification
+level: 8.8
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: tiSdOhAbdrcMp6e6ZExVNI8uETIdpcGkbDIJz8saXF8=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD SHALL display `State: MOTOR TRIP  ` on Row 1 and `Overcurrent Check HW` on Row 2.
+verified_date: ''

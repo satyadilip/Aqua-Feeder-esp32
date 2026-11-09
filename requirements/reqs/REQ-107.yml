@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Target Dispensed Weight Completion
+level: 6.12
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: J9L5-VvQAKX_jd1gwDQyuRUOAGc87Zy9w8nPUeZBh8w=
+status: PENDING
+test_notes: ''
+text: |
+  When `dispensedQuantity_g >= FeedQuantity * 1000`, the engine SHALL set `state = FEED_FINISHED` and cease pulsing for the day.
+verified_date: ''

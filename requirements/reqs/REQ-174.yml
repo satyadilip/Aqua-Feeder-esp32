@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Pause Duration Metric Tracking
+level: 10.14
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: Jq0Ke6sfQk3_r4ALcyjy55wd5VRzXc2hAQ0L4EbMCtI=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL log total cumulative pause duration per day in minutes to evaluate feeder availability metrics.
+verified_date: ''

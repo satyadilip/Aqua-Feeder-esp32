@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Uplink Port Mapping
+level: 12.2
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: aQRsxCoD8ee2cHb0313_o0VbgNv_g3PMjsq7OPIk1j4=
+status: PENDING
+test_notes: ''
+text: |
+  All telemetry uplink packets SHALL be transmitted on LoRaWAN **FPort 1**.
+verified_date: ''

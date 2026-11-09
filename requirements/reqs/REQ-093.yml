@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Clock Setting Field 0
+level: 5.18
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: BsTWqPMftcK_PDQgZdODN3Fk4Mda5rMhPzslHAxtopU=
+status: PENDING
+test_notes: ''
+text: |
+  In `EDIT_CLOCK`, Field 0 SHALL adjust Hours (`00` to `23`). Pressing SELECT moves active cursor to Field 1.
+verified_date: ''

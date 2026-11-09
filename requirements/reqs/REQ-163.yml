@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Extended Pause Threshold
+level: 10.3
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: V3oBXDWM2byUjVZn4hBlHGT8elYeVGKZwGuaOk2qFdM=
+status: PENDING
+test_notes: ''
+text: |
+  If total paused duration exceeds $t_{\text{gap}}$, the system SHALL classify the event as Scenario B (Extended Pause).
+verified_date: ''

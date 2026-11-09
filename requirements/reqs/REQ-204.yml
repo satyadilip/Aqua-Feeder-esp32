@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Evening Next Feed Display
+level: 13.4
+links: []
+method: Inspect
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: RdzdDu7MdoACejLgKqb5cu6GVR71zgpRomwYtqlFtgs=
+status: PENDING
+test_notes: ''
+text: |
+  Between 18:00 and 24:00 IST, the Next Feed card SHALL display **`06:00 AM`** with subtitle `Starts tomorrow at 06:00 AM`.
+verified_date: ''

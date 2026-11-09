@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Remote Cloud Resume Execution
+level: 10.12
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: NQKZ4LHr0vcm_B9Sz8mmHIoFpc4yxSqo0XEVNJwdCAA=
+status: PENDING
+test_notes: ''
+text: |
+  Upon receiving Downlink Command `0xA2` (CMD_RESUME_FEED), the feeder SHALL execute resume logic identical to LCD SELECT.
+verified_date: ''

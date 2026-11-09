@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  History Tab Event Log Isolation
+level: 13.14
+links: []
+method: Test
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: NccFXEXK95mSlcPUgebSCHFfUS8nXowOBJE3yhFhY9Q=
+status: PENDING
+test_notes: ''
+text: |
+  The History tab SHALL only list feed pulses timestamped on the active operational date. Past sessions SHALL be grouped under "Previous Sessions".
+verified_date: ''

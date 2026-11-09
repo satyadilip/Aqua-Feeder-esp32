@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Emergency Motor Abort Latency
+level: 7.14
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: nRUNissXBSm0KeWPMG4KrhDwTew9EDKQx6rKPtSvv2Q=
+status: PENDING
+test_notes: ''
+text: |
+  An emergency stop signal from software, overcurrent, or proximity SHALL de-energize both relays within $\le 10\text{ ms}$.
+verified_date: ''

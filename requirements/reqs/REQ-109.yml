@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  End of Operational Hours Concession
+level: 6.14
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: WXMxO1v3-naMEOVQ7gQlRnNDDnH8L3Brgesq-_zNmSk=
+status: PENDING
+test_notes: ''
+text: |
+  When local time reaches `EndHour:EndMinute`, the engine SHALL transition to `FEED_FINISHED` regardless of uncompleted events.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Strict 20-Character Line Budget
+level: 2.1
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: Z8ysf7ujqCaPIpxyY2ILk2OFEmf_jMVNn5NEzAyQMxw=
+status: PENDING
+test_notes: ''
+text: |
+  No LCD rendering routine SHALL output more than 20 characters to any single row. All string buffers SHALL be allocated as `char buf[21]`.
+verified_date: ''

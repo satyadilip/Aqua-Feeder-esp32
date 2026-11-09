@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Telemetry Bitmask on Empty
+level: 9.6
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: Wo_RN9MINuKv3mZv5W__YR160D7kcB8QFFC6Gxcy0jM=
+status: PENDING
+test_notes: ''
+text: |
+  The telemetry engine SHALL assert `Bit 3` (`0x08` Feed Hopper Empty) and `Bit 4` (`0x10` Feeder Paused) in `statusFlags`.
+verified_date: ''

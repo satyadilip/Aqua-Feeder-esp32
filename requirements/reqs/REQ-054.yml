@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Edit Value Commit
+level: 3.14
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: 1eR3LzvPV4XH4LweKCznc2JA8MqAejCMQWYU8AOdMkg=
+status: PENDING
+test_notes: ''
+text: |
+  In edit screens, pressing `[SELECT]` on the final field SHALL persist the parameter to NVS, recompute schedule math, and return to `MENU_LIST`.
+verified_date: ''

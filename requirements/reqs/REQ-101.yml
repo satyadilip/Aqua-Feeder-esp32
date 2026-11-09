@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Base Gap Calculation
+level: 6.6
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: yirlLwbs_mcKxs9nsAEI2T9KfjylSfyGZI-piBxSlRY=
+status: PENDING
+test_notes: ''
+text: |
+  The nominal wait gap SHALL be calculated as $t_{\text{base\_gap}} = \max(5, \lfloor (t_{\text{window}} - (\text{TotalEvents} \times t_{\text{event}})) / \text{TotalEvents} \rfloor)$.
+verified_date: ''

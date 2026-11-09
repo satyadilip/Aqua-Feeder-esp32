@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Cumulative Dispense Math Tracking
+level: 7.7
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: 2R83rltOasH_pi0Q3kkGFXhnl2YQsKrgTcGem6Ml_ns=
+status: PENDING
+test_notes: ''
+text: |
+  Upon completion of Phase 3, the engine SHALL increment `dispensedQuantity_g += FeedPerEvent` and `currentEvent += 1`.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  NVS Run State Checkpoint
+level: 7.8
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: GoxkgdxS-Id1BMkg5Aojuz3A4sZ7TpZa4ZnIjce11qQ=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL persist `currentEvent`, `dispensedQuantity_g`, and `lastFedDay` to NVS at the end of each pulse.
+verified_date: ''

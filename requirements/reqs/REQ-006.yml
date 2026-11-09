@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Custom CGRAM Registration
+level: 1.6
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: ZZt4ulxdOc7fUaptVWKcWGhVBxZShx5ImwsdIfSlBYY=
+status: PENDING
+test_notes: ''
+text: |
+  Upon successful LCD initialization, the firmware SHALL write the 5 sub-pixel progress bar bit patterns into CGRAM indices `0` through `4`.
+verified_date: ''

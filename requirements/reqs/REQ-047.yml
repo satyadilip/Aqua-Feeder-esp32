@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Menu Cursor Down
+level: 3.7
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: 70eBHkfDhrWhVLbyMTgU9rMbEhOwv7njy4tBNN_QUhQ=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[DOWN]` (SW2) in `MENU_LIST` SHALL increment `menuCursorIdx` by 1, wrapping from 10 to 0.
+verified_date: ''

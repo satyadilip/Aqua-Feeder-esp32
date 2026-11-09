@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feed Quantity Step Size
+level: 5.2
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: I-Kcn9Pk_dfLR4z9P8aC3Ox9IZkEHNojmcAD73lYDGg=
+status: PENDING
+test_notes: ''
+text: |
+  The Feed Quantity adjustment step size SHALL be exactly $0.5\text{ kg}$ per button event.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  LCD Empty Screen Display
+level: 9.9
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: UseQrL-cEoFASmr2WvP488jyO5gQmZEJDCFwIreTiuY=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD SHALL display `Error: FEED EMPTY   ` on Row 1 and `[SEL]: Resume       ` on Row 2 of the Paused Screen.
+verified_date: ''

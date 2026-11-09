@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Warmup Text
+level: 2.8
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: dlTnnABjGhrL-zI67hCL62AVxI_aqYdrRq4mXV-S20s=
+status: PENDING
+test_notes: ''
+text: |
+  During motor pre-spin warmup, Row 1 SHALL display `State: WARM-UP     `.
+verified_date: ''

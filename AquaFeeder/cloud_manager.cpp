@@ -46,10 +46,14 @@ void CloudManager::loop() {
         } else {
             interval = 60000UL;
         }
+    } else if (_status->state == SystemState::FEED_PAUSED || _status->proximityTriggered) {
+        // Rapid 30s heartbeat when feed is empty or paused so Cloud Downlinks (RESUME, START, SETTINGS)
+        // are delivered in Class A RX1/RX2 within 30s instead of waiting 5 minutes in deep standby!
+        interval = 30000UL;
     } else {
-        // User-configurable telemetry interval setting (default 300s / 5m if unconfigured)
+        // User-configurable telemetry interval setting (allows >= 30s; defaults to 300s / 5m if unset)
         unsigned long cfgInterval = _cfg->telemetryIntervalS * 1000UL;
-        interval = (cfgInterval >= 300000UL) ? cfgInterval : 300000UL;
+        interval = (cfgInterval >= 30000UL) ? cfgInterval : 300000UL;
     }
     
     if (nowMs - _lastSendAttemptMs < interval) return;
@@ -60,7 +64,7 @@ void CloudManager::loop() {
     if (_lora && (_status->loraStatus == ConnStatus::ERROR || _status->loraStatus == ConnStatus::DISCONNECTED)) {
         if (_cfg->uplinkMode == UplinkMode::LORAWAN_ONLY || _cfg->uplinkMode == UplinkMode::AUTO_FAILOVER) {
             Serial.println("[LORA] Retrying LoRaWAN Join (30s cooldown)...");
-            if (_lora->join(_cfg->loraDevEUI, _cfg->loraAppEUI, _cfg->loraAppKey)) {
+            if (_lora->join(_cfg->loraDevEUI, _cfg->loraAppEUI, _cfg->loraAppKey, _cfg->loraMode)) {
                 _status->loraStatus = ConnStatus::CONNECTED;
                 Serial.println("[LORA] LoRaWAN Join SUCCESS upon retry!");
             } else {

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Standby Text
+level: 2.5
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: kr0RwamEpJAecXm7NK2wxTyQe8fJgO7TOQHxNzj0t4c=
+status: PENDING
+test_notes: ''
+text: |
+  When machine is in standby, Row 1 SHALL display `State: STANDBY     ` (7 chars prefix + 13 chars padded text).
+verified_date: ''

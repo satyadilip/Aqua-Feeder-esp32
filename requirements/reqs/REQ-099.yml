@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Single Event Duration Formula
+level: 6.4
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: fHdsmHawAjo3qCq44lo4e4z4b_fdjLQSqwBUK1a3orE=
+status: PENDING
+test_notes: ''
+text: |
+  The duration of one pulse SHALL be calculated as $t_{\text{event}} = 3.0\text{s (Pre)} + (\text{FeedPerEvent} / \text{DischargeRate}) + 3.0\text{s (Post)}$.
+verified_date: ''

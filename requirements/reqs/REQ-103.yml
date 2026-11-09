@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Dynamic Gap Recalculation
+level: 6.8
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: -va9ZUbaEEolgjLOlmi9xDbhPEW9D1--oj5J8G3xULg=
+status: PENDING
+test_notes: ''
+text: |
+  When recalculated mid-day, the gap SHALL be $t_{\text{dyn\_gap}} = \max(5, \lfloor (t_{\text{rem\_window}} - (N_{\text{rem}} \times t_{\text{event}})) / N_{\text{rem}} \rfloor)$.
+verified_date: ''

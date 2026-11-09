@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Dispense Metering Duration Math
+level: 7.3
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: RJK-USYNWF8w1i_JLBmAwNfV8KpIq2Y-khITYgmMsb0=
+status: PENDING
+test_notes: ''
+text: |
+  Loader Relay SHALL remain energized for exactly $t_{\text{meter}} = (\text{FeedPerEvent} / \text{DischargeRate})\text{ seconds} \pm 50\text{ ms}$.
+verified_date: ''

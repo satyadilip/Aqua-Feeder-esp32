@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Remote Cloud Start Execution
+level: 10.13
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: S_SX3ofQJKPFqraXoDclJuOmYm2O4p7R0I1T3Mgw8rw=
+status: PENDING
+test_notes: ''
+text: |
+  Upon receiving Downlink Command `0xA0` (CMD_START_FEED), the feeder SHALL start the daily feeding session.
+verified_date: ''

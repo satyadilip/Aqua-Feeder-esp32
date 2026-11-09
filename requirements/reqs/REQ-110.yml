@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Immediate First Pulse on Manual Start
+level: 6.15
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: lfDCfG268vvjYkBlk-ovGRvKu_R5Esr21blSHtmrpaI=
+status: PENDING
+test_notes: ''
+text: |
+  When `START FEEDING` is triggered inside daylight hours (`06:00` to `18:00`), Event 1 SHALL fire within $\le 1.0\text{ second}$.
+verified_date: ''

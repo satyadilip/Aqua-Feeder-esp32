@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 2 Idle Prompt
+level: 2.14
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: PZPxy0dyKXR1h9H7yDYUO4rXm6OO5qYz-pgH0HyUB-Q=
+status: PENDING
+test_notes: ''
+text: |
+  When machine is in standby or scheduled, Row 2 SHALL display `Press [SEL] for Menu` (exactly 20 characters).
+verified_date: ''

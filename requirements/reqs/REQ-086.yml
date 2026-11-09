@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Discharge Rate Range
+level: 5.11
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: KniP7r1Z6OtSkHL5NDJauBXQ4pZ2Ja2qSxAQS0Kac0Y=
+status: PENDING
+test_notes: ''
+text: |
+  The Auger Discharge Rate calibration parameter SHALL be bounded between $20\text{ g/s}$ and $500\text{ g/s}$. Default: $100\text{ g/s}$.
+verified_date: ''

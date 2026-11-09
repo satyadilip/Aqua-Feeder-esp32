@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Downlink Command Packet Format
+level: 12.8
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: P3-RRf6yoCM8wBqrRgB-J2g2k7McJFsqN-qM-QMFtLA=
+status: PENDING
+test_notes: ''
+text: |
+  The binary downlink packet SHALL strictly measure **12 bytes**, containing `cmdType`, `feedQty_100g`, `fpe_g`, `shour`, `smin`, `ehour`, `emin`, and `rate`.
+verified_date: ''

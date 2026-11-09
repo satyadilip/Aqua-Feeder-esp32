@@ -1,0 +1,912 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.10.26)  5 NOV 2026 13:20
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**./aquaCON_At_A_Glance.tex
+(aquaCON_At_A_Glance.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/base\article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/base\size10.clo
+File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count275
+\c@section=\count276
+\c@subsection=\count277
+\c@subsubsection=\count278
+\c@paragraph=\count279
+\c@subparagraph=\count280
+\c@figure=\count281
+\c@table=\count282
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen148
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.sty
+Package: geometry 2026/03/07 v6.0 Page Geometry
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks17
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.sty
+Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+))
+\Gm@cnth=\count283
+\Gm@cntv=\count284
+\c@Gm@tempcnt=\count285
+\Gm@bindingoffset=\dimen149
+\Gm@wd@mp=\dimen150
+\Gm@odd@mp=\dimen151
+\Gm@even@mp=\dimen152
+\Gm@layoutwidth=\dimen153
+\Gm@layoutheight=\dimen154
+\Gm@layouthoffset=\dimen155
+\Gm@layoutvoffset=\dimen156
+\Gm@dimlist=\toks18
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.cfg))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+Package: inputenc 2024/02/08 v1.3d Input encoding file
+\inpenc@prehook=\toks19
+\inpenc@posthook=\toks20
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\helvet.sty
+Package: helvet 2020/03/25 PSNFSS-v9.3 (WaS) 
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microtype.sty
+Package: microtype 2026/03/01 v3.2d Micro-typographical refinements (RS)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count286
+)
+\MT@toks=\toks21
+\MT@tempbox=\box53
+\MT@count=\count287
+LaTeX Info: Redefining \noprotrusionifhmode on input line 1084.
+LaTeX Info: Redefining \leftprotrusion on input line 1085.
+\MT@prot@toks=\toks22
+LaTeX Info: Redefining \rightprotrusion on input line 1104.
+LaTeX Info: Redefining \textls on input line 1449.
+\MT@outer@kern=\dimen157
+LaTeX Info: Redefining \microtypecontext on input line 2053.
+LaTeX Info: Redefining \textmicrotypecontext on input line 2070.
+\MT@listname@count=\count288
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microtype-pdf
+tex.def
+File: microtype-pdftex.def 2026/03/01 v3.2d Definitions specific to pdftex (RS)
+
+LaTeX Info: Redefining \lsstyle on input line 944.
+LaTeX Info: Redefining \lslig on input line 944.
+\MT@outer@space=\skip51
+)
+Package microtype Info: Loading configuration file microtype.cfg.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\microtype.cfg
+File: microtype.cfg 2026/03/01 v3.2d microtype main configuration file (RS)
+)
+LaTeX Info: Redefining \microtypesetup on input line 3065.
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.c
+fg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+))
+\Gin@req@height=\dimen158
+\Gin@req@width=\dimen159
+) (C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tcolorbox\tcolorbox.sty
+Package: tcolorbox 2025/11/28 version 6.9.0 text color boxes
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer\tikz.
+sty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.sty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfrcs.st
+y
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfutil
+-common.tex
+\pgfutil@everybye=\toks23
+\pgfutil@tempdima=\dimen160
+\pgfutil@tempdimb=\dimen161
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfutil
+-latex.def
+\pgfutil@abb=\box54
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfrcs.
+code.tex
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revision.tex)
+Package: pgfrcs 2025-08-29 v3.1.11a (3.1.11a)
+))
+Package: pgf 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgfcore.
+sty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/systemlayer\pgfsys.
+sty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
+s.code.tex
+Package: pgfsys 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys
+.code.tex
+\pgfkeys@pathtoks=\toks24
+\pgfkeys@temptoks=\toks25
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys
+libraryfiltered.code.tex
+\pgfkeys@tmptoks=\toks26
+))
+\pgf@x=\dimen162
+\pgf@y=\dimen163
+\pgf@xa=\dimen164
+\pgf@ya=\dimen165
+\pgf@xb=\dimen166
+\pgf@yb=\dimen167
+\pgf@xc=\dimen168
+\pgf@yc=\dimen169
+\pgf@xd=\dimen170
+\pgf@yd=\dimen171
+\w@pgf@writea=\write3
+\r@pgf@reada=\read2
+\c@pgf@counta=\count289
+\c@pgf@countb=\count290
+\c@pgf@countc=\count291
+\c@pgf@countd=\count292
+\t@pgf@toka=\toks27
+\t@pgf@tokb=\toks28
+\t@pgf@tokc=\toks29
+\pgf@sys@id@count=\count293
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgf.c
+fg
+File: pgf.cfg 2025-08-29 v3.1.11a (3.1.11a)
+)
+Driver file for pgf: pgfsys-pdftex.def
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
+s-pdftex.def
+File: pgfsys-pdftex.def 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
+s-common-pdf.def
+File: pgfsys-common-pdf.def 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
+ssoftpath.code.tex
+File: pgfsyssoftpath.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfsyssoftpath@smallbuffer@items=\count294
+\pgfsyssoftpath@bigbuffer@items=\count295
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
+sprotocol.code.tex
+File: pgfsysprotocol.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+e.code.tex
+Package: pgfcore 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmath.code
+.tex
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathutil.
+code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathparse
+r.code.tex
+\pgfmath@dimen=\dimen172
+\pgfmath@count=\count296
+\pgfmath@box=\box55
+\pgfmath@toks=\toks30
+\pgfmath@stack@operand=\toks31
+\pgfmath@stack@operation=\toks32
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.basic.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.trigonometric.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.random.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.comparison.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.base.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.round.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.misc.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfunct
+ions.integerarithmetics.code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathcalc.
+code.tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfloat
+.code.tex
+\c@pgfmathroundto@lastzeros=\count297
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfint.code.
+tex)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+epoints.code.tex
+File: pgfcorepoints.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@picminx=\dimen173
+\pgf@picmaxx=\dimen174
+\pgf@picminy=\dimen175
+\pgf@picmaxy=\dimen176
+\pgf@pathminx=\dimen177
+\pgf@pathmaxx=\dimen178
+\pgf@pathminy=\dimen179
+\pgf@pathmaxy=\dimen180
+\pgf@xx=\dimen181
+\pgf@xy=\dimen182
+\pgf@yx=\dimen183
+\pgf@yy=\dimen184
+\pgf@zx=\dimen185
+\pgf@zy=\dimen186
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+epathconstruct.code.tex
+File: pgfcorepathconstruct.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@path@lastx=\dimen187
+\pgf@path@lasty=\dimen188
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+epathusage.code.tex
+File: pgfcorepathusage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@shorten@end@additional=\dimen189
+\pgf@shorten@start@additional=\dimen190
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+escopes.code.tex
+File: pgfcorescopes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfpic=\box56
+\pgf@hbox=\box57
+\pgf@layerbox@main=\box58
+\pgf@picture@serial@count=\count298
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+egraphicstate.code.tex
+File: pgfcoregraphicstate.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgflinewidth=\dimen191
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+etransformations.code.tex
+File: pgfcoretransformations.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@pt@x=\dimen192
+\pgf@pt@y=\dimen193
+\pgf@pt@temp=\dimen194
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+equick.code.tex
+File: pgfcorequick.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+eobjects.code.tex
+File: pgfcoreobjects.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+epathprocessing.code.tex
+File: pgfcorepathprocessing.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+earrows.code.tex
+File: pgfcorearrows.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfarrowsep=\dimen195
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+eshade.code.tex
+File: pgfcoreshade.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@max=\dimen196
+\pgf@sys@shading@range@num=\count299
+\pgf@shadingcount=\count300
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+eimage.code.tex
+File: pgfcoreimage.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+eexternal.code.tex
+File: pgfcoreexternal.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfexternal@startupbox=\box59
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+elayers.code.tex
+File: pgfcorelayers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+etransparency.code.tex
+File: pgfcoretransparency.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+epatterns.code.tex
+File: pgfcorepatterns.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/basiclayer\pgfcor
+erdf.code.tex
+File: pgfcorerdf.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmodule
+shapes.code.tex
+File: pgfmoduleshapes.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfnodeparttextbox=\box60
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmodule
+plot.code.tex
+File: pgfmoduleplot.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility\pgfco
+mp-version-0-65.sty
+Package: pgfcomp-version-0-65 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@nodesepstart=\dimen197
+\pgf@nodesepend=\dimen198
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/compatibility\pgfco
+mp-version-1-18.sty
+Package: pgfcomp-version-1-18 2025-08-29 v3.1.11a (3.1.11a)
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgffor.st
+y
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfkeys.s
+ty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys
+.code.tex))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pgfmath.sty
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmath.code
+.tex))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgffor.
+code.tex
+Package: pgffor 2025-08-29 v3.1.11a (3.1.11a)
+\pgffor@iter=\dimen199
+\pgffor@skip=\dimen256
+\pgffor@stack=\toks33
+\pgffor@toks=\toks34
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tik
+z\tikz.code.tex
+Package: tikz 2025-08-29 v3.1.11a (3.1.11a)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/libraries\pgflibr
+aryplothandlers.code.tex
+File: pgflibraryplothandlers.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgf@plot@mark@count=\count301
+\pgfplotmarksize=\dimen257
+)
+\tikz@lastx=\dimen258
+\tikz@lasty=\dimen259
+\tikz@lastxsaved=\dimen260
+\tikz@lastysaved=\dimen261
+\tikz@lastmovetox=\dimen262
+\tikz@lastmovetoy=\dimen263
+\tikzleveldistance=\dimen264
+\tikzsiblingdistance=\dimen265
+\tikz@figbox=\box61
+\tikz@figbox@bg=\box62
+\tikz@tempbox=\box63
+\tikz@tempbox@bg=\box64
+\tikztreelevel=\count302
+\tikznumberofchildren=\count303
+\tikznumberofcurrentchild=\count304
+\tikz@fig@count=\count305
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmodule
+matrix.code.tex
+File: pgfmodulematrix.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+\pgfmatrixcurrentrow=\count306
+\pgfmatrixcurrentcolumn=\count307
+\pgf@matrix@numberofcolumns=\count308
+)
+\tikz@expandcount=\count309
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tik
+z/libraries\tikzlibrarytopaths.code.tex
+File: tikzlibrarytopaths.code.tex 2025-08-29 v3.1.11a (3.1.11a)
+)))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tools\verbatim.sty
+Package: verbatim 2024-01-22 v1.5x LaTeX2e package for verbatim enhancements
+\every@verbatim=\toks35
+\verbatim@line=\toks36
+\verbatim@in@stream=\read3
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/environ\environ.sty
+Package: environ 2014/05/04 v0.3 A new way to define environments
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/trimspaces\trimspaces.s
+ty
+Package: trimspaces 2009/09/17 v1.1 Trim spaces around a token list
+)
+\@envbody=\toks37
+)
+\tcb@titlebox=\box65
+\tcb@upperbox=\box66
+\tcb@lowerbox=\box67
+\tcb@phantombox=\box68
+\c@tcbbreakpart=\count310
+\c@tcblayer=\count311
+\c@tcolorbox@number=\count312
+\l__tcobox_tmpa_box=\box69
+\l__tcobox_tmpa_dim=\dimen266
+\tcb@temp=\box70
+\tcb@temp=\box71
+\tcb@temp=\box72
+\tcb@temp=\box73
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tcolorbox\tcbskins.code
+.tex
+Library (tcolorbox): 'tcbskins.code.tex' version '6.9.0'
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tikzfill\tikzfill.image
+.sty
+Package: tikzfill.image 2026/04/23 v1.2.0 Image filling library for TikZ
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tikzfill\tikzlibraryfil
+l.image.code.tex
+File: tikzlibraryfill.image.code.tex 2026/04/23 v1.2.0 Image filling library
+\l__tikzfill_tmpa_dim=\dimen267
+\l__tikzfill_tmpb_dim=\dimen268
+\l__tikzfill_img_box=\box74
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tcolorbox\tcbskinsjigsa
+w.code.tex
+Library (tcolorbox): 'tcbskinsjigsaw.code.tex' version '6.9.0'
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tcolorbox\tcbraster.cod
+e.tex
+Library (tcolorbox): 'tcbraster.code.tex' version '6.9.0'
+\c@tcbrastercolumn=\count313
+\c@tcbrasterrow=\count314
+\c@tcbrasternum=\count315
+\c@tcbraster=\count316
+) (C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty
+Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
+\col@sep=\dimen269
+\ar@mcellbox=\box75
+\extrarowheight=\dimen270
+\NC@list=\toks38
+\extratabsurround=\skip52
+\backup@length=\skip53
+\ar@cellbox=\box76
+)
+\TX@col@width=\dimen271
+\TX@old@table=\dimen272
+\TX@old@col=\dimen273
+\TX@target=\dimen274
+\TX@delta=\dimen275
+\TX@cols=\count317
+\TX@ftn=\toks39
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
+\heavyrulewidth=\dimen276
+\lightrulewidth=\dimen277
+\cmidrulewidth=\dimen278
+\belowrulesep=\dimen279
+\belowbottomsep=\dimen280
+\aboverulesep=\dimen281
+\abovetopsep=\dimen282
+\cmidrulesep=\dimen283
+\cmidrulekern=\dimen284
+\defaultaddspace=\dimen285
+\@cmidla=\count318
+\@cmidlb=\count319
+\@aboverulesep=\dimen286
+\@belowrulesep=\dimen287
+\@thisruleclass=\count320
+\@lastruleclass=\count321
+\@thisrulewidth=\dimen288
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/colortbl\colortbl.sty
+Package: colortbl 2026/05/01 v1.0l Color table columns (DPC)
+\everycr=\toks40
+\minrowclearance=\skip54
+\rownum=\count322
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/enumitem\enumitem.sty
+Package: enumitem 2025/02/06 v3.11 Customized lists
+\labelindent=\skip55
+\enit@outerparindent=\dimen289
+\enit@toks=\toks41
+\enit@inbox=\box77
+\enit@count@id=\count323
+\enitdp@description=\count324
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
+Package: amssymb 2013/01/14 v3.01 AMS font symbols
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
+Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
+\@emptytoks=\toks42
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
+)) (C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/tfrupee\tfrupee.sty
+Package: tfrupee 2010/12/15 LaTeX Support for the TechFat Rupee symbols by Tech
+Fat (http://techfat.blogspot.com/2010/07/new-open-source-india-rupee-font.html)
+. Adapted for use with TeX by Palle Jorgensen, hamselv(a)pallej.dk
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpage.sty
+Package: lastpage 2025/08/14 v2.1h lastpage: 2.09 or 2e? (HMM)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpage2e.sty
+Package: lastpage2e 2025/08/14 v2.1h Decide which 2e lastpage version to use (H
+MM)
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/lastpage\lastpagemodern
+.sty
+Package: lastpagemodern 2025-08-14 v2.1h Refers to last page's name (HMM; JPG)
+\c@lastpagecount=\count325
+) 
+))
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/fancyhdr\fancyhdr.sty
+Package: fancyhdr 2025/02/07 v5.2 Extensive control of page headers and footers
+
+\f@nch@headwidth=\skip56
+\f@nch@offset@elh=\skip57
+\f@nch@offset@erh=\skip58
+\f@nch@offset@olh=\skip59
+\f@nch@offset@orh=\skip60
+\f@nch@offset@elf=\skip61
+\f@nch@offset@erf=\skip62
+\f@nch@offset@olf=\skip63
+\f@nch@offset@orf=\skip64
+\f@nch@height=\skip65
+\f@nch@footalignment=\skip66
+\f@nch@widthL=\skip67
+\f@nch@widthC=\skip68
+\f@nch@widthR=\skip69
+\@temptokenb=\toks43
+)
+LaTeX Font Info:    Trying to load font information for T1+phv on input line 57
+.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1phv.fd
+File: t1phv.fd 2020/03/25 scalable font definitions for T1/phv.
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdf
+tex.def
+File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count326
+) (aquaCON_At_A_Glance.aux)
+\openout1 = `aquaCON_At_A_Glance.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 57.
+LaTeX Font Info:    ... okay on input line 57.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: 
+* h-part:(L,W,R)=(34.14322pt, 529.22144pt, 34.14322pt)
+* v-part:(T,H,B)=(31.2982pt, 762.5336pt, 51.21504pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=529.22144pt
+* \textheight=762.5336pt
+* \oddsidemargin=-38.12677pt
+* \evensidemargin=-38.12677pt
+* \topmargin=-77.97179pt
+* \headheight=12.0pt
+* \headsep=25.0pt
+* \topskip=10.0pt
+* \footskip=18.0pt
+* \marginparwidth=57.0pt
+* \marginparsep=11.0pt
+* \columnsep=10.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidefalse
+* \@mparswitchfalse
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+LaTeX Info: Redefining \microtypecontext on input line 57.
+Package microtype Info: Applying patch `item' on input line 57.
+Package microtype Info: Applying patch `toc' on input line 57.
+Package microtype Info: Applying patch `eqnum' on input line 57.
+Package microtype Info: Applying patch `footnote' on input line 57.
+Package microtype Info: Applying patch `verbatim' on input line 57.
+LaTeX Info: Redefining \microtypesetup on input line 57.
+Package microtype Info: Generating PDF output.
+Package microtype Info: Character protrusion enabled (level 2).
+Package microtype Info: Using default protrusion set `alltext'.
+Package microtype Info: Automatic font expansion enabled (level 2),
+(microtype)             stretch: 20, shrink: 20, step: 1, non-selected.
+Package microtype Info: Using default expansion set `alltext-nott'.
+Package microtype Info: Patching command `\showhyphens'.
+Package microtype Info: No adjustment of tracking.
+Package microtype Info: No adjustment of interword spacing.
+Package microtype Info: No adjustment of character kerning.
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `phv' (encoding: T1).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mk
+ii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count327
+\scratchdimen=\dimen290
+\scratchbox=\box78
+\nofMPsegments=\count328
+\nofMParguments=\count329
+\everyMPshowfont=\toks44
+\MPscratchCnt=\count330
+\MPscratchDim=\dimen291
+\MPnumerator=\count331
+\makeMPintoPDFobject=\count332
+\everyMPtoPDFconversion=\toks45
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-b
+ase.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.c
+fg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
+))
+LaTeX Font Info:    Calculating math sizes for size <8.5> on input line 74.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <8.5> not available
+(Font)              size <8> substituted on input line 74.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-cmr.cfg
+File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman 
+(RS)
+)
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <4.25> not available
+(Font)              size <5> substituted on input line 74.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <8.5> not available
+(Font)              size <8> substituted on input line 74.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <4.25> not available
+(Font)              size <5> substituted on input line 74.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <8.5> not available
+(Font)              size <8> substituted on input line 74.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <4.25> not available
+(Font)              size <5> substituted on input line 74.
+
+LaTeX Font Info:    Trying to load font information for U+msa on input line 74.
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-msa.cfg
+File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 74.
+
+
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/microtype\mt-msb.cfg
+File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
+)
+LaTeX Font Info:    Calculating math sizes for size <19> on input line 75.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <19> not available
+(Font)              size <17.28> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <13.29994> not available
+(Font)              size <14.4> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <9.5> not available
+(Font)              size <9> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <19> not available
+(Font)              size <17.28> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <13.29994> not available
+(Font)              size <14.4> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <9.5> not available
+(Font)              size <9> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <19> not available
+(Font)              size <17.28> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <13.29994> not available
+(Font)              size <14.4> substituted on input line 75.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <9.5> not available
+(Font)              size <9> substituted on input line 75.
+
+LaTeX Font Info:    Calculating math sizes for size <9.5> on input line 76.
+LaTeX Font Info:    Trying to load font information for TS1+phv on input line 7
+6.
+(C:\Users\nsaty\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1phv.fd
+File: ts1phv.fd 2020/03/25 scalable font definitions for TS1/phv.
+)
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `phv' (encoding: TS1).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+<athena_logo.png, id=4, 577.15625pt x 313.17pt>
+File: athena_logo.png Graphic file (type png)
+<use athena_logo.png>
+Package pdftex.def Info: athena_logo.png  used on input line 90.
+(pdftex.def)             Requested size: 68.16373pt x 36.98866pt.
+LaTeX Font Info:    Calculating math sizes for size <7.5> on input line 119.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <7.5> not available
+(Font)              size <7> substituted on input line 119.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <3.75> not available
+(Font)              size <5> substituted on input line 119.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <7.5> not available
+(Font)              size <7> substituted on input line 119.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <3.75> not available
+(Font)              size <5> substituted on input line 119.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <7.5> not available
+(Font)              size <7> substituted on input line 119.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <3.75> not available
+(Font)              size <5> substituted on input line 119.
+
+LaTeX Font Info:    Calculating math sizes for size <14.5> on input line 128.
+LaTeX Font Info:    Calculating math sizes for size <7.8> on input line 180.
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <5.45998> not available
+(Font)              size <5> substituted on input line 180.
+
+
+LaTeX Font Warning: Font shape `OT1/cmr/m/n' in size <3.9> not available
+(Font)              size <5> substituted on input line 180.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <5.45998> not available
+(Font)              size <5> substituted on input line 180.
+
+
+LaTeX Font Warning: Font shape `OML/cmm/m/it' in size <3.9> not available
+(Font)              size <5> substituted on input line 180.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <5.45998> not available
+(Font)              size <5> substituted on input line 180.
+
+
+LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <3.9> not available
+(Font)              size <5> substituted on input line 180.
+
+<hero_feeder.jpg, id=5, 331.4784pt x 185.0112pt>
+File: hero_feeder.jpg Graphic file (type jpg)
+<use hero_feeder.jpg>
+Package pdftex.def Info: hero_feeder.jpg  used on input line 196.
+(pdftex.def)             Requested size: 263.08907pt x 156.49803pt.
+[1
+
+{C:/Users/nsaty/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/nsat
+y/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc} <./athena_logo.png
+> <./hero_feeder.jpg>]
+<solution_architecture.jpg, id=18, 331.4784pt x 185.0112pt>
+File: solution_architecture.jpg Graphic file (type jpg)
+<use solution_architecture.jpg>
+Package pdftex.def Info: solution_architecture.jpg  used on input line 284.
+(pdftex.def)             Requested size: 222.61539pt x 136.57866pt.
+ [2 <./solution_architecture.jpg>]
+
+enddocument/afterlastpage (AED): lastpage setting LastPage.
+(aquaCON_At_A_Glance.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-12-24>
+ ***********
+
+
+LaTeX Font Warning: Size substitutions with differences
+(Font)              up to 1.72pt have occurred.
+
+ ) 
+Here is how much of TeX's memory you used:
+ 20797 strings out of 467870
+ 435436 string characters out of 5418354
+ 907255 words of memory out of 5000000
+ 48989 multiletter control sequences out of 15000+600000
+ 742678 words of font info for 402 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 98i,15n,108p,1018b,1430s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/nsaty/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/
+cmmi12.pfb><C:/Users/nsaty/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
+fonts/cm/cmmi7.pfb><C:/Users/nsaty/AppData/Local/Programs/MiKTeX/fonts/type1/pu
+blic/amsfonts/cm/cmsy7.pfb><C:/Users/nsaty/AppData/Local/Programs/MiKTeX/fonts/
+type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/nsaty/AppData/Local/Programs/MiKTe
+X/fonts/type1/public/amsfonts/symbols/msam7.pfb><C:/Users/nsaty/AppData/Local/P
+rograms/MiKTeX/fonts/type1/tfrupee/tfrupee.pfb><C:/Users/nsaty/AppData/Local/Pr
+ograms/MiKTeX/fonts/type1/urw/helvetic/uhvb8a.pfb><C:/Users/nsaty/AppData/Local
+/Programs/MiKTeX/fonts/type1/urw/helvetic/uhvr8a.pfb>
+Output written on aquaCON_At_A_Glance.pdf (2 pages, 1927396 bytes).
+PDF statistics:
+ 57 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 500000)
+ 161820 words of extra memory for PDF output out of 184870 (max. 10000000)
+

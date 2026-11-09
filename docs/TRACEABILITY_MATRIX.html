@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>aquaCON™ Requirements Traceability Matrix</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 20px 40px; background: #0f172a; color: #f8fafc; }
+  h1 { color: #38bdf8; margin-bottom: 4px; }
+  .meta { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+  .kpis { display: flex; gap: 16px; margin-bottom: 24px; }
+  .card { background: #1e293b; padding: 14px 20px; border-radius: 8px; border: 1px solid #334155; min-width: 140px; }
+  .card .num { font-size: 28px; font-weight: 700; color: #f8fafc; }
+  .card .lbl { font-size: 12px; color: #94a3b8; text-transform: uppercase; }
+  .card.pass .num { color: #22c55e; }
+  .card.fail .num { color: #ef4444; }
+  .card.pend .num { color: #eab308; }
+  table { width: 100%; border-collapse: collapse; background: #1e293b; border-radius: 8px; overflow: hidden; font-size: 13px; }
+  th { background: #334155; text-align: left; padding: 10px 12px; font-weight: 600; color: #cbd5e1; }
+  td { padding: 10px 12px; border-bottom: 1px solid #334155; vertical-align: middle; }
+  tr:hover { background: #243248; }
+  .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .badge-pass { background: #14532d; color: #4ade80; border: 1px solid #22c55e; }
+  .badge-fail { background: #7f1d1d; color: #f87171; border: 1px solid #ef4444; }
+  .badge-pend { background: #713f12; color: #fde047; border: 1px solid #eab308; }
+  code { font-family: monospace; font-size: 12px; color: #38bdf8; }
+</style>
+</head>
+<body>
+<h1>aquaCON™ Requirements Traceability Matrix (RTM)</h1>
+<div class="meta">ISO/IEC/IEEE 29148:2018 Engineering Specification & Verification Traceability</div>
+<div class="kpis">
+  <div class="card"><div class="num">215</div><div class="lbl">Total Reqs</div></div>
+  <div class="card pass"><div class="num">1</div><div class="lbl">Passed (0.5%)</div></div>
+  <div class="card fail"><div class="num">0</div><div class="lbl">Failed</div></div>
+  <div class="card pend"><div class="num">214</div><div class="lbl">Pending Test</div></div>
+</div>
+<table>
+<thead>
+  <tr><th>UID</th><th>Category</th><th>Title</th><th>Method</th><th>Target</th><th>Status</th><th>Verified Date</th><th>Reference</th></tr>
+</thead>
+<tbody>
+  <tr>
+    <td><b>REQ-001</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Power-On Relay Isolation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pass">PASSED</span></td>
+    <td>2026-11-07 15:24:15</td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-002</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Power-On Hooter Isolation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-003</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Boot Visual Indicator</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-004</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>I2C Bus Bring-up</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-005</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>LCD Detection & Fallback</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-006</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Custom CGRAM Registration</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-007</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Splash Screen Line 0</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-008</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Splash Screen Line 1</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-009</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Splash Screen Line 2</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-010</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Splash Screen Line 3</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-011</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Splash Screen Duration</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-012</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Keypad Locking on Splash</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-013</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Hardware RTC Initialization</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-014</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Software RTC Fallback</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-015</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>INA219 Bring-up</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-016</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>NVS Configuration Load</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-017</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>First Boot Provisioning</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-018</b></td>
+    <td>Cat 1: Power-On, Bootup & Hardware Bring-Up</td>
+    <td>Autonomous Home Screen Entry</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-019</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Strict 20-Character Line Budget</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-020</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 0 Clock Format</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-021</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 0 No-Clock Fallback</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-022</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 State Prefix</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-023</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Standby Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-024</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Scheduled Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-025</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Dispensing Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-026</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Warmup Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-027</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Post-Clear Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-028</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Gap Delay Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-029</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Feed Paused Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-030</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Completed Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-031</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 1 Motor Trip Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-032</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 2 Idle Prompt</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-033</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 2 Gap Countdown</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-034</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 2 Running Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-035</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Home Row 3 Connectivity</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-036</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Progress Bar Enclosure</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-037</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Sub-Pixel Progress Math</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-038</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Paused Screen Line 0</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-039</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Paused Screen Line 2</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-040</b></td>
+    <td>Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds</td>
+    <td>Paused Screen Line 3</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-041</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Keypad Hardware Sampling</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-042</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Keypad Noise Debounce</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-043</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Rising Edge Event Generation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-044</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Long-Press Repeat Delay</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-045</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Long-Press Repeat Rate</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-046</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Home to Menu Navigation</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-047</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Menu Cursor Down</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-048</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Menu Cursor Up</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-049</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Menu Item Selection</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-050</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Menu Escape to Home</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-051</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Menu Inactivity Timeout</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-052</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Edit Value Increment</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-053</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Edit Value Decrement</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-054</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Edit Value Commit</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-055</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Edit Cancel Discard</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-056</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Running Screen Keypad Interlock</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-057</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Paused Resume Keypad Action</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-058</b></td>
+    <td>Cat 3: Keypad Input, Debouncing & Navigation</td>
+    <td>Paused Cancel Keypad Action</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-059</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>4-Row Windowed Pagination</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-060</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Active Item Cursor Tag</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-061</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Inactive Item Cursor Tag</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-062</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 0 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-063</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 1 Dynamic Text</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-064</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 2 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-065</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 3 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-066</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 4 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-067</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 5 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-068</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 6 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-069</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 7 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-070</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 8 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-071</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 9 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-072</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Menu Item 10 Text</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-073</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Empty Slot Blanking</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-074</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Diagnostics Submenu Items</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-075</b></td>
+    <td>Cat 4: Menu System Pagination & Submenus</td>
+    <td>Diagnostics Manual Test Safety</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lcd_display.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-076</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Feed Quantity Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-077</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Feed Quantity Step Size</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-078</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Feed Per Event Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-079</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Feed Per Event Step Size</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-080</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Start Hour Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-081</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Start Minute Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-082</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>End Hour Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-083</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>End Minute Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-084</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Operational Daylight Enclosure</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-085</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Chronological Ordering Rule</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-086</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Discharge Rate Range</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-087</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Discharge Rate Step Size</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-088</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>NVS Flash Wear Reduction</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-089</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Atomic NVS Transaction</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-090</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Total Events Deduction</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-091</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Overfill Window Prevention</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-092</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Settings Uplink Notification</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-093</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Clock Setting Field 0</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-094</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Clock Setting Field 1</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-095</b></td>
+    <td>Cat 5: Settings, Limits & NVS Persistence</td>
+    <td>Factory Reset Key Combo</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/config_manager.cpp;AquaFeeder/config.h</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-096</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Strict Night Window Motor Lockdown</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-097</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Unarmed First Boot Invariant</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-098</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Night Arming Behavior</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-099</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Single Event Duration Formula</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-100</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Full Window Duration Formula</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-101</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Base Gap Calculation</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-102</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Remaining Events Deduction</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-103</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Dynamic Gap Recalculation</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-104</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Dynamic Gap Ceiling</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-105</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Minimum Inter-Pulse Gap</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-106</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Day Rollover Autonomous Trigger</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-107</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Target Dispensed Weight Completion</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-108</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Target Event Count Completion</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-109</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>End of Operational Hours Concession</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-110</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Immediate First Pulse on Manual Start</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-111</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Next Feed Epoch Projection</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-112</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Telemetry Heartbeat in Gap Delay</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-113</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Time Drift Realignment</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-114</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Completion Lockout on Same Day</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-115</b></td>
+    <td>Cat 6: Schedule Engine, Timing & Operational Window Constraints</td>
+    <td>Check Tray Schedule Independence</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-116</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Phase 1 Spreader Pre-Warmup</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-117</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Phase 2 Loader Metering Engagement</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-118</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Dispense Metering Duration Math</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-119</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Phase 3 Loader Cutoff</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-120</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Phase 3 Spreader Post-Clear Duration</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-121</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Total Actuation Relay De-energize</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-122</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Cumulative Dispense Math Tracking</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-123</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>NVS Run State Checkpoint</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-124</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Dispense Telemetry Event Generation</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-125</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Relay Non-Overlap Failsafe</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-126</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Relay Command Inversion Guard</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-127</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Spreader Motor Current Sampling</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-128</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Active Pulse LED Indication</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-129</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Emergency Motor Abort Latency</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-130</b></td>
+    <td>Cat 7: 3-Phase Dispensing Engine & Actuator Control</td>
+    <td>Watchdog Refresh in Dispense Loop</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-131</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Overcurrent Trip Threshold</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-132</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Immediate Actuator Cutoff on Trip</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-133</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Acoustic Overcurrent Alarm</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-134</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Visual Overcurrent Alarm</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-135</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>System State Latch on Trip</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-136</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Telemetry Bitmask Assertion on Trip</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-137</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Cloud Alert Uplink on Trip</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-138</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>LCD Motor Jam Notification</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-139</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Jam Auto-Clear Prohibition</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-140</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Manual Jam Clearance Reset</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-141</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Brownout Voltage Floor</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-142</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Solar Overvoltage Protection</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-143</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Thermal Cutoff Protection</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-144</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Relay Weld Detection</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-145</b></td>
+    <td>Cat 8: Safety Interlocks, Current Monitoring & Motor Trip</td>
+    <td>Current Sensor Communication Loss</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-146</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Proximity Sensor Hardware Input</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-147</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Hopper Empty Sensor State</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-148</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Hopper Empty Debounce Window</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-149</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Feed Empty Mid-Pulse Abort</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-150</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>System State on Empty</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-151</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Telemetry Bitmask on Empty</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-152</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Hooter Empty Acoustic Pattern</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-153</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Visual Empty Indicator</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-154</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>LCD Empty Screen Display</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-155</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Proximity Active Low Config Option</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-156</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Resume Sensor Interlock</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-157</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Refusal on Uncleared Sensor</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-158</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Hooter Mute Capability</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-159</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Auto-Resume Prohibition</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-160</b></td>
+    <td>Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm</td>
+    <td>Pellets Refilled Telemetry</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-161</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Same-Window Resume Invariant</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-162</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Same-Window Countdown Continuity</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-163</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Extended Pause Threshold</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-164</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Extended Pause Dynamic Recalculation</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-165</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Immediate Pulse on Extended Resume</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-166</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Feed Session Cancel Action</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-167</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Manual Check Tray Invocation</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-168</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Check Tray Night Lockdown</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-169</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Check Tray Weight Non-Deduction</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-170</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Check Tray Telemetry Record</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-171</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Remote Cloud Pause Execution</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-172</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Remote Cloud Resume Execution</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-173</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Remote Cloud Start Execution</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-174</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Pause Duration Metric Tracking</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-175</b></td>
+    <td>Cat 10: Pause, Resume Engine & Manual Feed</td>
+    <td>Motor Pre-Pause State Recovery</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-176</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Hardware RTC Architecture</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-177</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Local Timezone Representation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-178</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Firmware Epoch Derivation</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-179</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Calendar Day Index Formula</td>
+    <td>[A] Analysis</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-180</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Software RTC Synchronization</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-181</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Cloud Time Synchronization Downlink</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-182</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>RTC Adjustment Execution</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-183</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>RTC Fault Telemetry Flag</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-184</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Smooth Schedule Realignment</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-185</b></td>
+    <td>Cat 11: Real-Time Clock, UTC/IST & Time Synchronization</td>
+    <td>Daylight Savings Immunity</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/rtc_manager.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-186</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Uplink Packet Size</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-187</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Uplink Port Mapping</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-188</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Downlink Port Mapping</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-189</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>LoRaWAN Radio Modulation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-190</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Bit 5 Diagnostic Isolation</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-191</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Cloud Misinterpretation Prohibition</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-192</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Day/Night LoRaWAN Class Switching</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-193</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Downlink Command Packet Format</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-194</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Downlink Execution Acknowledgment</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-195</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Uplink Queue Depth</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-196</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Telemetry Deduplication</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-197</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Daytime Telemetry Filtering</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-198</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Zero Item Rollover Invariant</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-199</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>LoRa SX1262 SPI Transaction Mutex</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-200</b></td>
+    <td>Cat 12: Wireless Telemetry & LoRaWAN Communications Contract</td>
+    <td>Link Quality Telemetry</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-201</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Zero Jargon Presentation</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-202</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Night Window Status Display</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-203</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Night Window Next Feed Display</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-204</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Evening Next Feed Display</td>
+    <td>[I] Inspect</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-205</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Pre-Dawn Progress Bar Integrity</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-206</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Pre-Dawn Dispensed Weight Integrity</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-207</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Standby Action Button Mapping</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-208</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Night Arming Operator Confirmation</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-209</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Feeding Action Button Mapping</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-210</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Paused Action Button Mapping</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-211</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Completed Action Button Mapping</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-212</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Mobile Viewport Responsiveness</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-213</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Auto-Refresh Polling Cycle</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-214</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>History Tab Event Log Isolation</td>
+    <td>[T] Test</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+  <tr>
+    <td><b>REQ-215</b></td>
+    <td>Cat 13: Web & Mobile Dashboard UI Contract</td>
+    <td>Cloud Command Pending Pill</td>
+    <td>[D] Demo</td>
+    <td>Feeder 03 (ESP32-S3)</td>
+    <td><span class="badge badge-pend">PENDING</span></td>
+    <td></td>
+    <td><code>web_dashboard/app.js;Cloud/api_lambda.py</code></td>
+  </tr>
+</tbody>
+</table>
+</body>
+</html>

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  LCD Detection & Fallback
+level: 1.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: PEghD77T8Dctv_77JwZYuHq5zi60SH6NKGS2VxDRa-8=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL poll I2C address `0x27` (primary) and `0x3F` (alternate). If neither acknowledges, system SHALL log `[LCD] Not Found` and proceed in Headless Web/LoRa mode without freezing.
+verified_date: ''

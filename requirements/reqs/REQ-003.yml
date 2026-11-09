@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Boot Visual Indicator
+level: 1.3
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: nujh05P_jjGgsK9xjQQ9xPv5b_O0AEaLVtqURZsYmTk=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL illuminate the onboard RGB LED to solid WHITE (`RGB: 64, 64, 64`) and turn ON the STAT1 Red LED upon boot.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 1 Scheduled Text
+level: 2.6
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 2kxpojapR57Zfq97txuygUV05ZEZEdPc2Z6azwRuUcw=
+status: PENDING
+test_notes: ''
+text: |
+  When machine is armed for today's schedule, Row 1 SHALL display `State: SCHEDULED   `.
+verified_date: ''

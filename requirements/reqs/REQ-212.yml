@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 13: Web & Mobile Dashboard UI Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Mobile Viewport Responsiveness
+level: 13.12
+links: []
+method: Demo
+normative: true
+ref: web_dashboard/app.js;Cloud/api_lambda.py
+reviewed: tCGkeXqtPdgEj_dJbYq2M4dGn3tGHMD8RchP1qm79kY=
+status: PENDING
+test_notes: ''
+text: |
+  The web dashboard layout SHALL render responsively on mobile viewports ($375\text{px}$ to $430\text{px}$ width) without horizontal scrolling.
+verified_date: ''

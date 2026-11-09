@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Hooter Mute Capability
+level: 9.13
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: nZctjoKovLI9h-hC5bccJ3vJ_K8W0pkLFEz-3h9cIHo=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[BACK]` while on the Paused Screen SHALL mute the periodic acoustic hooter while retaining visual error flags.
+verified_date: ''

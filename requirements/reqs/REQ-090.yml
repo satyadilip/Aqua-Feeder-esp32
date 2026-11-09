@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Total Events Deduction
+level: 5.15
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: FltaFSGFmO2y9n9QWL4A9h2WwoRpwW0_dtHPlMTSiWQ=
+status: PENDING
+test_notes: ''
+text: |
+  The total events count SHALL be calculated as $\text{TotalEvents} = \lceil (\text{FeedQuantity} \times 1000) / \text{FeedPerEvent} \rceil$.
+verified_date: ''

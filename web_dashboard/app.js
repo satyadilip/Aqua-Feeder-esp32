@@ -83,6 +83,27 @@ const defaultDevices = [
     intervalMin: 4.8,
     motorTimeSec: 2.0,
     scheduleValid: true
+  },
+  {
+    id: 'e072a1fffef5bac0',
+    name: 'aquaCON Feeder 04',
+    pondId: 'P-02',
+    status: 'STANDBY',
+    connected: true,
+    feedAvailable: true,
+    dispensedKg: 0.0,
+    targetKg: 15.0,
+    currentEvent: 0,
+    totalEvents: 150,
+    fpeGrams: 100,
+    dischargeRateGs: 50,
+    startHour: 6,
+    startMin: 0,
+    endHour: 18,
+    endMin: 0,
+    intervalMin: 7.0,
+    motorTimeSec: 2.0,
+    scheduleValid: true
   }
 ];
 
@@ -179,8 +200,12 @@ function loadDataFromStorage() {
         return d;
       });
 
-      // 1. Purge ALL obsolete dummy devices completely from storage
-      parsed = parsed.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02' && d.id !== 'aquaCON-AGV1-01');
+      // 1. Purge ALL obsolete dummy and ghost devices completely from storage
+      const GHOST_DEVICE_IDS = new Set([
+        'e072a1f6249c0005', 'e072a1f6249c0001', 'UNKNOWN_DEVICE', 
+        'aquaCON-Feeder-03', 'aquaCON-Feeder-02', 'aquaCON-AGV1-01'
+      ]);
+      parsed = parsed.filter(d => !GHOST_DEVICE_IDS.has(d.id));
 
       // 2. Ensure Feeder 03 (e072a1fffef64134) exists
       if (!parsed.some(d => d.id === 'e072a1fffef64134')) {
@@ -843,6 +868,7 @@ function loadSelectedDeviceToUI() {
 
     populateParamEditorUI(dev, heroTitle);
     updateDiagnosticsUI(dev, false, heroTitle);
+    renderCommandSyncUI(dev);
     return;
   }
 
@@ -888,25 +914,32 @@ function loadSelectedDeviceToUI() {
   const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
   const isFeedEmpty = dev.feedAvailable === false || dev.status === 'FEED EMPTY' || ((dev.statusFlags || 0) & 0x08) !== 0 || ((dev.statusFlags || 0) & 0x01) !== 0;
 
-  const isBeforeSchedule = nowTotalMin < startTotalMin && !isPaused && !isFeedEmpty && dev.status !== 'FEEDING' && dev.status !== 'ACTIVE';
+  const isBeforeSchedule = nowTotalMin < startTotalMin && dev.status !== 'COMPLETED' && dev.todayStatus !== 'COMPLETED' && !isPaused && !isFeedEmpty;
   const isPastSchedule = nowTotalMin >= endTotalMin;
 
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
-  // Calculate authoritative dispensed feed: strictly the sum of today's feed events history
+  // Calculate authoritative dispensed feed:
+  // Anchored to hardware-reported cumulative dispensed feed (dev.DispensedFeed_kg or dev.todayFeedDispensed_kg)
+  // Reconciled with today's event log history to ensure mathematical integrity
   let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  const hwDispensed = parseFloat(dev.DispensedFeed_kg !== undefined ? dev.DispensedFeed_kg : (dev.todayFeedDispensed_kg || 0.0));
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   if (dev.eventsLog && dev.eventsLog.length > 0) {
     const todayEvents = dev.eventsLog.filter(e => e.date === todayIso);
     if (todayEvents.length > 0) {
       const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
+      const sumKg = parseFloat((sumG / 1000.0).toFixed(2));
+      authoritativeDispensed = (hwDispensed > 0) ? Math.max(hwDispensed, sumKg) : sumKg;
       dev.dispensedKg = authoritativeDispensed;
     } else {
-      authoritativeDispensed = 0.0;
-      dev.dispensedKg = 0.0;
+      authoritativeDispensed = (hwDispensed > 0) ? hwDispensed : 0.0;
+      dev.dispensedKg = authoritativeDispensed;
     }
+  } else if (hwDispensed > 0) {
+    authoritativeDispensed = hwDispensed;
+    dev.dispensedKg = authoritativeDispensed;
   } else if (dev.currentEvent === 0) {
     authoritativeDispensed = 0.0;
     dev.dispensedKg = 0.0;
@@ -917,15 +950,25 @@ function loadSelectedDeviceToUI() {
   // Before today's schedule begins, today's feeding progress is 0
   const effectiveCurrent = isBeforeSchedule ? 0 : rawCurrent;
   const hasFeedsRanToday = (effectiveCurrent > 0 || rawDispensed > 0);
-  const isTargetCompleted = !isBeforeSchedule && (effectiveCurrent >= totalEvents || (targetKg > 0 && rawDispensed >= targetKg));
+  
+  // When feeder completed today's cycle or when out of feeding cycle (isPastSchedule) after feeds ran:
+  // Today's completed cycle was fully achieved for today's run!
+  // Any newly configured targetKg in settings is strictly for the NEXT feed cycle (tomorrow).
+  const isCompletedState = (dev.status === 'COMPLETED' || dev.todayStatus === 'COMPLETED') && (rawDispensed >= targetKg * 0.95 || (totalEvents > 0 && effectiveCurrent >= totalEvents));
+  const isTargetCompleted = !isBeforeSchedule && (
+    isCompletedState ||
+    (isPastSchedule && hasFeedsRanToday && (effectiveCurrent >= totalEvents || rawDispensed >= targetKg * 0.95)) ||
+    (totalEvents > 0 && effectiveCurrent >= totalEvents) ||
+    (targetKg > 0 && rawDispensed >= targetKg)
+  );
   const isScheduleEnded = !isBeforeSchedule && isPastSchedule && !isTargetCompleted;
-  const isTrulyCompleted = !isBeforeSchedule && (isTargetCompleted || (dev.status === 'COMPLETED' && isTargetCompleted));
+  const isTrulyCompleted = !isBeforeSchedule && isTargetCompleted;
   const isFeedStopped = (dev.status === 'STANDBY' || dev.status === 'STOPPED' || dev.feedActive === false);
 
-  const displayCurrent = isTargetCompleted ? effectiveCurrent : Math.min(effectiveCurrent, totalEvents);
-  const displayTotal = isTargetCompleted ? Math.max(totalEvents, effectiveCurrent) : totalEvents;
+  const displayCurrent = effectiveCurrent;
+  const displayTotal = Math.max(totalEvents, effectiveCurrent);
   const trueDispensePct = Math.min(100, Math.max(0, (rawDispensed / targetKg) * 100));
-  const gaugePct = (isTargetCompleted && rawDispensed >= targetKg) ? 100 : trueDispensePct;
+  const gaugePct = isTargetCompleted ? 100 : trueDispensePct;
 
   let statusText = 'STANDBY';
   let badgeClass = 'b-idle';
@@ -975,7 +1018,7 @@ function loadSelectedDeviceToUI() {
     nextTimestamp = isPastSchedule ? timeFormatted : '--';
     nextSubText = isPastSchedule ? `Starts tomorrow at ${timeFormatted}` : 'Feed Paused / Standby';
     eventSubText = `${displayCurrent} of ${displayTotal} completed`;
-  } else if (dev.status === 'FEEDING' || dev.status === 'ACTIVE' || (effectiveCurrent > 0 && !isPastSchedule)) {
+  } else if ((dev.status === 'FEEDING' || dev.status === 'ACTIVE') && !isFeedStopped) {
     statusText = 'FEEDING';
     badgeClass = 'b-run';
     const totalRemaining = isTrulyCompleted ? 0 : (dev.totalEventsRemaining !== undefined ? dev.totalEventsRemaining : Math.max(0, totalEvents - displayCurrent));
@@ -1038,11 +1081,21 @@ function loadSelectedDeviceToUI() {
   if (gaugePctBadge) {
     gaugePctBadge.textContent = isBeforeSchedule 
       ? `Scheduled ${timeFormatted}` 
-      : (isTargetCompleted && rawDispensed >= targetKg ? '100% Completed' : (isScheduleEnded ? `${gaugePct.toFixed(1)}% (Partial)` : `${gaugePct.toFixed(1)}%`));
+      : (isTargetCompleted ? '100% Completed' : (isScheduleEnded ? `${gaugePct.toFixed(1)}% (Partial)` : `${gaugePct.toFixed(1)}%`));
   }
 
   if (dispensedText) dispensedText.textContent = rawDispensed.toFixed(2);
   if (targetText) targetText.textContent = targetKg.toFixed(1);
+  const targetSyncPill = document.getElementById('target-sync-pill');
+  if (targetSyncPill) {
+    if (dev.settingsSyncStatus === 'PENDING') {
+      targetSyncPill.style.display = 'inline-flex';
+      const pendingVal = dev.pendingDailyTarget_kg !== undefined && dev.pendingDailyTarget_kg !== null ? dev.pendingDailyTarget_kg : targetKg;
+      targetSyncPill.textContent = `⏳ New: ${pendingVal} kg`;
+    } else {
+      targetSyncPill.style.display = 'none';
+    }
+  }
 
   if (burstCountText) {
     burstCountText.textContent = `${displayCurrent} / ${displayTotal}`;
@@ -1077,11 +1130,13 @@ function loadSelectedDeviceToUI() {
       btnStart.onclick = () => triggerRemoteAction('RESUME');
       btnStop.onclick = null;
     } else if (statusText === 'STANDBY') {
+      const isNightTime = nowTotalMin < startTotalMin || nowTotalMin >= endTotalMin;
       btnStart.disabled = false;
       btnStop.disabled = true;
       btnStart.classList.remove('btn-disabled', 'btn-resume');
       btnStop.classList.add('btn-disabled');
       btnStop.classList.remove('btn-stop-active');
+      btnStart.title = isNightTime ? `Click to Start / Arm: Feeder begins automatically at ${timeFormatted}` : 'Start daily feeding session';
       btnStart.innerHTML = `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>START FEEDING</span>`;
       btnStart.onclick = () => triggerRemoteAction('START');
       btnStop.onclick = null;
@@ -1095,14 +1150,15 @@ function loadSelectedDeviceToUI() {
       btnStart.onclick = () => triggerRemoteAction('START');
       btnStop.onclick = () => triggerRemoteAction('STOP');
     } else if (isTrulyCompleted) {
-      btnStart.disabled = true;
+      btnStart.disabled = false;
       btnStop.disabled = true;
-      btnStart.classList.add('btn-disabled');
+      btnStart.classList.remove('btn-disabled', 'btn-resume');
       btnStop.classList.add('btn-disabled');
-      btnStart.classList.remove('btn-resume');
       btnStop.classList.remove('btn-stop-active');
-      btnStart.title = "Today's Feeding Completed";
-      btnStop.title = "Today's Feeding Completed";
+      btnStart.title = "Today's feeding completed. Click to arm for tomorrow or restart.";
+      btnStart.innerHTML = `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>START FEEDING</span>`;
+      btnStart.onclick = () => triggerRemoteAction('START');
+      btnStop.onclick = null;
     } else {
       btnStart.disabled = false;
       btnStop.disabled = false;
@@ -1110,6 +1166,7 @@ function loadSelectedDeviceToUI() {
       btnStop.classList.remove('btn-disabled', 'btn-stop-active');
     }
   }
+  renderCommandSyncUI(dev);
 
   // Next feed exact timestamp & unambiguous sub-label
   const nextFeedTimestampEl = document.getElementById('next-feed-timestamp');
@@ -1174,6 +1231,143 @@ function loadSelectedDeviceToUI() {
   // so that background 5s polls do not wipe out inputs while user is typing.
 }
 
+function renderCommandSyncUI(dev) {
+  if (!dev) return;
+
+  const btnStart = document.getElementById('btn-remote-start');
+  const btnStop = document.getElementById('btn-remote-stop');
+  const callout = document.getElementById('command-sync-callout');
+  const calloutTitle = document.getElementById('command-sync-title');
+  const calloutSub = document.getElementById('command-sync-sub');
+  const stateBadge = document.getElementById('feeder-state-badge');
+
+  const pending = dev.pendingCommand || null;
+
+  function getStartNormalHtml() {
+    const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
+    const isFeeding = dev.status === 'FEEDING' || dev.status === 'ACTIVE';
+    const label = isPaused ? 'RESUME FEEDING' : (isFeeding ? 'FEED BURST NOW' : 'START FEEDING');
+    return `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></span><span>${label}</span>`;
+  }
+
+  function getStopNormalHtml() {
+    return `<span class="btn-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg></span><span>STOP FEEDING</span>`;
+  }
+
+  if (pending === 'START' || pending === 'RESUME') {
+    if (btnStart) {
+      btnStart.disabled = true;
+      btnStart.classList.add('btn-loading-pending');
+      btnStart.classList.remove('btn-disabled');
+      btnStart.innerHTML = `<span class="btn-icon spin-slow"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg></span><span>Starting...</span>`;
+    }
+    if (btnStop) {
+      btnStop.disabled = true;
+      btnStop.classList.remove('btn-loading-pending');
+      btnStop.classList.add('btn-disabled');
+      btnStop.innerHTML = getStopNormalHtml();
+    }
+    if (callout) {
+      callout.style.display = 'flex';
+      if (calloutTitle) calloutTitle.textContent = 'Starting feeder... waiting for confirmation';
+      if (calloutSub) calloutSub.style.display = 'none';
+    }
+    if (stateBadge) {
+      stateBadge.textContent = 'STARTING...';
+      stateBadge.className = 'badge-state b-alert';
+    }
+  } else if (pending === 'STOP') {
+    if (btnStop) {
+      btnStop.disabled = true;
+      btnStop.classList.add('btn-loading-pending');
+      btnStop.classList.remove('btn-disabled');
+      btnStop.innerHTML = `<span class="btn-icon spin-slow"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg></span><span>Stopping...</span>`;
+    }
+    if (btnStart) {
+      btnStart.disabled = true;
+      btnStart.classList.remove('btn-loading-pending');
+      btnStart.classList.add('btn-disabled');
+      btnStart.innerHTML = getStartNormalHtml();
+    }
+    if (callout) {
+      callout.style.display = 'flex';
+      if (calloutTitle) calloutTitle.textContent = 'Stopping feeder... waiting for confirmation';
+      if (calloutSub) calloutSub.style.display = 'none';
+    }
+    if (stateBadge) {
+      stateBadge.textContent = 'STOPPING...';
+      stateBadge.className = 'badge-state b-alert';
+    }
+  } else {
+    if (callout) callout.style.display = 'none';
+    if (btnStart) {
+      btnStart.classList.remove('btn-loading-pending');
+      btnStart.innerHTML = getStartNormalHtml();
+    }
+    if (btnStop) {
+      btnStop.classList.remove('btn-loading-pending');
+      btnStop.innerHTML = getStopNormalHtml();
+    }
+  }
+}
+
+function renderSettingsSyncStatus(dev) {
+  if (!dev) return;
+
+  const badgeEl = document.getElementById('settings-sync-badge');
+  const badgeTextEl = document.getElementById('sync-status-badge-text');
+  const calloutEl = document.getElementById('settings-sync-callout');
+  const titleEl = document.getElementById('sync-banner-title');
+  const descEl = document.getElementById('sync-banner-desc');
+  const diffBoxEl = document.getElementById('sync-banner-diff');
+  const diffPendingEl = document.getElementById('diff-pending-qty');
+  const diffActiveEl = document.getElementById('diff-active-qty');
+  const miniPillEl = document.getElementById('target-sync-pill');
+
+  const status = dev.settingsSyncStatus || 'IN_SYNC';
+  const isPending = status === 'PENDING';
+
+  // 1. Mini pill on Status Tab (under Daily Target)
+  if (miniPillEl) {
+    if (isPending) {
+      miniPillEl.style.display = 'inline-flex';
+      const pendingVal = dev.pendingDailyTarget_kg !== undefined && dev.pendingDailyTarget_kg !== null ? dev.pendingDailyTarget_kg : dev.targetKg;
+      miniPillEl.textContent = `⏳ New: ${pendingVal} kg`;
+    } else {
+      miniPillEl.style.display = 'none';
+    }
+  }
+
+  if (!badgeEl) return;
+
+  if (isPending) {
+    badgeEl.className = 'sync-badge sync-badge-pending';
+    if (badgeTextEl) badgeTextEl.textContent = 'UPDATING FEEDER...';
+
+    if (calloutEl) {
+      calloutEl.style.display = 'flex';
+      calloutEl.className = 'sync-banner sync-banner-pending';
+    }
+    if (titleEl) titleEl.textContent = 'Updating feeder...';
+    if (descEl) descEl.textContent = 'New settings saved. Updating feeder on next check-in.';
+
+    const pendingVal = dev.pendingDailyTarget_kg !== undefined && dev.pendingDailyTarget_kg !== null ? dev.pendingDailyTarget_kg : dev.targetKg;
+    const activeVal = dev.reportedDailyTarget_kg !== undefined && dev.reportedDailyTarget_kg !== null ? dev.reportedDailyTarget_kg : (dev.targetKg || 15.0);
+
+    if (diffBoxEl) {
+      diffBoxEl.style.display = 'flex';
+      if (diffPendingEl) diffPendingEl.textContent = `${pendingVal} kg`;
+      if (diffActiveEl) diffActiveEl.textContent = `${activeVal} kg`;
+    }
+  } else {
+    badgeEl.className = 'sync-badge sync-badge-synced';
+    if (badgeTextEl) badgeTextEl.textContent = 'SETTINGS SYNCED';
+
+    // Farmer-friendly simplicity: Hide the big technical card completely when in sync!
+    if (calloutEl) calloutEl.style.display = 'none';
+  }
+}
+
 async function populateParamEditorUI(dev, heroTitle, force = false) {
   if (!dev) {
     dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
@@ -1227,6 +1421,7 @@ async function populateParamEditorUI(dev, heroTitle, force = false) {
   if (inputEndMin) inputEndMin.value = dev.endMin !== undefined ? dev.endMin : 0;
 
   recalculateSchedule();
+  renderSettingsSyncStatus(dev);
 
   // Authoritatively fetch device settings from cloud
   try {
@@ -1244,6 +1439,12 @@ async function populateParamEditorUI(dev, heroTitle, force = false) {
         if (s.EndHour !== undefined) dev.endHour = Number(s.EndHour);
         if (s.EndMinute !== undefined) dev.endMin = Number(s.EndMinute);
         if (s.DischargeRate_gs !== undefined) dev.dischargeRateGs = Number(s.DischargeRate_gs);
+        if (s.SettingsSyncStatus !== undefined) dev.settingsSyncStatus = s.SettingsSyncStatus;
+        if (s.SettingsPushedAt !== undefined) dev.settingsPushedAt = s.SettingsPushedAt;
+        if (s.SettingsConfirmedAt !== undefined) dev.settingsConfirmedAt = s.SettingsConfirmedAt;
+        if (s.PendingDailyTarget_kg !== undefined) dev.pendingDailyTarget_kg = Number(s.PendingDailyTarget_kg);
+        if (s.ReportedDailyTarget_kg !== undefined) dev.reportedDailyTarget_kg = Number(s.ReportedDailyTarget_kg);
+        renderSettingsSyncStatus(dev);
 
         if (inputQty && sliderQty) {
           inputQty.value = dev.targetKg;
@@ -2191,6 +2392,12 @@ async function saveSettingsToFeeder() {
   const btnText = document.getElementById('save-btn-text');
   if (btnText) btnText.textContent = 'Saving to Feeder...';
 
+  // Mark immediate PENDING state in UI & Storage
+  dev.settingsSyncStatus = 'PENDING';
+  dev.pendingDailyTarget_kg = dev.targetKg;
+  dev.settingsPushedAt = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' IST';
+  renderSettingsSyncStatus(dev);
+
   saveDataToStorage();
 
   try {
@@ -2211,13 +2418,19 @@ async function saveSettingsToFeeder() {
     });
     if (res.ok) {
       const data = await res.json();
-      if (data && data.calculated) {
-        dev.totalEvents = data.calculated.totalEvents || dev.totalEvents;
-        dev.totalEventsRemaining = data.calculated.remainingEvents !== undefined ? data.calculated.remainingEvents : dev.totalEventsRemaining;
-        dev.intervalMin = data.calculated.intervalMin || dev.intervalMin;
+      if (data) {
+        if (data.syncStatus) dev.settingsSyncStatus = data.syncStatus;
+        if (data.settingsPushedAt) dev.settingsPushedAt = data.settingsPushedAt;
+        if (data.settingsConfirmedAt) dev.settingsConfirmedAt = data.settingsConfirmedAt;
+        if (data.calculated) {
+          dev.totalEvents = data.calculated.totalEvents || dev.totalEvents;
+          dev.totalEventsRemaining = data.calculated.remainingEvents !== undefined ? data.calculated.remainingEvents : dev.totalEventsRemaining;
+          dev.intervalMin = data.calculated.intervalMin || dev.intervalMin;
+        }
       }
+      renderSettingsSyncStatus(dev);
     }
-    showToast(`Settings saved for ${dev.name}!`);
+    showToast(`Settings queued for ${dev.name}! Waiting for feeder radio window...`);
   } catch (e) {
     showToast(`Settings saved locally for ${dev.name}`);
   } finally {
@@ -2244,11 +2457,11 @@ async function triggerRemoteAction(action) {
     const confirmMsg = `Resume feeding for ${dev.name}?`;
     if (!confirm(confirmMsg)) return;
 
-    dev.status = 'FEEDING';
+    dev.pendingCommand = 'RESUME';
     dev.feedAvailable = true;
-    showToast(`▶ Feeder resumed: ${dev.name}`);
+    renderCommandSyncUI(dev);
     saveDataToStorage();
-    loadSelectedDeviceToUI();
+    showToast(`⏳ Resume command queued! Awaiting feeder radio window...`);
 
     try {
       await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
@@ -2261,86 +2474,72 @@ async function triggerRemoteAction(action) {
   }
 
   if (action === 'START') {
+    const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
+    const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
+    const eHour = parseInt(dev.endHour !== undefined ? dev.endHour : (dev.EndHour !== undefined ? dev.EndHour : 18), 10);
+    const eMin = parseInt(dev.endMin !== undefined ? dev.endMin : (dev.EndMinute !== undefined ? dev.EndMinute : 0), 10);
+    const now = new Date();
+    const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
+    const nowMins = istParts[0] * 60 + istParts[1];
+    const startMins = sHour * 60 + sMin;
+    const endMins = eHour * 60 + eMin;
+
+    const isNight = nowMins < startMins || nowMins >= endMins;
     const fpeGrams = dev.fpeGrams || 100;
-    const confirmMsg = `Trigger feed burst for ${dev.name}?\n\n• ${fpeGrams}g feed will be dispensed immediately.\n• This will be counted as 1 completed feed event in today's cycle.`;
+    const sTimeStr = `${sHour.toString().padStart(2, '0')}:${sMin.toString().padStart(2, '0')}`;
+    let confirmMsg = '';
+    if (isNight) {
+      confirmMsg = `Start schedule for ${dev.name}?\n\n• Currently outside feeding hours (${sTimeStr} - ${eHour.toString().padStart(2, '0')}:${eMin.toString().padStart(2, '0')}).\n• Feeder will be ARMED to begin its schedule automatically at ${sTimeStr} AM.\n• No feed will be dispensed tonight.`;
+    } else {
+      confirmMsg = `Start feeding for ${dev.name}?\n\n• Feeder will begin its daily feeding schedule now.\n• First ${fpeGrams}g feed burst will start on next radio check-in.`;
+    }
     if (!confirm(confirmMsg)) return;
 
-    // 1. Calculate as ONE EVENT DONE in the entire feed cycle
-    const oldCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : 0;
-    const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 235;
-    const newCurrent = Math.min(totalEvents, oldCurrent + 1);
-    dev.currentEvent = newCurrent;
-
-    // 2. Increment dispensed feed
-    const addedKg = fpeGrams / 1000.0;
-    dev.dispensedKg = parseFloat(((dev.dispensedKg || 0) + addedKg).toFixed(2));
-
-    // 3. Mark active feeding pulse
-    dev.status = 'FEEDING';
-
-    // 4. Reset next interval timer from right now
-    const now = new Date();
-    const intervalMin = dev.intervalMin || 2.9;
-    const nextMs = now.getTime() + intervalMin * 60 * 1000;
-    const nextDate = new Date(nextMs);
-    const nH = nextDate.getHours();
-    const nM = nextDate.getMinutes();
-    const ampm = nH >= 12 ? 'PM' : 'AM';
-    const dispH = nH % 12 === 0 ? 12 : nH % 12;
-    dev.nextFeedTimestamp = `${String(dispH).padStart(2, '0')}:${String(nM).padStart(2, '0')} ${ampm}`;
-
-    // 5. Append to today's feed event log
-    if (!dev.eventsLog) dev.eventsLog = [];
-    dev.eventsLog.unshift({
-      eventNumber: newCurrent,
-      grams: fpeGrams,
-      time: now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
-      isManual: true
-    });
-
-    showToast(`▶ Feed event #${newCurrent} triggered! (+${fpeGrams}g counted in cycle)`);
-
-    // 6. Persist to storage & update UI instantly
+    dev.pendingCommand = 'START';
+    renderCommandSyncUI(dev);
     saveDataToStorage();
-    loadSelectedDeviceToUI();
+    showToast(`⏳ Start command queued! Awaiting feeder radio window...`);
 
-    // 7. Send downlink command & persist to AWS DynamoDB
     try {
-      await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          command: 'FEED',
-          feedGrams: fpeGrams,
-          currentEvent: newCurrent,
-          dispensedKg: dev.dispensedKg
-        })
+        body: JSON.stringify({ command: 'START' })
       });
-    } catch (e) {
-      // Local execution remains responsive
-    }
-
-    // After 2.5s simulated rotation, return to completed or scheduled
-    setTimeout(() => {
-      if (dev.status === 'FEEDING') {
-        dev.status = newCurrent >= totalEvents ? 'COMPLETED' : 'SCHEDULED';
-        loadSelectedDeviceToUI();
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.pendingCommand) {
+          dev.pendingCommand = data.pendingCommand;
+          renderCommandSyncUI(dev);
+        }
       }
-    }, 2500);
+    } catch (e) {}
 
   } else if (action === 'STOP') {
+    const confirmMsg = `Stop feeding for ${dev.name}?`;
+    if (!confirm(confirmMsg)) return;
+
     dev.status = 'STANDBY';
     dev.feedActive = false;
-    showToast(`⏹ Feeder paused: ${dev.name}`);
-    saveDataToStorage();
+    dev.pendingCommand = 'STOP';
     loadSelectedDeviceToUI();
+    renderCommandSyncUI(dev);
+    saveDataToStorage();
+    showToast(`⏳ Stop command queued! Awaiting feeder confirmation...`);
 
     try {
-      await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/command/${dev.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: 'STOP' })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.pendingCommand) {
+          dev.pendingCommand = data.pendingCommand;
+          renderCommandSyncUI(dev);
+        }
+      }
     } catch (e) {}
   }
 }
@@ -2838,7 +3037,9 @@ async function syncDevicesFromCloud() {
     const data = await res.json();
 
     if (data && data.devices) {
-      appState.devices = appState.devices.filter(d => d.id !== 'aquaCON-Feeder-03' && d.id !== 'aquaCON-Feeder-02');
+      const validCloudIds = new Set(data.devices.map(d => d.DeviceId));
+      // STRICT PURGE: Keep ONLY devices that are currently active in the cloud registry!
+      appState.devices = appState.devices.filter(d => validCloudIds.has(d.id));
       data.devices.forEach(cloudDev => {
         let localDev = appState.devices.find(d => d.id === cloudDev.DeviceId);
         if (!localDev) {
@@ -2877,8 +3078,35 @@ async function syncDevicesFromCloud() {
           if (cloudDev.EndMinute !== undefined) localDev.endMin = Number(cloudDev.EndMinute);
           if (cloudDev.Status) localDev.status = cloudDev.Status;
           if (cloudDev.StatusFlags !== undefined) localDev.statusFlags = Number(cloudDev.StatusFlags);
+          if (cloudDev.SettingsSyncStatus !== undefined) {
+            const prevSync = localDev.settingsSyncStatus;
+            localDev.settingsSyncStatus = cloudDev.SettingsSyncStatus;
+            if (prevSync === 'PENDING' && cloudDev.SettingsSyncStatus === 'IN_SYNC') {
+              showToast(`✓ ${localDev.name} confirmed settings over LoRaWAN!`);
+            }
+          }
+          if (cloudDev.SettingsPushedAt !== undefined) localDev.settingsPushedAt = cloudDev.SettingsPushedAt;
+          if (cloudDev.SettingsConfirmedAt !== undefined) localDev.settingsConfirmedAt = cloudDev.SettingsConfirmedAt;
+          if (cloudDev.PendingDailyTarget_kg !== undefined) localDev.pendingDailyTarget_kg = Number(cloudDev.PendingDailyTarget_kg);
+          if (cloudDev.ReportedDailyTarget_kg !== undefined) localDev.reportedDailyTarget_kg = Number(cloudDev.ReportedDailyTarget_kg);
+          if (cloudDev.PendingCommand !== undefined) {
+            const prevCmd = localDev.pendingCommand;
+            localDev.pendingCommand = cloudDev.PendingCommand;
+            if (prevCmd && !cloudDev.PendingCommand) {
+              showToast(`✓ ${localDev.name} confirmed ${prevCmd} over LoRaWAN!`);
+            }
+          } else if (localDev.pendingCommand) {
+            const prevCmd = localDev.pendingCommand;
+            localDev.pendingCommand = null;
+            showToast(`✓ ${localDev.name} confirmed ${prevCmd} over LoRaWAN!`);
+          }
         }
       });
+      const curDev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+      if (curDev) {
+        renderCommandSyncUI(curDev);
+        renderSettingsSyncStatus(curDev);
+      }
       // Persist latest telemetry into storage so page refreshes never flash stale data
       try {
         localStorage.setItem('aquacon_devices', JSON.stringify(appState.devices));

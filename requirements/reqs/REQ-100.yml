@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Full Window Duration Formula
+level: 6.5
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: bu9BQcTDVDQrmJxlyl3lJuQUvXyK_bU5WYyLOKIo9FQ=
+status: PENDING
+test_notes: ''
+text: |
+  Total daylight window seconds SHALL be calculated as $t_{\text{window}} = (\text{EndHour} \times 3600 + \text{EndMin} \times 60) - (\text{StartHour} \times 3600 + \text{StartMin} \times 60)$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 9: Hopper Level Sensing, Proximity & Hooter Alarm'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Visual Empty Indicator
+level: 9.8
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/feed_engine.cpp
+reviewed: WPBf-e7BQkzBFk_l02QRq7f5tPjvzgrKH8xVfsFvg-Y=
+status: PENDING
+test_notes: ''
+text: |
+  The STAT1 Red LED SHALL flash at $1\text{ Hz}$ while paused due to empty hopper.
+verified_date: ''

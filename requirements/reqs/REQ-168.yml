@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Check Tray Night Lockdown
+level: 10.8
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: wQy5azYSgZ7oN8nGfKvIqdRanCzqIqhtj4Lsd3Hejp8=
+status: PENDING
+test_notes: ''
+text: |
+  The system SHALL reject `Check Tray` requests received between `18:00` and `06:00 IST` with error `Outside Feed Window`.
+verified_date: ''

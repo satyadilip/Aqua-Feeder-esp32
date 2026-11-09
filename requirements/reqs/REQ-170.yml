@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Check Tray Telemetry Record
+level: '10.10'
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: IwSc94drp11FNXzzANh5irYyvfeeZfXDENyUQANhG7M=
+status: PENDING
+test_notes: ''
+text: |
+  Upon `Check Tray` completion, a dedicated uplink packet with MsgType `0x0A` (Tray Checkin) SHALL be transmitted.
+verified_date: ''

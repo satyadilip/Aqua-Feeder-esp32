@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 6: Schedule Engine, Timing & Operational Window Constraints'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Completion Lockout on Same Day
+level: 6.19
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/feed_engine.cpp
+reviewed: Ktkp0U54UdEkaOuDdCbSezfUHIsFrVBOv-FTwjzGUD0=
+status: PENDING
+test_notes: ''
+text: |
+  Once `FEED_FINISHED` is reached on calendar day $D$, auto-start SHALL remain locked until calendar day $D+1$.
+verified_date: ''

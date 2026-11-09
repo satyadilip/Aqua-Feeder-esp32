@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Progress Bar Enclosure
+level: 2.18
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: KcgDCTtMazJFF5uFQjLGj8phUk3S9QRsQ3vnHkAyPcY=
+status: PENDING
+test_notes: ''
+text: |
+  The LCD progress bar SHALL render an opening bracket `[` at Column 0 and a closing bracket `]` at Column 19 on Row 2, containing exactly 18 bar slots.
+verified_date: ''

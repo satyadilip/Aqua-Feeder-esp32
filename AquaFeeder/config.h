@@ -290,7 +290,7 @@ struct DeviceConfig {
     uint8_t  loraDevEUI[8];
     uint8_t  loraAppEUI[8];
     uint8_t  loraAppKey[16];
-    bool     loraOTAA;           // true = OTAA, false = ABP
+    uint8_t  loraMode;           // 0 = AUTO_FALLBACK (OTAA then ABP), 1 = OTAA_ONLY, 2 = ABP_ONLY
 
     // WiFi Station (for cloud MQTT)
     char     wifiSSID[33];

@@ -894,19 +894,26 @@ function loadSelectedDeviceToUI() {
   const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
   const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 150;
 
-  // Calculate authoritative dispensed feed: strictly the sum of today's feed events history
+  // Calculate authoritative dispensed feed:
+  // Anchored to hardware-reported cumulative dispensed feed (dev.DispensedFeed_kg or dev.todayFeedDispensed_kg)
+  // Reconciled with today's event log history to ensure mathematical integrity
   let authoritativeDispensed = dev.dispensedKg !== undefined ? dev.dispensedKg : 0;
+  const hwDispensed = parseFloat(dev.DispensedFeed_kg !== undefined ? dev.DispensedFeed_kg : (dev.todayFeedDispensed_kg || 0.0));
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   if (dev.eventsLog && dev.eventsLog.length > 0) {
     const todayEvents = dev.eventsLog.filter(e => e.date === todayIso);
     if (todayEvents.length > 0) {
       const sumG = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-      authoritativeDispensed = parseFloat((sumG / 1000.0).toFixed(2));
+      const sumKg = parseFloat((sumG / 1000.0).toFixed(2));
+      authoritativeDispensed = (hwDispensed > 0) ? Math.max(hwDispensed, sumKg) : sumKg;
       dev.dispensedKg = authoritativeDispensed;
     } else {
-      authoritativeDispensed = 0.0;
-      dev.dispensedKg = 0.0;
+      authoritativeDispensed = (hwDispensed > 0) ? hwDispensed : 0.0;
+      dev.dispensedKg = authoritativeDispensed;
     }
+  } else if (hwDispensed > 0) {
+    authoritativeDispensed = hwDispensed;
+    dev.dispensedKg = authoritativeDispensed;
   } else if (dev.currentEvent === 0) {
     authoritativeDispensed = 0.0;
     dev.dispensedKg = 0.0;

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feed Per Event Range
+level: 5.3
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: 7x8T-91oWsC_eSonNCtvpkAUU9_i-A2vjHOKlh87bro=
+status: PENDING
+test_notes: ''
+text: |
+  The Feed Per Event setting SHALL be bounded between a minimum of $50\text{ g}$ and a maximum of $1000\text{ g}$.
+verified_date: ''

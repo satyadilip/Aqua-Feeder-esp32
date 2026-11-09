@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  NVS Configuration Load
+level: 1.16
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: uAwi5-xHFlu3704DrM4GC30hLV5ovrRXCRm6RAVdDf4=
+status: PENDING
+test_notes: ''
+text: |
+  The firmware SHALL load persistent settings (`feedQuantity`, `feedPerEvent`, `startHour`, `startMinute`, `endHour`, `endMinute`, `dischargeRate`) from NVS partition `aquacon`.
+verified_date: ''

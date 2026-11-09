@@ -1,0 +1,18 @@
+active: true
+category: 'Cat 1: Power-On, Bootup & Hardware Bring-Up'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Power-On Relay Isolation
+level: 1.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: cmlSndjq6Yae0LkEBpgbRBmaiDCpVe7qDT-2g7Y6_iw=
+status: PASSED
+test_notes: |
+  Tested on Feeder 03: Verified GPIO 10 and 11 held LOW on boot, zero motor spin
+text: |
+  The firmware SHALL initialize GPIO 10 (Spreader Relay) and GPIO 11 (Loader Relay) to LOW (de-energized) within $\le 50\text{ ms}$ of ROM boot to prevent inadvertent motor spin.
+verified_date: '2026-11-07 15:24:15'

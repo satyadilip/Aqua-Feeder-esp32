@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Start Hour Range
+level: 5.5
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: ABVfNjhM2y7xPcWNlbb4JV-wEtCJfQ8TOkbvCx3QSLY=
+status: PENDING
+test_notes: ''
+text: |
+  The Schedule Start Hour setting SHALL be bounded between $06\text{ (6 AM)}$ and $17\text{ (5 PM)}$.
+verified_date: ''

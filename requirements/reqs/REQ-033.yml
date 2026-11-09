@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Home Row 2 Gap Countdown
+level: 2.15
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: wiBTBENYDoa0wrz7c9nfP41hnzCltubcSATAb6oT3aU=
+status: PENDING
+test_notes: ''
+text: |
+  During `FC_WAIT`, Row 2 SHALL display `E:XXX/YYY W:ZZZZs   ` where XXX is current event, YYY is total events, and ZZZZ is remaining wait seconds.
+verified_date: ''

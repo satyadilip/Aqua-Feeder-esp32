@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 8: Safety Interlocks, Current Monitoring & Motor Trip'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Manual Jam Clearance Reset
+level: '8.10'
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/power_monitor.cpp;AquaFeeder/af_hal.cpp
+reviewed: 6W1Ktb0VX-90Znxc93QDkr2H8GOBqWRr9IzG3DXDjYo=
+status: PENDING
+test_notes: ''
+text: |
+  The user SHALL only clear a Motor Trip by pressing `[BACK]` from the Home Screen or power-cycling the device.
+verified_date: ''

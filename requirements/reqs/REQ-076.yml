@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Feed Quantity Range
+level: 5.1
+links: []
+method: Test
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: aTDEWBYe6238e0dw3k6HNrUyBtbVZU6UtYCYGgh4T24=
+status: PENDING
+test_notes: ''
+text: |
+  The Daily Feed Quantity setting SHALL be bounded between a minimum of $0.5\text{ kg}$ and a maximum of $120.0\text{ kg}$.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 5: Settings, Limits & NVS Persistence'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Clock Setting Field 1
+level: 5.19
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/config_manager.cpp;AquaFeeder/config.h
+reviewed: jE1ET66_iOuN1rw0f2JUxjDG-zFUHULqfwbFC-e2FMM=
+status: PENDING
+test_notes: ''
+text: |
+  In `EDIT_CLOCK`, Field 1 SHALL adjust Minutes (`00` to `59`). Pressing SELECT commits time to DS3231 RTC.
+verified_date: ''

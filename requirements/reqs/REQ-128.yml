@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 7: 3-Phase Dispensing Engine & Actuator Control'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Active Pulse LED Indication
+level: 7.13
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/af_hal.cpp
+reviewed: snWRy-cr1NxBYFNU0jB-O3EO1hVv9B2U4Gk2fB74wO0=
+status: PENDING
+test_notes: ''
+text: |
+  The STAT2 Green LED SHALL flash at $5\text{ Hz}$ during Phase 1, Phase 2, and Phase 3.
+verified_date: ''

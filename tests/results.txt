@@ -1,0 +1,47 @@
+test_req_181_time_sync_downlink (test_cloud_requirements.TestCloudRequirements.test_req_181_time_sync_downlink)
+REQ-181: Cloud Time Synchronization Downlink (CMD_SYNC_TIME 0xA3) ... ok
+test_req_191_cloud_misinterpretation_prohibition (test_cloud_requirements.TestCloudRequirements.test_req_191_cloud_misinterpretation_prohibition)
+REQ-191: Bit 5 (0x20 = SD Card) must NOT be interpreted as feed active ... ok
+test_req_193_downlink_packet_format (test_cloud_requirements.TestCloudRequirements.test_req_193_downlink_packet_format)
+REQ-193: Downlink packet must strictly measure 12 bytes across all commands ... ok
+test_req_196_telemetry_deduplication (test_cloud_requirements.TestCloudRequirements.test_req_196_telemetry_deduplication)
+REQ-196: Ingestion Lambda deduplicates incoming uplinks by primary key (DeviceId, Timestamp) ... ok
+test_req_197_daytime_telemetry_filtering (test_cloud_requirements.TestCloudRequirements.test_req_197_daytime_telemetry_filtering)
+REQ-197: Cloud query for today's feed filters strictly >= 00:00:00 IST ... ok
+test_req_198_zero_item_rollover_invariant (test_cloud_requirements.TestCloudRequirements.test_req_198_zero_item_rollover_invariant)
+REQ-198: When no telemetry records exist for current calendar day, returns 0.00 kg and 0 events ... ok
+test_req_201_zero_jargon_presentation (test_cloud_requirements.TestCloudRequirements.test_req_201_zero_jargon_presentation)
+REQ-201: Dashboard displays human-friendly badges (STANDBY, FEEDING, PAUSED, COMPLETED, OVERCURRENT, EMPTY) ... ok
+test_req_202_night_window_status_display (test_cloud_requirements.TestCloudRequirements.test_req_202_night_window_status_display)
+REQ-202: Between 18:00 and 06:00 IST, dashboard status badge displays STANDBY ... ok
+test_req_203_night_window_next_feed_display (test_cloud_requirements.TestCloudRequirements.test_req_203_night_window_next_feed_display)
+REQ-203: Between 00:00 and 06:00 IST, Next Feed displays morning schedule ... ok
+test_req_204_evening_next_feed_display (test_cloud_requirements.TestCloudRequirements.test_req_204_evening_next_feed_display)
+REQ-204: Between 18:00 and 24:00 IST, Next Feed displays tomorrow's schedule ... ok
+test_req_205_pre_dawn_progress_bar_integrity (test_cloud_requirements.TestCloudRequirements.test_req_205_pre_dawn_progress_bar_integrity)
+REQ-205: Between 00:00 and 06:00 IST on a new calendar day, progress gauge displays 0% ... ok
+test_req_206_pre_dawn_dispensed_weight_integrity (test_cloud_requirements.TestCloudRequirements.test_req_206_pre_dawn_dispensed_weight_integrity)
+REQ-206: Between 00:00 and 06:00 IST, Dispensed Today displays 0.00 kg ... ok
+test_req_207_standby_action_button_mapping (test_cloud_requirements.TestCloudRequirements.test_req_207_standby_action_button_mapping)
+REQ-207: In STANDBY, primary button displays START FEEDING and is active ... ok
+test_req_208_night_arming_operator_confirmation (test_cloud_requirements.TestCloudRequirements.test_req_208_night_arming_operator_confirmation)
+REQ-208: Clicking START FEEDING during night hours displays informational prompt/arming ... ok
+test_req_209_feeding_action_button_mapping (test_cloud_requirements.TestCloudRequirements.test_req_209_feeding_action_button_mapping)
+REQ-209: When FEEDING, primary button displays FEED BURST NOW and secondary button is STOP FEEDING ... ok
+test_req_210_paused_action_button_mapping (test_cloud_requirements.TestCloudRequirements.test_req_210_paused_action_button_mapping)
+REQ-210: When PAUSED, primary button displays RESUME FEEDING and is active ... ok
+test_req_211_completed_action_button_mapping (test_cloud_requirements.TestCloudRequirements.test_req_211_completed_action_button_mapping)
+REQ-211: When COMPLETED, primary button allows arming or restart ... ok
+test_req_212_mobile_viewport_responsiveness (test_cloud_requirements.TestCloudRequirements.test_req_212_mobile_viewport_responsiveness)
+REQ-212: Web dashboard layout has responsive viewport meta tag and mobile-first container max-width ... ok
+test_req_213_auto_refresh_polling_cycle (test_cloud_requirements.TestCloudRequirements.test_req_213_auto_refresh_polling_cycle)
+REQ-213: Dashboard polls GET /api/devices every 5.0 seconds ... ok
+test_req_214_history_tab_event_log_isolation (test_cloud_requirements.TestCloudRequirements.test_req_214_history_tab_event_log_isolation)
+REQ-214: History tab isolates events to active operational date ... ok
+test_req_215_cloud_command_pending_pill (test_cloud_requirements.TestCloudRequirements.test_req_215_cloud_command_pending_pill)
+REQ-215: While downlink command is queued, displays pending confirmation callout ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 0.045s
+
+OK

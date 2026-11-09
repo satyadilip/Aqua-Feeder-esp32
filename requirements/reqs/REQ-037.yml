@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 2: 20x4 LCD Physical Screen Layouts & Text Bounds'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Sub-Pixel Progress Math
+level: 2.19
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/lcd_display.cpp
+reviewed: 9yI8zktman__Un3RI9GRliYn9hnp7WGf9FIjUzuT_Uw=
+status: PENDING
+test_notes: ''
+text: |
+  The progress bar SHALL scale 0.0% to 100.0% linearly across 90 discrete sub-pixel levels ($18 \text{ slots} \times 5 \text{ sub-pixels}$).
+verified_date: ''

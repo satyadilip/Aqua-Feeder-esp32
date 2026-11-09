@@ -242,7 +242,7 @@
                 <div class="metric-sub-divider"></div>
                 <div class="metric-sub-item">
                   <span class="metric-sub-label">Daily Target</span>
-                  <span class="metric-sub-val"><span id="target-val-text">--</span> kg</span>
+                  <span class="metric-sub-val"><span id="target-val-text">--</span> kg <span id="target-sync-pill" class="pill-sync-mini" style="display:none;">⏳ Pending Sync</span></span>
                 </div>
               </div>
 
@@ -291,6 +291,20 @@
                   </span>
                   <span>STOP FEEDING</span>
                 </button>
+              </div>
+
+              <!-- Clean Command Status Notice (Farmer Friendly) -->
+              <div id="command-sync-callout" class="command-sync-banner" style="display: none;">
+                <div class="command-sync-icon" id="command-sync-icon-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="spin-slow">
+                    <circle cx="12" cy="12" r="2"></circle>
+                    <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+                  </svg>
+                </div>
+                <div class="command-sync-text">
+                  <strong id="command-sync-title" class="command-sync-title-clean">Waiting for feeder...</strong>
+                  <span id="command-sync-sub" style="display: none;"></span>
+                </div>
               </div>
             </div>
             <!-- Instant Inline Pre-Hydration from Cached State (Eliminates Flash of Stale Data) -->
@@ -552,6 +566,42 @@
                 <div>
                   <span class="device-tag">DAILY SCHEDULE</span>
                   <h2 class="section-title">Feed Settings for <span id="param-device-name">Feeder 01</span></h2>
+                </div>
+                <div id="settings-sync-badge-container">
+                  <div id="settings-sync-badge" class="sync-badge sync-badge-synced">
+                    <span class="sync-dot" id="sync-dot"></span>
+                    <span id="sync-status-badge-text">IN SYNC</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Clean Settings Sync Banner (Shown only when updating) -->
+              <div id="settings-sync-callout" class="sync-banner sync-banner-pending" style="display: none;">
+                <div class="sync-banner-icon" id="sync-banner-icon-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="spin-slow">
+                    <circle cx="12" cy="12" r="2"></circle>
+                    <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path>
+                  </svg>
+                </div>
+                <div class="sync-banner-body">
+                  <div class="sync-banner-head">
+                    <span class="sync-banner-title" id="sync-banner-title">Updating feeder...</span>
+                    <span class="sync-banner-time" id="sync-banner-time" style="display:none;"></span>
+                  </div>
+                  <p class="sync-banner-desc" id="sync-banner-desc">
+                    New settings saved. Updating feeder on next check-in.
+                  </p>
+                  <div class="sync-banner-diff" id="sync-banner-diff" style="display: none;">
+                    <div class="diff-chip diff-active">
+                      <span class="diff-lbl">Active:</span>
+                      <strong id="diff-active-qty">-- kg</strong>
+                    </div>
+                    <div class="diff-arrow">→</div>
+                    <div class="diff-chip diff-pending">
+                      <span class="diff-lbl">New Target:</span>
+                      <strong id="diff-pending-qty">-- kg</strong>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1248,7 +1298,7 @@
   <div id="app-toast" class="toast-banner"></div>
 
   <!-- Main Application Script -->
-  <script src="app.js?v=2.5"></script>
+  <script src="app.js?v=2.7"></script>
 </body>
 </html>
 

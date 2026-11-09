@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 12: Wireless Telemetry & LoRaWAN Communications Contract'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Cloud Misinterpretation Prohibition
+level: 12.6
+links: []
+method: Inspect
+normative: true
+ref: AquaFeeder/lora_manager.cpp;AquaFeeder/telemetry.cpp
+reviewed: CgoX26k3BQRZB48WYiUhOayRq5a-eXK7dTL6zGZiY3g=
+status: PENDING
+test_notes: ''
+text: |
+  Cloud ingestion services SHALL NOT interpret `Bit 5` (`0x20`) as feed active. `FEEDING` state SHALL strictly depend on message type and daylight window.
+verified_date: ''

@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 3: Keypad Input, Debouncing & Navigation'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Menu Item Selection
+level: 3.9
+links: []
+method: Demo
+normative: true
+ref: AquaFeeder/af_hal.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: PS5freRFD68n4uLsyTghXYThSTPGux0vi1PAyUfbppY=
+status: PENDING
+test_notes: ''
+text: |
+  Pressing `[SELECT]` (SW3) in `MENU_LIST` SHALL open the corresponding submenu or execute the associated command.
+verified_date: ''

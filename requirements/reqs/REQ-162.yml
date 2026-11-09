@@ -1,0 +1,17 @@
+active: true
+category: 'Cat 10: Pause, Resume Engine & Manual Feed'
+derived: false
+hardware_target: Feeder 03 (ESP32-S3)
+header: |
+  Same-Window Countdown Continuity
+level: 10.2
+links: []
+method: Analysis
+normative: true
+ref: AquaFeeder/feed_engine.cpp;AquaFeeder/AquaFeeder.ino
+reviewed: kT2lQ_5RItRhc5TFYBjVHH5zjjMsaBrtsZxPI66i5GU=
+status: PENDING
+test_notes: ''
+text: |
+  In Scenario A (Same-Window Resume), the countdown on Row 2 SHALL resume from $(T_{\text{nextFeed}} - T_{\text{current}})$.
+verified_date: ''

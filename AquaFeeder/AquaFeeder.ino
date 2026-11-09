@@ -41,6 +41,8 @@
 
 
 #include <Wire.h>
+#include <esp_task_wdt.h>
+#define WDT_TIMEOUT_MS 30000
 
 #include <SPI.h>
 
@@ -265,7 +267,7 @@ void cbOnSaveConfig(const DeviceConfig& newCfg) {
 
     uint32_t epoch = rtcMgr.getEpoch();
 
-    bool valid = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+    bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
     if (!valid) {
 
@@ -330,25 +332,16 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         
 
         uint32_t epoch = rtcMgr.getEpoch();
-
-        bool valid = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
-
+        bool valid = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
         if (!valid) {
-
             Serial.printf("[MAIN] [REJECT] Downlink settings invalid or cannot fit: %s\n", sysStatus.schedError);
-
             config = oldCfg;
-
             if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
-
             else feedEng.calcSchedule(epoch);
-
         } else {
-
-            cfgMgr.saveFeedParams(config);
-
-            Serial.println("[MAIN] Settings applied from Downlink!");
-
+            config.hasBeenRun = true;
+            cfgMgr.saveConfig(config);
+            Serial.println("[MAIN] Settings applied & saved from Downlink!");
         }
 
         
@@ -376,17 +369,27 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
         Serial.printf("[MAIN] Received CMD_SYNC_TIME Downlink! Raw Epoch: %u\n", epoch);
 
         if (epoch > 1700000000) {
-
             rtcMgr.setEpoch(epoch);
-
             sysStatus.rtcOK = true;
-
             sysStatus.currentEpoch = epoch;
-
             Serial.printf("[MAIN] [SUCCESS] RTC Synchronized via Cloud! Time: %s\n", rtcMgr.getDateTimeStr().c_str());
-
+            
+            // Evaluate authoritative day rollover on time synchronization
+            uint32_t currentDay = epoch / 86400;
+            if (sysStatus.lastFedDay > 0 && currentDay > sysStatus.lastFedDay) {
+                Serial.printf("[RTC-SYNC] Cloud time confirms new calendar day %lu (was %lu). Resetting daily counters.\n",
+                              currentDay, sysStatus.lastFedDay);
+                sysStatus.feedActive = false;
+                sysStatus.currentEvent = 0;
+                sysStatus.dispensedQuantity_g = 0.0f;
+                sysStatus.lastFedDay = currentDay;
+                feedEng.calcSchedule(epoch);
+                cfgMgr.saveRunState(sysStatus);
+            } else {
+                if (feedEng.isActive()) feedEng.recalcDynamic(epoch);
+                else feedEng.calcSchedule(epoch);
+            }
             telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
-
         }
 
     }
@@ -401,14 +404,20 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
 
         
 
+        if (durationSec > 5) durationSec = 5; // Safety clamp: 5s max test run
         hal.setRelay(motorNum, true);
-
-        delay(durationSec * 1000UL);
-
-        pwrMon.update();
-
-        float runCur = pwrMon.getCurrent();
-
+        unsigned long testStart = millis();
+        float runCur = 0.0f;
+        while (millis() - testStart < durationSec * 1000UL) {
+            pwrMon.update();
+            float cur = pwrMon.getCurrent();
+            if (cur > runCur) runCur = cur;
+            if (cur > (config.overcurrentLimit > 0 ? config.overcurrentLimit : OVERCURRENT_LIMIT_MA)) {
+                Serial.printf("[MAIN] Overcurrent trip during motor %d test! (%.1f mA)\n", motorNum, cur);
+                break;
+            }
+            delay(50);
+        }
         hal.setRelay(motorNum, false);
 
         Serial.printf("[MAIN] Motor %d test completed. Measured current: %.1f mA\n", motorNum, runCur);
@@ -440,21 +449,47 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
     }
 
     else if (dl.msgType == (uint8_t)CommandMsgType::CMD_START_FEED) {
-
         Serial.println("[MAIN] [DOWNLINK] Received CMD_START_FEED from Cloud!");
-
-        if (!feedEng.isActive()) {
-
-            cbOnFeedStart();
-
-            Serial.println("[MAIN] Feed started successfully via Cloud Downlink!");
-
+        uint32_t epoch = rtcMgr.getEpoch();
+        bool proxActive = hal.isProximityTriggered();
+        if (feedEng.isPaused() || sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
+            if (!proxActive) {
+                sysStatus.proximityTriggered = false;
+                hal.setHooter(false);
+                feedEng.resumeFeed(epoch);
+                currentMenu = MenuState::RUNNING;
+                telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+                Serial.println("[MAIN] Feed resumed successfully from pause via Cloud START downlink!");
+            } else {
+                Serial.println("[MAIN] Cannot resume feed: Proximity sensor still triggered (empty/blocked)!");
+                telMgr.queueEvent(TelemetryMsgType::ALARM_PROXIMITY);
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+            }
+        } else if (!feedEng.isActive()) {
+            uint32_t secSinceMidnight = epoch % 86400;
+            uint32_t startSecToday = (config.startHour * 3600UL) + (config.startMinute * 60UL);
+            uint32_t endSecToday = (config.endHour * 3600UL) + (config.endMinute * 60UL);
+            if (epoch > 0 && (secSinceMidnight < startSecToday || secSinceMidnight >= endSecToday)) {
+                Serial.printf("[MAIN] [STRICT NIGHT GUARD] CMD_START_FEED received outside daytime window (%02d:%02d - %02d:%02d). Feeder ARMED for tomorrow morning!\n",
+                              config.startHour, config.startMinute, config.endHour, config.endMinute);
+                if (!config.hasBeenRun) {
+                    config.hasBeenRun = true;
+                    cfgMgr.saveConfig(config);
+                }
+                feedEng.calcSchedule(epoch);
+                sysStatus.state = SystemState::IDLE;
+                sysStatus.feedActive = false;
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+                Serial.println("[MAIN] Feeder successfully armed from Cloud! hasBeenRun saved to NVS. Starting at configured start time.");
+            } else {
+                cbOnFeedStart();
+                Serial.println("[MAIN] Feed started successfully via Cloud Downlink!");
+            }
         } else {
-
-            Serial.println("[MAIN] Feed is already active, ignoring start downlink.");
-
+            feedEng.resumeFeed(epoch);
+            Serial.println("[MAIN] Feed already active - triggered immediate cycle via Cloud START downlink!");
         }
-
     }
 
     else if (dl.msgType == (uint8_t)CommandMsgType::CMD_STOP_FEED) {
@@ -489,33 +524,35 @@ void cbOnDownlink(const LoRaDownlinkPayload& dl) {
     else if (dl.msgType == (uint8_t)CommandMsgType::CMD_RESUME_FEED) {
 
         Serial.println("[MAIN] [DOWNLINK] Received CMD_RESUME_FEED from Cloud!");
+        uint32_t epoch = rtcMgr.getEpoch();
+        bool proxActive = hal.isProximityTriggered();
+        Serial.printf("[MAIN] [RESUME_CHECK] isPaused: %d, sysState: %d, menu: %d, prox: %d\n",
+                      feedEng.isPaused(), (int)sysStatus.state, (int)currentMenu, proxActive);
 
-        if (sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
+        if (proxActive) {
+            Serial.println("[MAIN] Cannot resume feed: Proximity sensor still triggered (empty/blocked)!");
+            telMgr.queueEvent(TelemetryMsgType::ALARM_PROXIMITY);
+            telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+        } else {
+            sysStatus.proximityTriggered = false;
+            hal.setHooter(false);
 
-            if (!hal.isProximityTriggered()) {
-
-                sysStatus.proximityTriggered = false;
-
-                hal.setHooter(false);
-
-                uint32_t epoch = rtcMgr.getEpoch();
-
+            if (feedEng.isPaused() || sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
                 feedEng.resumeFeed(epoch);
-
                 currentMenu = MenuState::RUNNING;
-
+                telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
                 telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
-
-                Serial.println("[MAIN] Feed resumed successfully via Cloud Downlink!");
-
+                Serial.println("[MAIN] Feed resumed successfully from pause via Cloud Downlink!");
+            } else if (!feedEng.isActive()) {
+                Serial.println("[MAIN] Feeding session started/resumed from IDLE via Cloud Downlink!");
+                feedEng.startFeed(epoch);
+                currentMenu = MenuState::RUNNING;
+                telMgr.queueEvent(TelemetryMsgType::FEED_STARTED);
+                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
             } else {
-
-                Serial.println("[MAIN] Cannot resume feed: Proximity sensor still triggered (empty/blocked)!");
-
+                Serial.println("[MAIN] Feed already running actively.");
             }
-
         }
-
     }
 
 }
@@ -954,7 +991,35 @@ void handleButtonNavigation() {
 
                     case 1: // Start or Stop Feeding
 
-                        if (feedEng.isActive() || sysStatus.feedActive) {
+                        if (feedEng.isPaused() || sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
+
+                            if (!hal.isProximityTriggered()) {
+
+                                sysStatus.proximityTriggered = false;
+
+                                hal.setHooter(false);
+
+                                uint32_t epoch = rtcMgr.getEpoch();
+
+                                feedEng.resumeFeed(epoch);
+
+                                currentMenu = MenuState::RUNNING;
+
+                                telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
+
+                                telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
+
+                                Serial.println("[RESUME] Feed successfully resumed by operator from menu.");
+
+                                lcd.showMessage("Feed Resumed", "Cycle Active", 1500);
+
+                            } else {
+
+                                lcd.showMessage("Cannot Resume", "Refill Feed First", 2000);
+
+                            }
+
+                        } else if (feedEng.isActive() || sysStatus.feedActive) {
 
                             cbOnFeedStop();
 
@@ -968,6 +1033,11 @@ void handleButtonNavigation() {
 
                         } else {
 
+                            if (!config.hasBeenRun) {
+                                config.hasBeenRun = true;
+                                cfgMgr.saveConfig(config);
+                            }
+
                             sysStatus.state = SystemState::IDLE;
 
                             uint32_t epoch = rtcMgr.getEpoch();
@@ -976,7 +1046,7 @@ void handleButtonNavigation() {
 
                             if (sysStatus.scheduleValid) {
 
-                                feedEng.startFeed();
+                                feedEng.startFeed(epoch);
 
                                 currentMenu = MenuState::RUNNING;
 
@@ -1102,7 +1172,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 
@@ -1148,7 +1218,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 
@@ -1232,7 +1302,7 @@ void handleButtonNavigation() {
 
                     uint32_t epoch = rtcMgr.getEpoch();
 
-                    bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                     if (!ok) {
 
@@ -1312,7 +1382,7 @@ void handleButtonNavigation() {
 
                     uint32_t epoch = rtcMgr.getEpoch();
 
-                    bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                    bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                     if (!ok) {
 
@@ -1362,7 +1432,7 @@ void handleButtonNavigation() {
 
                 uint32_t epoch = rtcMgr.getEpoch();
 
-                bool ok = (sysStatus.dispensedQuantity_g > 0.0f || feedEng.isActive()) ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
+                bool ok = feedEng.isActive() ? feedEng.recalcDynamic(epoch) : feedEng.calcSchedule(epoch);
 
                 if (!ok) {
 
@@ -1484,17 +1554,21 @@ void handleButtonNavigation() {
 
                     currentMenu = MenuState::RUNNING;
 
+                    telMgr.queueEvent(TelemetryMsgType::FEED_RESUMED);
+
                     telMgr.queueEvent(TelemetryMsgType::SETTINGS_REPORT);
 
                     Serial.println("[RESUME] Feed successfully resumed by user pressing SELECT.");
 
+                    lcd.showMessage("Feed Resumed", "Cycle Active", 1500);
+
                 } else {
 
-                    // Flash red LED to indicate still blocked or empty
+                    // Flash red LED and display message on LCD
 
                     hal.setLedRed(true);
 
-                    delay(200);
+                    lcd.showMessage("Cannot Resume", "Refill Feed First", 2000);
 
                     hal.setLedRed(false);
 
@@ -1863,6 +1937,8 @@ void updateSystemStatus() {
     // Preserve machine state based on feed engine state rather than UI screen
     if (currentMenu == MenuState::TEST_FEED_RUNNING) {
         sysStatus.state = SystemState::FEED_DISPENSING;
+    } else if (feedEng.isPaused() || sysStatus.state == SystemState::FEED_PAUSED || currentMenu == MenuState::PAUSED) {
+        sysStatus.state = SystemState::FEED_PAUSED;
     } else if (sysStatus.feedActive) {
         switch (sysStatus.feedState) {
             case FeedCycleState::FC_PRE:  sysStatus.state = SystemState::FEED_PRE_WARMUP; break;
@@ -2345,9 +2421,7 @@ void setup() {
 
         
 
-        config.loraOTAA = false;
-
-        if (loraMgr.join(config.loraDevEUI, config.loraAppEUI, config.loraAppKey)) {
+        if (loraMgr.join(config.loraDevEUI, config.loraAppEUI, config.loraAppKey, config.loraMode)) {
 
             sysStatus.loraStatus = ConnStatus::CONNECTED;
 
@@ -2599,6 +2673,16 @@ void setup() {
 
     }
 
+    // Initialize Hardware Task Watchdog (30s timeout)
+    esp_task_wdt_config_t twdt_config = {
+        .timeout_ms = 30000,
+        .idle_core_mask = 0,
+        .trigger_panic = true,
+    };
+    esp_task_wdt_init(&twdt_config);
+    esp_task_wdt_add(NULL);
+    Serial.println("[SYS] Task Watchdog initialized (30s).");
+    Serial.println("[SYS] AquaFeeder ready.");
 }
 
 
@@ -2612,6 +2696,8 @@ void setup() {
 
 
 void loop() {
+
+    esp_task_wdt_reset(); // Feed hardware watchdog
 
     unsigned long nowMs = millis();
 
@@ -2771,38 +2857,48 @@ void loop() {
 
                 }
 
-            } else if (upper == "GET LORA" || upper == "EUI") {
-
+                        } else if (upper.startsWith("SET LORA MODE ")) {
                 if (!techAuthenticated) {
-
                     Serial.println("[REJECTED] Locked! Enter 'AUTH <PIN>' first.");
-
                 } else {
-
-                    Serial.println("\n[LORA CREDENTIALS (OTAA)]");
-
-                    Serial.print("  DevEUI  : "); 
-
+                    String mStr = upper.substring(14);
+                    mStr.trim();
+                    if (mStr == "AUTO" || mStr == "FALLBACK") {
+                        config.loraMode = 0;
+                        cfgMgr.saveConfig(config);
+                        Serial.println("[SUCCESS] LoRa Mode set to: AUTO_FALLBACK (OTAA -> ABP)");
+                    } else if (mStr == "OTAA") {
+                        config.loraMode = 1;
+                        cfgMgr.saveConfig(config);
+                        Serial.println("[SUCCESS] LoRa Mode set to: OTAA_ONLY");
+                    } else if (mStr == "ABP") {
+                        config.loraMode = 2;
+                        cfgMgr.saveConfig(config);
+                        Serial.println("[SUCCESS] LoRa Mode set to: ABP_ONLY");
+                    } else {
+                        Serial.println("[ERROR] Invalid mode. Use: AUTO, OTAA, or ABP");
+                    }
+                }
+            } else if (upper == "GET LORA" || upper == "EUI") {
+                if (!techAuthenticated) {
+                    Serial.println("[REJECTED] Locked! Enter 'AUTH <PIN>' first.");
+                } else {
+                    const char* modeName = (config.loraMode == 0) ? "AUTO_FALLBACK (OTAA -> ABP)" :
+                                           (config.loraMode == 1) ? "OTAA_ONLY" : "ABP_ONLY";
+                    Serial.println("\n══════════ LORAWAN CONFIGURATION & CREDENTIALS ══════════");
+                    Serial.printf("  Activation Mode : %s\n", modeName);
+                    Serial.printf("  Conn Status     : %s\n", sysStatus.loraStatus == ConnStatus::CONNECTED ? "CONNECTED" : "DISCONNECTED");
+                    Serial.print("  DevEUI (Silicon): "); 
                     for(int i=0; i<8; i++) Serial.printf("%02X", config.loraDevEUI[i]);
-
                     Serial.println();
-
-                    
-
-                    Serial.print("  AppEUI  : "); 
-
+                    Serial.printf("  DevAddr (ABP)   : 0x%08X\n", loraMgr.getDevAddr());
+                    Serial.print("  AppEUI          : "); 
                     for(int i=0; i<8; i++) Serial.printf("%02X", config.loraAppEUI[i]);
-
                     Serial.println();
-
-                    
-
-                    Serial.print("  AppKey  : "); 
-
+                    Serial.print("  AppKey          : "); 
                     for(int i=0; i<16; i++) Serial.printf("%02X", config.loraAppKey[i]);
-
-                    Serial.println("\n");
-
+                    Serial.println();
+                    Serial.println("════════════════════════════════════════════════════════\n");
                 }
 
             } else if (upper == "HELP" || upper == "H" || upper == "?") {
@@ -2823,7 +2919,8 @@ void loop() {
 
                 Serial.println("  SET ID <SERIAL_ID> : Set Permanent Enclosure Serial ID");
 
-                Serial.println("  GET LORA           : Print LoRaWAN ABP Credentials for AWS");
+                Serial.println("  GET LORA           : Print LoRaWAN Status, DevAddr, Keys");
+                Serial.println("  SET LORA MODE <M>  : Set LoRa Mode (AUTO | OTAA | ABP)");
 
                 Serial.println("  REBOOT             : Soft Reset ESP32 Controller");
 
@@ -2859,22 +2956,21 @@ void loop() {
 
     // ── 5. Proximity Check ──
 
-    if (sysStatus.feedActive && currentMenu == MenuState::RUNNING) {
-
+    if (sysStatus.feedActive && !feedEng.isPaused() && sysStatus.state != SystemState::FEED_PAUSED) {
         if (hal.isProximityTriggered()) {
-
             feedEng.pauseFeed();
-
             currentMenu = MenuState::PAUSED;
-
-            hal.setHooter(true);
-
+            hal.setLedRed(true);
+            // Alert operator with 3 audible pulses (total 1.8s), then silence to preserve battery & aquatic life
+            for (int b = 0; b < 3; b++) {
+                hal.setHooter(true);
+                delay(300);
+                hal.setHooter(false);
+                delay(200);
+            }
             telMgr.queueEvent(TelemetryMsgType::ALARM_PROXIMITY);
-
-            Serial.println("[!] PROXIMITY PAUSE!");
-
+            Serial.println("[!] PROXIMITY PAUSE! Feed paused & 3-beep alert sounded.");
         }
-
     }
 
 
