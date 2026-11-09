@@ -2034,13 +2034,41 @@ function renderHourlyChart(hourlyKg, targetDate, totalDayKg) {
   container.innerHTML = html;
 }
 
+function scrollBarChart(delta) {
+  const track = document.getElementById('history-chart-container');
+  if (track) track.scrollBy({ left: delta, behavior: 'smooth' });
+}
+
 function renderBarChart(metrics, targetKg) {
   const container = document.getElementById('history-chart-container');
   const chartTitle = document.getElementById('history-barchart-title');
+  const chartSub = document.getElementById('history-barchart-sub');
+  const btnLeft = document.getElementById('btn-chart-scroll-left');
+  const btnRight = document.getElementById('btn-chart-scroll-right');
+  if (!container) return;
+
   if (chartTitle) {
     chartTitle.textContent = `Daily Feed Dispensed (${metrics.length} Day${metrics.length === 1 ? '' : 's'} on Record)`;
   }
-  if (!container) return;
+  if (chartSub) {
+    const startD = metrics[0] ? metrics[0].Date : '';
+    const endD = metrics[metrics.length - 1] ? metrics[metrics.length - 1].Date : '';
+    chartSub.textContent = `Slide or click any bar to inspect events (${startD} to ${endD})`;
+  }
+
+  // If few items (e.g. 1 to 3 items), center them cleanly; otherwise align left for smooth sliding
+  if (metrics.length <= 3) {
+    container.classList.add('center-bars');
+  } else {
+    container.classList.remove('center-bars');
+  }
+
+  // Show/hide sliding chevrons if items fit without scrolling
+  if (btnLeft && btnRight) {
+    const showChevrons = metrics.length > 5;
+    btnLeft.style.display = showChevrons ? 'flex' : 'none';
+    btnRight.style.display = showChevrons ? 'flex' : 'none';
+  }
 
   const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)));
   const selectedDate = appState.selectedHistoryDate;
@@ -2049,20 +2077,39 @@ function renderBarChart(metrics, targetKg) {
   metrics.forEach(m => {
     const val = m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0);
     const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / (maxVal || 1)) * 100));
-    const dayLabel = m.dateLabel ? m.dateLabel.split(' ')[0] : (m.Date ? m.Date.slice(5) : 'Day');
+    const label = m.isToday ? 'Today' : (m.dateLabel || m.Date);
     const isToday = m.isToday || (m.Date && m.Date === new Date().toISOString().slice(0, 10));
     const isSelected = (m.Date === selectedDate);
 
     html += `
-      <div class="bar-column ${isSelected ? 'selected' : ''}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${val.toFixed(1)} kg">
+      <div class="bar-column ${isSelected ? 'selected' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${val.toFixed(1)} kg">
         <span class="bar-val-lbl">${val.toFixed(1)}</span>
         <div class="bar-pillar ${isToday ? 'today' : ''}" style="height: ${heightPct}%;"></div>
-        <span class="bar-day-lbl">${dayLabel}</span>
+        <span class="bar-day-lbl">${label}</span>
       </div>
     `;
   });
 
   container.innerHTML = html;
+
+  // Horizontal mouse-wheel sliding interception
+  if (!container.__wheelBound) {
+    container.__wheelBound = true;
+    container.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
+  // Smooth auto-centering of the active/selected bar
+  setTimeout(() => {
+    const selectedBar = container.querySelector('.bar-column.selected');
+    if (selectedBar) {
+      selectedBar.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, 40);
 }
 
 function renderEventsLog(dev, metrics, eventsList, selectedDate) {

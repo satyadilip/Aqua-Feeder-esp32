@@ -100,6 +100,7 @@ The Senior QA audit identified several static and simulated placeholders in the 
 | **CR-026** | STORY-028 | REQ-217 | Live AWS API Endpoint & UI Inspection | Deterministic schedule calculation anchored to feeder daylight window and event sequence ($T_{k+1}$) | **PASSED & CLOSED** |
 | **CR-027** | STORY-029 | REQ-218 | Live E2E Headless Test (`verify_live_e2e.py`) | Power status dynamically bound to `LastVoltage_mV` (0.89V Bench Supply); window dynamically bound to `06:00 AM - 06:00 PM`; 5 diagnostics badges dynamically evaluated; fake setTimeout eradicated | **PASSED & CLOSED** |
 | **CR-028** | STORY-030 | REQ-219 | Live Headless E2E Test (`verify_enterprise_history.py`) | Date Explorer card aligned inside standard `.card` layout; available history dynamic (1 day on Feeder 04, 13 days on Feeder 02, zero forced 15 blank days); left/right chevrons, wheel horizontal scroll, and calendar picker fully operational; 0 hanging 'Loading dates...' states | **PASSED & CLOSED** |
+| **CR-029** | STORY-031 | REQ-220 | Live Headless E2E Test (`verify_sliding_barchart.py`) | Daily Feed Dispensed chart encapsulated in `.barchart-slider-wrapper` inside card boundaries; fixed 62px column widths prevent label collision; left/right sliding chevrons & wheel scrolling operational; single-day charts centered cleanly | **PASSED & CLOSED** |
 
 ---
 
@@ -128,3 +129,26 @@ User review identified critical issues in the History tab UI:
 4. **Eliminate Hanging "Loading dates...":**
    - Automatically hydrate `#history-active-date-lbl` upon render with selected date and dispensed quantity.
    - Reset `appState.selectedHistoryDate` on feeder switch so dates re-anchor cleanly.
+
+---
+
+## CR-029 / STORY-031: Sliding Daily Feed Dispensed Bar Chart & Boundary Encapsulation
+
+### 1. Problem Description
+User reported that the "Daily Feed Dispensed" bar chart was not aligned or sitting properly inside boundaries:
+1. When multiple days of historical records (e.g. 8 to 13 days) were loaded, `#history-chart-container` squeezed all columns using `flex: 1` into a non-scrollable flex row without `min-width` or horizontal slide.
+2. Value labels (`15.0`) and weekday/date labels (`Mon 11/09`) collided, overlapped, and caused visual spillage across card boundaries.
+3. For single-day devices (e.g. Feeder 04), the single bar stretched unnaturally across the entire card width.
+4. The user requested: "daily feed dispensed is is not aligned or sit inside boundaries keep it inside the boundaries and make it slide that would be clean".
+
+### 2. Engineering Solution
+1. **Container Encapsulation (`index.html` & `styles.css`):**
+   - Wrap the chart container in `.barchart-slider-wrapper` with strict `max-width: 100%`, `overflow: hidden`, and relative positioning.
+   - Enforce exact card boundary alignment inside `.card.chart-card`.
+2. **Sliding Track Architecture (`styles.css` & `app.js`):**
+   - Make `#history-chart-container` a horizontal sliding track (`overflow-x: auto`, `scroll-behavior: smooth`, `scrollbar-width: none`).
+   - Fix each column to a comfortable `min-width: 60px; max-width: 68px; flex: 0 0 62px;` so text labels (`15.0 kg` and `Mon 11/09`) have generous breathing room and never collide.
+   - Add Left (`◀`) and Right (`▶`) circular navigation buttons (`scrollBarChart(delta)`).
+   - Add mouse-wheel horizontal scroll translation (`e.deltaY` to `scrollLeft`).
+   - Add auto-scroll centering on the selected day's bar column.
+   - When only 1 or 2 days are present, center them cleanly without stretching.

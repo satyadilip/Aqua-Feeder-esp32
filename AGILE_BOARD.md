@@ -658,3 +658,14 @@
   1. `api_lambda.py` unconditionally looped 15 days, generating 15 empty records for new/bench devices. Fix: Bound rolling window dynamically to earliest recorded date (1 to 15 days).
   2. Date ribbon was styled with `margin: 10px 0 14px` without `.card` wrapping, crossing boundaries and failing horizontal scroll. Fix: Wrap inside `.card.history-date-card`, add left/right chevrons, wheel scroll translation, and `<input type="date">` picker.
   3. `#history-active-date-lbl` was stuck on 'Loading dates...'. Fix: Deterministically resolve label on render and reset selected date on feeder switch.
+
+
+---
+
+### STORY-031: Sliding Daily Feed Dispensed Bar Chart & Boundary Encapsulation (CR-029 / REQ-220)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farm Supervisor
+- **I want:** The Daily Feed Dispensed bar chart to sit strictly within card boundaries and slide horizontally with smooth navigation controls so that daily bars never overlap or spill over container edges.
+- **Root Cause & Technical Fix:**
+  1. `#history-chart-container` lacked horizontal scroll and enforced `flex: 1` per column, causing label collision and overflow on multi-day histories.
+  2. Fix: Wrap in `.barchart-slider-wrapper`, set columns to comfortable fixed widths (62px), enable horizontal scroll/slide with left/right navigation buttons and wheel translation.

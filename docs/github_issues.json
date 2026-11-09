@@ -2407,5 +2407,16 @@
       "status:closed"
     ],
     "uid": "REQ-219"
+  },
+  {
+    "title": "[REQ-220] Sliding Daily Feed Dispensed Bar Chart with Boundary Encapsulation & Navigation",
+    "body": "### \ud83d\udccb Requirement Specification\n- **ID**: REQ-220\n- **Category**: Cat 13: Web & Mobile Dashboard UI Contract\n- **Verification Method**: [T] Test / [D] Demo\n- **Target Hardware**: aquaCON Commercial Feeders (Node 1\u20135)\n- **Source Reference**: web_dashboard/app.js;web_dashboard/index.html;web_dashboard/styles.css\n\n### \ud83d\udcdd Requirement Statement\n> The Daily Feed Dispensed bar chart SHALL sit strictly inside the dashboard container card boundaries without horizontal overflow, squishing, or label overlap. When multiple historical days are present, the chart track SHALL slide horizontally with smooth scrolling, supporting Left/Right navigation chevrons, mouse wheel horizontal translation, comfortable fixed column widths (minimum 58px per day), and auto-centering of the active/selected bar.\n\n---\n\n### \ud83e\uddea Verification & Acceptance Criteria\n- [x] Daily Feed Dispensed chart is wrapped in a slider container that stays 100% within card boundaries (`margin: 0 16px 14px`, `max-width: 100%`).\n- [x] Each bar column has comfortable minimum width (58px\u201364px) preventing label collision (date and kg labels never overlap).\n- [x] Left (`\u25c0`) and Right (`\u25b6`) navigation chevron buttons smoothly slide the bar chart horizontally.\n- [x] Mouse wheel events over the bar chart track translate vertically to smooth horizontal sliding.\n- [x] Clicking any bar highlights it, triggers `selectHistoryDate(date)`, and smooth-scrolls the active bar into center view.\n- [x] Single-day feeders (e.g. Feeder 04) render cleanly without unnatural stretching across the container.",
+    "labels": [
+      "requirement",
+      "cat:cat-13",
+      "method:test",
+      "status:closed"
+    ],
+    "uid": "REQ-220"
   }
 ]

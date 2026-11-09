@@ -491,16 +491,31 @@
               </div>
             </div>
 
-            <!-- Daily Feed Consumption Bar Chart -->
-            <div class="card chart-card">
+            <!-- Daily Feed Consumption Bar Chart (Sliding Track CR-029) -->
+            <div class="card chart-card" id="history-barchart-card">
               <div class="card-header-row">
-                <h3 class="section-title" id="history-barchart-title">Daily Feed Dispensed</h3>
-                <span class="chart-legend-tag">Target: <strong id="chart-target-lbl">15.0 Kg</strong></span>
+                <div>
+                  <h3 class="section-title" id="history-barchart-title">Daily Feed Dispensed</h3>
+                  <span class="section-desc" id="history-barchart-sub">Slide or click any daily bar to inspect full event log</span>
+                </div>
+                <div class="chart-header-actions">
+                  <span class="chart-legend-tag">Target: <strong id="chart-target-lbl">15.0 Kg</strong></span>
+                </div>
               </div>
 
-              <!-- Interactive Bar Chart View -->
-              <div class="chart-container" id="history-chart-container">
-                <!-- Dynamically rendered bars -->
+              <!-- Sliding Bar Chart Track with Left/Right Chevrons -->
+              <div class="barchart-slider-wrapper">
+                <button type="button" class="barchart-chevron btn-barchart-left" onclick="scrollBarChart(-220)" aria-label="Slide chart left" id="btn-chart-scroll-left">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+
+                <div class="chart-container barchart-slider-track" id="history-chart-container">
+                  <!-- Dynamically rendered bars with comfortable min-width -->
+                </div>
+
+                <button type="button" class="barchart-chevron btn-barchart-right" onclick="scrollBarChart(220)" aria-label="Slide chart right" id="btn-chart-scroll-right">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
             </div>
 

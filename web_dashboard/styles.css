@@ -2489,54 +2489,149 @@ html.user-authenticated #main-app-shell {
 /* ==========================================================================
    DRIBBLE 7-DAY BAR CHART & EVENT LOG STYLES
    ========================================================================== */
+/* ==========================================================================
+   SLIDING DAILY BAR CHART TRACK (CR-029 / REQ-220)
+   ========================================================================== */
+.barchart-slider-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 10px !important;
+  gap: 8px !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.barchart-chevron {
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: var(--card-bg, #FFFFFF) !important;
+  border: 1px solid var(--cell-border, #CBD5E1) !important;
+  color: var(--text-main, #334155) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 3 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.15s ease !important;
+}
+
+.barchart-chevron:hover {
+  background: var(--brand-teal, #059669) !important;
+  color: #FFFFFF !important;
+  border-color: var(--brand-teal, #059669) !important;
+  transform: scale(1.05) !important;
+}
+
+.barchart-chevron:active {
+  transform: scale(0.95) !important;
+}
+
 #history-chart-container, .chart-container {
+  flex: 1 1 auto !important;
   display: flex !important;
   align-items: flex-end !important;
-  justify-content: space-between !important;
-  height: 160px !important;
-  gap: 8px !important;
-  padding: 12px 6px 6px !important;
+  justify-content: flex-start !important;
+  height: 165px !important;
+  gap: 12px !important;
+  padding: 16px 12px 10px !important;
   position: relative !important;
-  background: var(--card-subtle);
-  border-radius: 16px;
-  border: 1px solid var(--cell-border);
-  margin-top: 14px;
+  background: var(--card-subtle, #F8FAFC) !important;
+  border-radius: 14px !important;
+  border: 1px solid var(--cell-border, #E2E8F0) !important;
+  margin-top: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-behavior: smooth !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  -webkit-overflow-scrolling: touch !important;
+  box-sizing: border-box !important;
+}
+
+#history-chart-container::-webkit-scrollbar,
+.chart-container::-webkit-scrollbar {
+  display: none !important;
+}
+
+#history-chart-container.center-bars {
+  justify-content: center !important;
 }
 
 .bar-column {
-  flex: 1;
+  flex: 0 0 62px !important;
+  min-width: 62px !important;
+  max-width: 70px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   height: 100% !important;
   justify-content: flex-end !important;
+  cursor: pointer !important;
+  padding: 4px 2px !important;
+  border-radius: 10px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+}
+
+.bar-column:hover {
+  background: rgba(5, 150, 105, 0.05) !important;
+  transform: translateY(-2px) !important;
+}
+
+.bar-column.selected {
+  background: rgba(5, 150, 105, 0.08) !important;
 }
 
 .bar-val-lbl {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--text-primary, #334155) !important;
+  margin-bottom: 6px !important;
+  white-space: nowrap !important;
+  transition: color 0.2s ease !important;
+}
+
+.bar-column.selected .bar-val-lbl {
+  color: var(--brand-teal, #059669) !important;
+  font-weight: 800 !important;
 }
 
 .bar-pillar {
-  width: 100%;
-  max-width: 22px;
-  background: #D9E1EC;
-  border-radius: 6px 6px 0 0;
-  transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 4px;
+  width: 100% !important;
+  max-width: 26px !important;
+  background: #CBD5E1 !important;
+  border-radius: 6px 6px 0 0 !important;
+  transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease !important;
+  min-height: 4px !important;
 }
 
 .bar-pillar.today {
-  background: var(--brand-sage);
+  background: #94A3B8 !important;
+}
+
+.bar-column.selected .bar-pillar {
+  background: linear-gradient(180deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35) !important;
 }
 
 .bar-day-lbl {
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: 6px;
-  font-weight: 600;
+  font-size: 10px !important;
+  color: var(--text-secondary, #64748B) !important;
+  margin-top: 6px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.bar-column.selected .bar-day-lbl {
+  color: var(--brand-teal, #059669) !important;
+  font-weight: 800 !important;
 }
 
 /* Event Logs List */
