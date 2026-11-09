@@ -37,9 +37,12 @@
 | | | | **STORY-023** (Eradicate Running-Average Distortion on FeedPerEvent Changes in Event History) `CLOSED` |
 | | | | **STORY-024** (Firmware & Cloud Forensic Review: Stop Feed State Preservation, Telemetry Parity, Dynamic Schedule Timing) `CLOSED` |
 | | | | **STORY-026** (Eradication of Ghost Telemetry Aggregation & Contradictory Status Subtext) `CLOSED` |
-| | **STORY-027** (15-Day History Date Selector & Hourly Visualizer) `REQ-216` | | |
-| | **STORY-028** (Deterministic Next Event Schedule Anchoring) `REQ-217` | | |
-| | **STORY-029** (Hardware Data Grounding: Dynamic Battery, Solar & Diagnostics) `REQ-218` | | |
+| | | | **STORY-027** (15-Day History Date Selector & Hourly Visualizer) `CLOSED` |
+| | | | **STORY-028** (Deterministic Next Event Schedule Anchoring) `CLOSED` |
+| | | | **STORY-029** (Hardware Data Grounding: Dynamic Battery, Solar & Diagnostics) `CLOSED` |
+| | | | **STORY-030** (Enterprise History Date Explorer & Available-Day Dynamic Window) `CLOSED` |
+| | | | **STORY-031** (Sliding Daily Feed Dispensed Bar Chart & Boundary Encapsulation) `CLOSED` |
+| | | | **STORY-032** (Daily Feed Master Chart with Interactive Day Inspection Modal) `CLOSED` |
 
 ---
 
@@ -669,3 +672,14 @@
 - **Root Cause & Technical Fix:**
   1. `#history-chart-container` lacked horizontal scroll and enforced `flex: 1` per column, causing label collision and overflow on multi-day histories.
   2. Fix: Wrap in `.barchart-slider-wrapper`, set columns to comfortable fixed widths (62px), enable horizontal scroll/slide with left/right navigation buttons and wheel translation.
+
+
+---
+
+### STORY-032: Daily Feed Master Chart with Interactive Day Inspection Modal (CR-030 / REQ-221)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farm Supervisor
+- **I want:** The History screen to present a clean, spacious master chart showing daily feed totals with total kg on top of each bar, opening a focused day inspection popup on click with seamless switching between hourly feed graph and completed pulse events timeline, and a small close button to return.
+- **Root Cause & Technical Fix:**
+  1. Date Explorer ribbon and inline charts cluttered the page, suffered from UTC timezone shift bugs on date names, and caused visual chaos.
+  2. Fix: Implement master-detail modal architecture. Remove redundant ribbon and inline cards; render interactive bars with kg on top; clicking a bar opens `#day-inspector-modal` with KPI strip, dual-view switcher (`Hourly Graph` vs `Event Timeline`), date navigation controls, and small close button (`✕`).

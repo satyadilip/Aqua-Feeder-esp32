@@ -11,9 +11,12 @@
 
 | CR ID | GitHub Issue | Story ID | Title | Priority | Status | Date Opened |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **CR-025** | `REQ-216` | `STORY-025` | 15-Day History Date Selector, Full Event Logs & Hourly Visualizer | **CRITICAL** | `IN PROGRESS` | 2026-11-10 |
-| **CR-026** | `REQ-217` | `STORY-026` | Deterministic Next Event Schedule Anchoring to Saved Settings | **HIGH** | `IN PROGRESS` | 2026-11-10 |
-| **CR-027** | `REQ-218` | `STORY-027` | Hardware Data Grounding (Replace Static/Simulated Placeholders) | **HIGH** | `IN PROGRESS` | 2026-11-10 |
+| **CR-025** | `REQ-216` | `STORY-025` | 15-Day History Date Selector, Full Event Logs & Hourly Visualizer | **CRITICAL** | `CLOSED` | 2026-11-10 |
+| **CR-026** | `REQ-217` | `STORY-026` | Deterministic Next Event Schedule Anchoring to Saved Settings | **HIGH** | `CLOSED` | 2026-11-10 |
+| **CR-027** | `REQ-218` | `STORY-027` | Hardware Data Grounding (Replace Static/Simulated Placeholders) | **HIGH** | `CLOSED` | 2026-11-10 |
+| **CR-028** | `REQ-219` | `STORY-030` | Enterprise History Date Explorer & Available-Day Dynamic Window | **HIGH** | `CLOSED` | 2026-11-10 |
+| **CR-029** | `REQ-220` | `STORY-031` | Sliding Daily Feed Dispensed Bar Chart & Boundary Encapsulation | **HIGH** | `CLOSED` | 2026-11-10 |
+| **CR-030** | `REQ-221` | `STORY-032` | Daily Feed Master Chart with Interactive Day Inspection Modal | **CRITICAL** | `CLOSED` | 2026-11-10 |
 
 ---
 
@@ -101,6 +104,7 @@ The Senior QA audit identified several static and simulated placeholders in the 
 | **CR-027** | STORY-029 | REQ-218 | Live E2E Headless Test (`verify_live_e2e.py`) | Power status dynamically bound to `LastVoltage_mV` (0.89V Bench Supply); window dynamically bound to `06:00 AM - 06:00 PM`; 5 diagnostics badges dynamically evaluated; fake setTimeout eradicated | **PASSED & CLOSED** |
 | **CR-028** | STORY-030 | REQ-219 | Live Headless E2E Test (`verify_enterprise_history.py`) | Date Explorer card aligned inside standard `.card` layout; available history dynamic (1 day on Feeder 04, 13 days on Feeder 02, zero forced 15 blank days); left/right chevrons, wheel horizontal scroll, and calendar picker fully operational; 0 hanging 'Loading dates...' states | **PASSED & CLOSED** |
 | **CR-029** | STORY-031 | REQ-220 | Live Headless E2E Test (`verify_sliding_barchart.py`) | Daily Feed Dispensed chart encapsulated in `.barchart-slider-wrapper` inside card boundaries; fixed 62px column widths prevent label collision; left/right sliding chevrons & wheel scrolling operational; single-day charts centered cleanly | **PASSED & CLOSED** |
+| **CR-030** | STORY-032 | REQ-221 | Live Headless E2E Test (`verify_day_inspector_modal.py`) | Master Daily Bar Chart with kg on top; Day Inspection Modal with 4 summary KPIs, dual-view toggle (Hourly Graph & Event Timeline), date stepping, and close button ✕ verified across 8/8 automated test cases | **PASSED & CLOSED** |
 
 ---
 
@@ -152,3 +156,29 @@ User reported that the "Daily Feed Dispensed" bar chart was not aligned or sitti
    - Add mouse-wheel horizontal scroll translation (`e.deltaY` to `scrollLeft`).
    - Add auto-scroll centering on the selected day's bar column.
    - When only 1 or 2 days are present, center them cleanly without stretching.
+
+
+---
+
+## CR-030 / STORY-032: Daily Feed Master Chart with Interactive Day Inspection Modal (Graph & Timeline Views)
+
+### 1. Problem Description
+User review identified that the Date Explorer ribbon was confusing, prone to calendar navigation failures, and suffered from date label/timezone inconsistencies. Furthermore, stacking four sequential cards (Header Stats, Date Explorer Ribbon, 15-Day Barchart, Hourly Distribution Chart, and 150-row Completed Events Log) on a single endless scrolling page produced severe cognitive overload and an unpolished user experience.
+The user requested:
+> *"and date explorer doesnt work. cant change date and rthe name is not correct. just have a history and show a graph of dates with total feed onm top when user clicks on any date open it up showing the timeline and feed graph for that day he can change the view to list or graph or how ever it is good and a small close button should close this pop up and go back. think like a ui designer and do not patch design and implement"*
+
+### 2. Engineering Solution
+1. **Master-Detail Architecture (`index.html`):**
+   - Main History Screen is streamlined to an elegant high-level overview:
+     - Feeder Trends & Analytics Header Card (4 summary stats).
+     - Daily Feed Dispensed Bar Chart Card with total feed dispensed (e.g. `15.0 kg`) displayed directly on top of each bar.
+     - Redundant inline Date Explorer ribbon, inline Hourly Chart, and inline 150-event log are removed from the main page scroll.
+2. **Day Inspection Modal (`index.html`, `styles.css`, `app.js`):**
+   - Clicking any bar on the Daily Feed Dispensed chart opens `#day-inspector-modal`.
+   - **Header:** Full formatted date (`Monday, Nov 9, 2026` via timezone-safe date constructor), feeder name, pond, target kg, and a top-right close button (`✕`).
+   - **KPI Strip:** Total Dispensed, Events Completed, Schedule Adherence, and Active Operating Window.
+   - **Segmented Control:** Seamless toggle between:
+     - **📊 Hourly Graph:** Hourly feeding bars (06:00 to 18:00) with peak hour insights.
+     - **📋 Event Timeline:** Complete sequential pulse log (1 to 150) with timestamps and cumulative grams.
+   - **Footer:** Date stepping (`← Previous Day` / `Next Day →`) and a `Done` close button.
+   - Modal closes cleanly via close button, backdrop tap, or `Escape` key.

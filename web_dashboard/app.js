@@ -1741,8 +1741,31 @@ async function submitAddNewDevice() {
 }
 
 /* ==========================================================================
-   5. HISTORIC DATA & TRENDS (NEW!)
+   5. HISTORIC DATA & TRENDS (CR-030 / REQ-221)
    ========================================================================== */
+
+function formatHistoryDateTitle(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
+  const monthName = d.toLocaleDateString('en-US', { month: 'short' });
+  const day = d.getDate();
+  const year = d.getFullYear();
+  return `${weekday}, ${monthName} ${day < 10 ? '0' + day : day}, ${year}`;
+}
+
+function formatHistoryDateShort(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  const weekday = d.toLocaleDateString('en-US', { weekday: 'short' });
+  const day = d.getDate();
+  return `${weekday} ${day < 10 ? '0' + day : day}`;
+}
+
 async function renderHistoryView() {
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (!dev) return;
@@ -1759,7 +1782,7 @@ async function renderHistoryView() {
   if (pondEl) pondEl.textContent = pond ? pond.name : 'Pond P-01';
   if (targetLbl) targetLbl.textContent = `${(dev.targetKg || 15.0).toFixed(1)} Kg`;
 
-  // 1. Fetch 15-day metric data from cloud
+  // 1. Fetch available metric data from cloud (up to 15 days, dynamic window)
   let metrics = appState.deviceMetrics[dev.id];
   try {
     const res = await fetch(`${API_BASE_URL}/api/metrics/${dev.id}?days=15&_t=${Date.now()}`, { cache: 'no-store' });
@@ -1774,7 +1797,7 @@ async function renderHistoryView() {
 
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-  // Fallback: Only show available day (Today) if no metrics found - NEVER force 15 empty days! (CR-028 / REQ-219)
+  // Fallback: Only show available day (Today) if no metrics found
   if (!metrics || metrics.length === 0) {
     metrics = [{
       Date: todayIso,
@@ -1788,97 +1811,7 @@ async function renderHistoryView() {
     appState.deviceMetrics[dev.id] = metrics;
   }
 
-  // 2. Determine currently active/selected date in History tab
-  if (!appState.selectedHistoryDate || !metrics.some(m => m.Date === appState.selectedHistoryDate)) {
-    const todayMetric = metrics.find(m => m.isToday || m.Date === todayIso);
-    if (todayMetric && (todayMetric.FeedDispensed_kg > 0 || todayMetric.EventsCompleted > 0)) {
-      appState.selectedHistoryDate = todayMetric.Date;
-    } else {
-      // Find the most recent active date with feed events
-      const lastActive = metrics.slice().reverse().find(m => (m.FeedDispensed_kg || 0) > 0 || (m.EventsCompleted || 0) > 0);
-      appState.selectedHistoryDate = lastActive ? lastActive.Date : (metrics[metrics.length - 1] ? metrics[metrics.length - 1].Date : todayIso);
-    }
-  }
-
-  // 3. Render Enterprise Date Selector Ribbon & update picker bounds
-  renderDateSelectorRibbon(metrics, dev);
-
-  // 4. Fetch telemetry events for the selected date
-  const targetDate = appState.selectedHistoryDate;
-  let dateTelemetry = [];
-  let hourlyKg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-  let selectedDayDispensedKg = 0.0;
-
-  try {
-    const tRes = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?date=${targetDate}&_t=${Date.now()}`, { cache: 'no-store' });
-    if (tRes.ok) {
-      const tData = await tRes.json();
-      if (tData && tData.telemetry) {
-        dateTelemetry = tData.telemetry;
-        if (tData.hourlyKg && Array.isArray(tData.hourlyKg)) {
-          hourlyKg = tData.hourlyKg;
-        }
-        selectedDayDispensedKg = Number(tData.totalDispensedKg || 0.0);
-      }
-    }
-  } catch (e) {
-    console.error("Telemetry fetch error:", e);
-  }
-
-  // Fallback: If hourlyKg is all zeros but we have dateTelemetry, derive from event timestamps
-  if (!hourlyKg.some(v => v > 0) && dateTelemetry.length > 0) {
-    dateTelemetry.forEach(it => {
-      const rawTs = Number(it.Timestamp || 0);
-      if (rawTs > 0) {
-        const dt = new Date(rawTs * 1000);
-        const h = dt.getUTCHours();
-        const g = Number(it.EventGrams || it.FeedPerEvent_g || 100);
-        if (h >= 0 && h < 24) hourlyKg[h] = (hourlyKg[h] || 0) + (g / 1000.0);
-      }
-    });
-  }
-
-  // Clean and prepare events for display
-  const cleanEvents = [];
-  const seenEvents = new Set();
-  for (const item of dateTelemetry) {
-    const evNum = Math.round(Number(item.CurrentEvent || 0));
-    if (evNum <= 0) continue;
-    if (!seenEvents.has(evNum)) {
-      seenEvents.add(evNum);
-      let timeStr = item.Time || '';
-      if (timeStr && timeStr.includes(':')) {
-        const parts = timeStr.split(' ');
-        const timeParts = parts[0].split(':');
-        if (timeParts.length >= 2) {
-          timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
-        }
-      }
-      const eventGrams = Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100);
-      cleanEvents.push({
-        eventNumber: evNum,
-        time: timeStr,
-        grams: eventGrams,
-        cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
-        timestamp: Number(item.Timestamp || 0),
-        date: item.Date || targetDate
-      });
-    }
-  }
-  // Sort events from newest to oldest for timeline
-  cleanEvents.sort((a, b) => b.eventNumber - a.eventNumber);
-
-  // If selected date is today, update dev.dispensedKg
-  if (targetDate === todayIso && cleanEvents.length > 0) {
-    const hwDispGrams = cleanEvents[0].cumulativeGrams;
-    if (hwDispGrams > 0) {
-      dev.dispensedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
-    }
-    const dispensedText = document.getElementById('dispensed-val-text');
-    if (dispensedText) dispensedText.textContent = dev.dispensedKg.toFixed(2);
-  }
-
-  // 5. Compute Stats Overview (Past 7 days for summary cards)
+  // 2. Compute High-level Stats Overview
   const isConn = isDeviceConnected(dev);
   const statWeek = document.getElementById('stat-week-total');
   const statAvg = document.getElementById('stat-daily-avg');
@@ -1888,150 +1821,22 @@ async function renderHistoryView() {
   const past7 = metrics.slice(-7);
   const totalWeek = past7.reduce((acc, m) => acc + (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)), 0);
   const activeDays = past7.filter(m => (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)) > 0).length;
-  const avgDaily = activeDays > 0 ? (totalWeek / activeDays).toFixed(1) : (totalWeek / 7).toFixed(1);
+  const avgDaily = activeDays > 0 ? (totalWeek / activeDays).toFixed(1) : (totalWeek / (past7.length || 1)).toFixed(1);
 
-  if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} Kg`;
-  if (statAvg) statAvg.textContent = `${avgDaily} Kg`;
+  if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} kg`;
+  if (statAvg) statAvg.textContent = `${avgDaily} kg`;
   if (statAdherence) statAdherence.textContent = totalWeek > 0 ? '100%' : (isConn ? '100%' : '--');
   const seasonKg = metrics.reduce((acc, m) => acc + (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)), 0);
-  if (statSeason) statSeason.textContent = `${seasonKg.toFixed(1)} Kg`;
+  if (statSeason) statSeason.textContent = `${seasonKg.toFixed(1)} kg`;
 
-  // 6. Render 15-Day Daily Feed Dispensed Bar Chart
+  // 3. Render Master Daily Feed Dispensed Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
 
-  // 7. Render Hourly Feed Distribution Chart for selected date
-  const dayMetric = metrics.find(m => m.Date === targetDate);
-  const targetDayKg = selectedDayDispensedKg > 0 ? selectedDayDispensedKg : (dayMetric ? (dayMetric.FeedDispensed_kg || 0) : (cleanEvents.length * (dev.fpeGrams || 100) / 1000.0));
-  renderHourlyChart(hourlyKg, targetDate, targetDayKg);
-
-  // 8. Render All Completed Feed Events Log
-  renderEventsLog(dev, metrics, cleanEvents, targetDate);
-}
-
-function renderDateSelectorRibbon(metrics, dev) {
-  const container = document.getElementById('history-date-pills');
-  const activeLbl = document.getElementById('history-active-date-lbl');
-  const subLbl = document.getElementById('history-date-range-sub');
-  const calPicker = document.getElementById('history-calendar-picker');
-  if (!container) return;
-
-  const sorted = metrics.slice().reverse();
-  const selectedDate = appState.selectedHistoryDate;
-  const currentDev = dev || appState.devices.find(d => d.id === appState.selectedDeviceId);
-  const devName = currentDev ? currentDev.name : 'Feeder';
-
-  // Synchronize Calendar input bounds and value
-  if (calPicker && metrics.length > 0) {
-    calPicker.min = metrics[0].Date;
-    calPicker.max = metrics[metrics.length - 1].Date;
-    calPicker.value = selectedDate;
+  // 4. If the Day Inspector modal is currently open, re-hydrate it
+  const modal = document.getElementById('day-inspector-modal');
+  if (modal && modal.style.display === 'flex' && appState.selectedHistoryDate) {
+    openDayInspector(appState.selectedHistoryDate);
   }
-
-  // Update active date header text immediately (eliminates hanging 'Loading dates...')
-  const curMetric = metrics.find(m => m.Date === selectedDate) || sorted[0];
-  if (curMetric) {
-    const dispVal = Number(curMetric.FeedDispensed_kg !== undefined ? curMetric.FeedDispensed_kg : (curMetric.feedKg || 0));
-    const label = curMetric.isToday ? 'Today' : (curMetric.dateLabel || curMetric.Date);
-    if (activeLbl) {
-      activeLbl.textContent = `${label} · ${dispVal.toFixed(1)} kg Dispensed`;
-    }
-  }
-  if (subLbl) {
-    subLbl.textContent = `Showing ${metrics.length} day${metrics.length === 1 ? '' : 's'} on record for ${devName}`;
-  }
-
-  let html = '';
-  sorted.forEach(m => {
-    const isSel = (m.Date === selectedDate);
-    const dispVal = Number(m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0));
-    const label = m.isToday ? 'Today' : (m.dateLabel || m.Date);
-    html += `
-      <div class="date-pill ${isSel ? 'active' : ''} ${m.isToday ? 'is-today' : ''} ${dispVal > 0 ? 'has-feed' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${dispVal.toFixed(1)} kg">
-        <div class="date-pill-top">
-          <span class="date-pill-dot"></span>
-          <span class="date-pill-day">${label}</span>
-        </div>
-        <span class="date-pill-val">${dispVal > 0 ? dispVal.toFixed(1) + ' kg' : '0 kg'}</span>
-      </div>
-    `;
-  });
-  container.innerHTML = html;
-
-  // Horizontal wheel-scroll support (standard enterprise UX)
-  if (!container.__wheelBound) {
-    container.__wheelBound = true;
-    container.addEventListener('wheel', (e) => {
-      if (e.deltaY !== 0) {
-        e.preventDefault();
-        container.scrollLeft += e.deltaY;
-      }
-    }, { passive: false });
-  }
-
-  // Auto-scroll selected date into view
-  setTimeout(() => {
-    const activePill = container.querySelector('.date-pill.active');
-    if (activePill) {
-      activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
-  }, 40);
-}
-
-function scrollDateTrack(delta) {
-  const ribbon = document.getElementById('history-date-pills');
-  if (ribbon) ribbon.scrollBy({ left: delta, behavior: 'smooth' });
-}
-
-function onCalendarDatePicked(pickedDate) {
-  if (!pickedDate) return;
-  selectHistoryDate(pickedDate);
-}
-
-function selectTodayDate() {
-  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  selectHistoryDate(todayIso);
-}
-
-function selectHistoryDate(dateStr) {
-  appState.selectedHistoryDate = dateStr;
-  renderHistoryView();
-}
-
-function renderHourlyChart(hourlyKg, targetDate, totalDayKg) {
-  const container = document.getElementById('hourly-bars-container');
-  const dateLbl = document.getElementById('hourly-date-label');
-  const totalLbl = document.getElementById('hourly-day-total');
-  if (!container) return;
-
-  if (dateLbl) {
-    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-    dateLbl.textContent = (targetDate === todayIso) ? 'Today' : targetDate;
-  }
-  if (totalLbl) {
-    totalLbl.textContent = `${Number(totalDayKg || 0).toFixed(1)} Kg Dispensed`;
-  }
-
-  // Operating window is 06:00 to 18:00 (Hours 6 through 18)
-  const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
-  const maxVal = Math.max(1.5, ...hours.map(h => hourlyKg[h] || 0));
-
-  let html = '';
-  hours.forEach(h => {
-    const val = hourlyKg[h] || 0.0;
-    const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / maxVal) * 100));
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
-    const timeLabel = `${dispH}${ampm}`;
-
-    html += `
-      <div class="hourly-bar-col">
-        <span class="hourly-bar-val">${val > 0 ? val.toFixed(1) : ''}</span>
-        <div class="hourly-bar-pillar ${val > 0 ? 'active-feed' : ''}" data-val="${val.toFixed(2)}kg" style="height: ${heightPct}%;"></div>
-        <span class="hourly-bar-time">${timeLabel}</span>
-      </div>
-    `;
-  });
-  container.innerHTML = html;
 }
 
 function scrollBarChart(delta) {
@@ -2047,16 +1852,18 @@ function renderBarChart(metrics, targetKg) {
   const btnRight = document.getElementById('btn-chart-scroll-right');
   if (!container) return;
 
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
   if (chartTitle) {
     chartTitle.textContent = `Daily Feed Dispensed (${metrics.length} Day${metrics.length === 1 ? '' : 's'} on Record)`;
   }
   if (chartSub) {
     const startD = metrics[0] ? metrics[0].Date : '';
     const endD = metrics[metrics.length - 1] ? metrics[metrics.length - 1].Date : '';
-    chartSub.textContent = `Slide or click any bar to inspect events (${startD} to ${endD})`;
+    chartSub.textContent = `Click any date bar to inspect hourly breakdown & event timeline (${startD} to ${endD})`;
   }
 
-  // If few items (e.g. 1 to 3 items), center them cleanly; otherwise align left for smooth sliding
+  // If few items (1 to 3 items), center them cleanly; otherwise align left for sliding
   if (metrics.length <= 3) {
     container.classList.add('center-bars');
   } else {
@@ -2070,22 +1877,23 @@ function renderBarChart(metrics, targetKg) {
     btnRight.style.display = showChevrons ? 'flex' : 'none';
   }
 
-  const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)));
+  const maxVal = Math.max(targetKg * 1.25, ...metrics.map(m => m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)));
   const selectedDate = appState.selectedHistoryDate;
 
   let html = '';
   metrics.forEach(m => {
-    const val = m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0);
-    const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / (maxVal || 1)) * 100));
-    const label = m.isToday ? 'Today' : (m.dateLabel || m.Date);
-    const isToday = m.isToday || (m.Date && m.Date === new Date().toISOString().slice(0, 10));
+    const val = Number(m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0));
+    const heightPct = Math.min(100, Math.max(val > 0 ? 14 : 4, (val / (maxVal || 1)) * 100));
+    const isToday = m.isToday || (m.Date && m.Date === todayIso);
+    const dayLabel = isToday ? 'Today' : formatHistoryDateShort(m.Date);
     const isSelected = (m.Date === selectedDate);
+    const valText = `${val.toFixed(1)} kg`;
 
     html += `
-      <div class="bar-column ${isSelected ? 'selected' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${val.toFixed(1)} kg">
-        <span class="bar-val-lbl">${val.toFixed(1)}</span>
-        <div class="bar-pillar ${isToday ? 'today' : ''}" style="height: ${heightPct}%;"></div>
-        <span class="bar-day-lbl">${label}</span>
+      <div class="bar-column ${isSelected ? 'selected' : ''}" data-date="${m.Date}" onclick="openDayInspector('${m.Date}')" title="${m.Date}: ${valText} dispensed • Click to inspect day">
+        <span class="bar-val-lbl">${valText}</span>
+        <div class="bar-pillar ${isToday ? 'today' : ''} ${val > 0 ? 'has-feed' : ''}" style="height: ${heightPct}%;"></div>
+        <span class="bar-day-lbl">${dayLabel}</span>
       </div>
     `;
   });
@@ -2112,68 +1920,242 @@ function renderBarChart(metrics, targetKg) {
   }, 40);
 }
 
-function renderEventsLog(dev, metrics, eventsList, selectedDate) {
-  const container = document.getElementById('events-log-container');
-  const logLabel = document.getElementById('log-date-label');
-  const countBadge = document.getElementById('log-count-badge');
-  const mainTitle = document.getElementById('log-main-title');
+/* ==========================================================================
+   DAY DRILL-DOWN INSPECTION MODAL (CR-030 / REQ-221)
+   ========================================================================== */
+
+async function openDayInspector(dateStr) {
+  const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (!dev) return;
+
+  const pond = appState.ponds.find(p => p.id === dev.pondId);
+  appState.selectedHistoryDate = dateStr;
+
+  // Highlight selected bar in master chart
+  const allBars = document.querySelectorAll('.bar-column');
+  allBars.forEach(b => {
+    if (b.getAttribute('data-date') === dateStr) {
+      b.classList.add('selected');
+    } else {
+      b.classList.remove('selected');
+    }
+  });
+
+  const modal = document.getElementById('day-inspector-modal');
+  if (modal) {
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  // Set date title and metadata
+  const titleEl = document.getElementById('inspector-modal-date');
+  const metaEl = document.getElementById('inspector-modal-meta');
+  const cleanFeeder = (dev.name || '').match(/Feeder\s*\d+/i) ? dev.name.match(/Feeder\s*\d+/i)[0] : 'Feeder 01';
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  const isToday = (dateStr === todayIso);
+
+  const formattedDate = formatHistoryDateTitle(dateStr);
+  if (titleEl) {
+    titleEl.textContent = isToday ? `Today · ${formattedDate}` : formattedDate;
+  }
+  if (metaEl) {
+    metaEl.textContent = `${cleanFeeder} • ${pond ? pond.name : 'Pond P-01'} • Target ${(dev.targetKg || 15.0).toFixed(1)} kg`;
+  }
+
+  // Step buttons update
+  const metrics = appState.deviceMetrics[dev.id] || [];
+  const curIdx = metrics.findIndex(m => m.Date === dateStr);
+  const btnPrev = document.getElementById('btn-prev-day');
+  const btnNext = document.getElementById('btn-next-day');
+  if (btnPrev) btnPrev.disabled = (curIdx <= 0);
+  if (btnNext) btnNext.disabled = (curIdx === -1 || curIdx >= metrics.length - 1);
+
+  // Fetch telemetry for the selected date
+  let dateTelemetry = [];
+  let hourlyKg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  let selectedDayDispensedKg = 0.0;
+
+  try {
+    const tRes = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?date=${dateStr}&_t=${Date.now()}`, { cache: 'no-store' });
+    if (tRes.ok) {
+      const tData = await tRes.json();
+      if (tData) {
+        if (tData.telemetry) dateTelemetry = tData.telemetry;
+        if (tData.hourlyKg && Array.isArray(tData.hourlyKg)) hourlyKg = tData.hourlyKg;
+        selectedDayDispensedKg = Number(tData.totalDispensedKg || 0.0);
+      }
+    }
+  } catch (e) {
+    console.error('Telemetry fetch error:', e);
+  }
+
+  // Fallback: derive hourlyKg from events if needed
+  if (!hourlyKg.some(v => v > 0) && dateTelemetry.length > 0) {
+    dateTelemetry.forEach(it => {
+      const rawTs = Number(it.Timestamp || 0);
+      if (rawTs > 0) {
+        const dt = new Date(rawTs * 1000);
+        const h = dt.getUTCHours();
+        const g = Number(it.EventGrams || it.FeedPerEvent_g || 100);
+        if (h >= 0 && h < 24) hourlyKg[h] = (hourlyKg[h] || 0) + (g / 1000.0);
+      }
+    });
+  }
+
+  // Clean deduplicated events
+  const cleanEvents = [];
+  const seenEvents = new Set();
+  for (const item of dateTelemetry) {
+    const evNum = Math.round(Number(item.CurrentEvent || 0));
+    if (evNum <= 0) continue;
+    if (!seenEvents.has(evNum)) {
+      seenEvents.add(evNum);
+      let timeStr = item.Time || '';
+      if (timeStr && timeStr.includes(':')) {
+        const parts = timeStr.split(' ');
+        const timeParts = parts[0].split(':');
+        if (timeParts.length >= 2) {
+          timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
+        }
+      }
+      const eventGrams = Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100);
+      cleanEvents.push({
+        eventNumber: evNum,
+        time: timeStr,
+        grams: eventGrams,
+        cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
+        timestamp: Number(item.Timestamp || 0),
+        date: item.Date || dateStr
+      });
+    }
+  }
+  cleanEvents.sort((a, b) => b.eventNumber - a.eventNumber);
+
+  // Compute metrics for the day
+  const metricItem = metrics.find(m => m.Date === dateStr);
+  const finalDayDispensedKg = selectedDayDispensedKg > 0 ? selectedDayDispensedKg : (metricItem ? (metricItem.FeedDispensed_kg || 0) : (cleanEvents.length * (dev.fpeGrams || 100) / 1000.0));
+  const targetKg = dev.targetKg || 15.0;
+  const totalEvents = dev.totalEvents || 150;
+  const eventsDone = cleanEvents.length > 0 ? cleanEvents.length : (metricItem ? (metricItem.EventsCompleted || 0) : 0);
+  const adherence = targetKg > 0 ? Math.min(100, Math.round((finalDayDispensedKg / targetKg) * 100)) : 0;
+
+  // Hydrate KPI cells
+  const dispValEl = document.getElementById('insp-dispensed-val');
+  const targetSubEl = document.getElementById('insp-target-sub');
+  const eventsValEl = document.getElementById('insp-events-val');
+  const adherenceValEl = document.getElementById('insp-adherence-val');
+  const windowValEl = document.getElementById('insp-window-val');
+
+  if (dispValEl) dispValEl.textContent = `${finalDayDispensedKg.toFixed(1)} kg`;
+  if (targetSubEl) targetSubEl.textContent = `of ${targetKg.toFixed(1)} kg target`;
+  if (eventsValEl) eventsValEl.textContent = `${eventsDone} / ${totalEvents}`;
+  if (adherenceValEl) adherenceValEl.textContent = `${adherence}%`;
+  if (windowValEl) {
+    const sH = dev.startHour !== undefined ? dev.startHour : 6;
+    const sM = dev.startMinute !== undefined ? dev.startMinute : 0;
+    const eH = dev.endHour !== undefined ? dev.endHour : 18;
+    const eM = dev.endMinute !== undefined ? dev.endMinute : 0;
+    windowValEl.textContent = `${String(sH).padStart(2, '0')}:${String(sM).padStart(2, '0')} - ${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}`;
+  }
+
+  // Hydrate View 1: Hourly Graph
+  renderInspectorHourlyChart(hourlyKg, finalDayDispensedKg);
+
+  // Hydrate View 2: Event Timeline
+  renderInspectorTimeline(cleanEvents, dateStr, isToday);
+
+  // Ensure current view is shown
+  switchInspectorView(appState.inspectorView || 'graph');
+}
+
+function renderInspectorHourlyChart(hourlyKg, totalDayKg) {
+  const container = document.getElementById('inspector-hourly-bars');
+  const totalBadge = document.getElementById('insp-graph-day-total');
+  const peakHourEl = document.getElementById('insp-peak-hour');
+  const peakValEl = document.getElementById('insp-peak-val');
+  const avgHourEl = document.getElementById('insp-avg-hour');
+
+  if (totalBadge) {
+    totalBadge.textContent = `${Number(totalDayKg || 0).toFixed(1)} Kg Dispensed`;
+  }
   if (!container) return;
 
-  const isConn = isDeviceConnected(dev);
-  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  const isSelectedToday = (selectedDate === todayIso);
+  // Operating window is 06:00 to 18:00 (Hours 6 through 18)
+  const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+  const maxVal = Math.max(1.5, ...hours.map(h => hourlyKg[h] || 0));
 
-  const cleanEvents = eventsList || [];
-  const eventsCount = cleanEvents.length;
+  let peakH = 6;
+  let peakV = 0;
+  let activeHourCount = 0;
 
-  if (countBadge) {
-    countBadge.textContent = `${eventsCount} Events`;
-  }
-  if (mainTitle) {
-    mainTitle.textContent = isSelectedToday ? "Today's Feed Event Log" : `Feed Event Log (${selectedDate})`;
-  }
-  if (logLabel) {
-    if (eventsCount > 0) {
-      logLabel.textContent = `Showing all ${eventsCount} completed feed events for ${selectedDate}`;
-    } else if (isSelectedToday) {
-      logLabel.textContent = `Today's feeding schedule begins at 06:00 AM (0 events dispensed today)`;
-    } else {
-      logLabel.textContent = `No feed events recorded for ${selectedDate}`;
+  let html = '';
+  hours.forEach(h => {
+    const val = hourlyKg[h] || 0.0;
+    if (val > peakV) {
+      peakV = val;
+      peakH = h;
     }
+    if (val > 0) activeHourCount++;
+
+    const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / maxVal) * 100));
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+    const timeLabel = `${dispH}${ampm}`;
+
+    html += `
+      <div class="hourly-bar-col">
+        <span class="hourly-bar-val">${val > 0 ? val.toFixed(1) : ''}</span>
+        <div class="hourly-bar-pillar ${val > 0 ? 'active-feed' : ''}" data-val="${val.toFixed(2)}kg" style="height: ${heightPct}%;"></div>
+        <span class="hourly-bar-time">${timeLabel}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+
+  if (peakHourEl) {
+    const ampm = peakH >= 12 ? 'PM' : 'AM';
+    const dispH = peakH % 12 === 0 ? 12 : (peakH > 12 ? peakH - 12 : peakH);
+    peakHourEl.textContent = peakV > 0 ? `${String(dispH).padStart(2, '0')}:00 ${ampm}` : '--';
+  }
+  if (peakValEl) {
+    peakValEl.textContent = peakV > 0 ? `${peakV.toFixed(1)} kg dispensed` : '0 kg dispensed';
+  }
+  if (avgHourEl) {
+    const avg = activeHourCount > 0 ? (totalDayKg / activeHourCount).toFixed(2) : '0.00';
+    avgHourEl.textContent = `${avg} kg/hr`;
+  }
+}
+
+function renderInspectorTimeline(events, dateStr, isToday) {
+  const container = document.getElementById('inspector-timeline-container');
+  const countBadge = document.getElementById('insp-timeline-badge');
+  const countTabMini = document.getElementById('insp-badge-event-count');
+  const descEl = document.getElementById('insp-timeline-desc');
+  if (!container) return;
+
+  const count = events.length;
+  if (countBadge) countBadge.textContent = `${count} Events`;
+  if (countTabMini) countTabMini.textContent = `${count}`;
+  if (descEl) {
+    descEl.textContent = count > 0 ? `Showing all ${count} completed feed pulses for ${dateStr}` : `No feed pulses recorded for ${dateStr}`;
   }
 
-  if (eventsCount === 0) {
-    if (!isConn && isSelectedToday) {
-      container.innerHTML = `
-        <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
-          <div style="font-size: 20px; margin-bottom: 6px;">📡</div>
-          <strong style="color:var(--text-main);">Feeder is Not Connected</strong>
-          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">No live telemetry recorded for today.</div>
+  if (count === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 36px 16px; color: var(--text-muted); font-size: 13px;">
+        <div style="font-size: 26px; margin-bottom: 6px;">${isToday ? '🌅' : '📋'}</div>
+        <strong style="color:var(--text-main); font-size: 14px;">${isToday ? "0 Events Dispensed Today" : "No Events Recorded"}</strong>
+        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted); max-width: 380px; margin-left: auto; margin-right: auto;">
+          ${isToday ? "Today's feeding schedule begins at 06:00 AM. Completed pulses will appear here automatically." : `Feeder was inactive or in standby on ${dateStr}.`}
         </div>
-      `;
-    } else if (isSelectedToday) {
-      container.innerHTML = `
-        <div style="text-align:center; padding: 24px 16px; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.08);">
-          <div style="font-size: 22px; margin-bottom: 4px;">🌅</div>
-          <strong style="color:var(--text-main);">0 Events Dispensed Today</strong>
-          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Daily scheduled feeding begins at 06:00 AM. Select past dates above to view complete event history.</div>
-        </div>
-      `;
-    } else {
-      container.innerHTML = `
-        <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
-          <div style="font-size: 20px; margin-bottom: 6px;">📋</div>
-          <strong style="color:var(--text-main);">No Events On ${selectedDate}</strong>
-          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Feeder was inactive or in standby on this date.</div>
-        </div>
-      `;
-    }
+      </div>
+    `;
     return;
   }
 
-  // Render ALL events (no 20-event cutoff!)
   let html = '';
-  cleanEvents.forEach(ev => {
+  events.forEach(ev => {
     html += `
       <div class="event-log-item">
         <div>
@@ -2184,8 +2166,61 @@ function renderEventsLog(dev, metrics, eventsList, selectedDate) {
       </div>
     `;
   });
-
   container.innerHTML = html;
+}
+
+function closeDayInspector() {
+  const modal = document.getElementById('day-inspector-modal');
+  if (modal) {
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+}
+
+function onInspectorBackdropClick(event) {
+  if (event.target && event.target.id === 'day-inspector-modal') {
+    closeDayInspector();
+  }
+}
+
+function switchInspectorView(mode) {
+  appState.inspectorView = mode;
+  const btnGraph = document.getElementById('btn-toggle-graph');
+  const btnTimeline = document.getElementById('btn-toggle-timeline');
+  const panelGraph = document.getElementById('inspector-view-graph');
+  const panelTimeline = document.getElementById('inspector-view-timeline');
+
+  if (mode === 'timeline') {
+    if (btnGraph) btnGraph.classList.remove('active');
+    if (btnTimeline) btnTimeline.classList.add('active');
+    if (panelGraph) panelGraph.style.display = 'none';
+    if (panelTimeline) panelTimeline.style.display = 'block';
+  } else {
+    if (btnGraph) btnGraph.classList.add('active');
+    if (btnTimeline) btnTimeline.classList.remove('active');
+    if (panelGraph) panelGraph.style.display = 'block';
+    if (panelTimeline) panelTimeline.style.display = 'none';
+  }
+}
+
+function stepInspectorDate(delta) {
+  const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
+  if (!dev) return;
+
+  const metrics = appState.deviceMetrics[dev.id] || [];
+  if (metrics.length === 0) return;
+
+  const curIdx = metrics.findIndex(m => m.Date === appState.selectedHistoryDate);
+  const newIdx = curIdx + delta;
+  if (newIdx >= 0 && newIdx < metrics.length) {
+    openDayInspector(metrics[newIdx].Date);
+  }
+}
+
+// Backward compatibility shim
+function selectHistoryDate(dateStr) {
+  openDayInspector(dateStr);
 }
 
 function refreshHistoryData() {
@@ -2196,6 +2231,13 @@ function refreshHistoryData() {
     showToast('Refreshed historic trends');
   }
 }
+
+// Global escape key listener to close modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closeDayInspector();
+  }
+});
 
 /* ==========================================================================
    6. REALTIME GOOGLE MAPS LINK & LEAFLET MAP
