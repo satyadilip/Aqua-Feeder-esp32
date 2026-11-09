@@ -646,3 +646,15 @@
   2. Operational Status active window was hardcoded to `06:00 AM – 06:00 PM`. Fix: Bind to dynamic `StartHour:StartMinute` – `EndHour:EndMinute`.
   3. Troubleshoot checklist had 5 static HTML PASSED items. Fix: Bind each item to live hardware telemetry flags and sensor readings.
   4. `runFullDiagnosticScan()` used a dummy 1200ms `setTimeout`. Fix: Execute genuine validation of device telemetry.
+
+
+---
+
+### STORY-030: Enterprise History Date Explorer, Dynamic Available-Day History & Boundary Alignment (CR-028 / REQ-219)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farm Supervisor
+- **I want:** The History tab to show a clean, enterprise-grade date explorer contained within dashboard boundaries with smooth scrolling and a calendar picker, displaying only the actual available history for each feeder rather than forcing 15 empty days.
+- **Root Cause & Technical Fix:**
+  1. `api_lambda.py` unconditionally looped 15 days, generating 15 empty records for new/bench devices. Fix: Bound rolling window dynamically to earliest recorded date (1 to 15 days).
+  2. Date ribbon was styled with `margin: 10px 0 14px` without `.card` wrapping, crossing boundaries and failing horizontal scroll. Fix: Wrap inside `.card.history-date-card`, add left/right chevrons, wheel scroll translation, and `<input type="date">` picker.
+  3. `#history-active-date-lbl` was stuck on 'Loading dates...'. Fix: Deterministically resolve label on render and reset selected date on feeder switch.

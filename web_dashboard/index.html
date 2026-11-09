@@ -452,21 +452,49 @@
               </div>
             </div>
 
-            <!-- 15-Day Date Selector Ribbon -->
-            <div class="date-selector-ribbon-wrap">
-              <div class="date-selector-header">
-                <span class="date-selector-title">Select Date (Past 15 Days):</span>
-                <span class="date-selected-indicator" id="history-active-date-lbl">Loading dates...</span>
+            <!-- Enterprise Date Explorer Card (CR-028 / REQ-219) -->
+            <div class="card date-explorer-card" id="history-date-explorer-card">
+              <div class="card-header-row date-explorer-header">
+                <div>
+                  <span class="device-tag">DATE EXPLORER</span>
+                  <h3 class="section-title" id="history-active-date-lbl">Select Date</h3>
+                  <span class="section-desc" id="history-date-range-sub">Available active history records</span>
+                </div>
+                <div class="date-controls-group">
+                  <label class="custom-date-picker-btn" title="Pick specific calendar date">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <span class="picker-label">Calendar</span>
+                    <input type="date" id="history-calendar-picker" onchange="onCalendarDatePicked(this.value)" />
+                  </label>
+                  <button type="button" class="btn-today-chip" onclick="selectTodayDate()">Today</button>
+                </div>
               </div>
-              <div class="date-selector-ribbon" id="history-date-pills">
-                <!-- Dynamically populated 15 date pills -->
+
+              <!-- Smooth Horizontal Date Track with Left / Right Chevrons -->
+              <div class="date-scroll-container">
+                <button type="button" class="date-chevron btn-chevron-left" onclick="scrollDateTrack(-240)" aria-label="Scroll dates left" id="btn-date-scroll-left">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+
+                <div class="date-selector-ribbon" id="history-date-pills">
+                  <!-- Dynamically populated date pills -->
+                </div>
+
+                <button type="button" class="date-chevron btn-chevron-right" onclick="scrollDateTrack(240)" aria-label="Scroll dates right" id="btn-date-scroll-right">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
               </div>
             </div>
 
-            <!-- 15-Day Feed Consumption Bar Chart -->
+            <!-- Daily Feed Consumption Bar Chart -->
             <div class="card chart-card">
               <div class="card-header-row">
-                <h3 class="section-title">Daily Feed Dispensed (Past 15 Days)</h3>
+                <h3 class="section-title" id="history-barchart-title">Daily Feed Dispensed</h3>
                 <span class="chart-legend-tag">Target: <strong id="chart-target-lbl">15.0 Kg</strong></span>
               </div>
 

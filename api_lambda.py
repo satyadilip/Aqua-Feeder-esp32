@@ -1316,12 +1316,34 @@ def lambda_handler(event, context):
             if not is_today_live_event and live_cur_ev > 0:
                 is_today_live_event = True
 
-            # Build rolling calendar window ending today (IST) - Default 15 days
+            # Dynamic Available-Day History (CR-028 / REQ-219)
+            # If the device has fewer than 15 days of history, show ONLY available days (don't force 15 days)
             try:
-                num_days = int(query_params.get('days', 15))
+                max_window_days = int(query_params.get('days', 15))
             except:
-                num_days = 15
-            num_days = max(7, min(30, num_days))
+                max_window_days = 15
+            max_window_days = max(1, min(15, max_window_days))
+
+            # Find earliest recorded feeding/metric date within the 15-day window
+            cutoff_date_str = (today_ist - timedelta(days=max_window_days - 1)).strftime("%Y-%m-%d")
+            active_dates_in_window = [
+                d for d in db_by_date.keys()
+                if d >= cutoff_date_str and (float(db_by_date[d].get('FeedDispensed_kg', 0)) > 0 or float(db_by_date[d].get('EventsCompleted', 0)) > 0)
+            ]
+
+            if active_dates_in_window:
+                earliest_recorded_str = min(active_dates_in_window)
+                try:
+                    earliest_dt = datetime.strptime(earliest_recorded_str, "%Y-%m-%d").date()
+                    available_days_count = (today_ist - earliest_dt).days + 1
+                    num_days = min(max_window_days, max(1, available_days_count))
+                except:
+                    num_days = len(active_dates_in_window)
+            elif is_today_live_event and live_dispensed_kg > 0:
+                num_days = 1
+            else:
+                # No historical feed data in window: only show today
+                num_days = 1
 
             rolling_days = []
             for i in range(num_days - 1, -1, -1):
@@ -1359,7 +1381,11 @@ def lambda_handler(event, context):
                         'isToday': (i == 0)
                     })
                     
-            return build_response(200, {'deviceId': device_id, 'metrics': rolling_days})
+            return build_response(200, {
+                'deviceId': device_id,
+                'availableDays': len(rolling_days),
+                'metrics': rolling_days
+            })
 
         return build_response(404, {'error': f'Route {http_method} {path} not found'})
 

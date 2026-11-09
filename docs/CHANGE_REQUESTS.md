@@ -99,3 +99,32 @@ The Senior QA audit identified several static and simulated placeholders in the 
 | **CR-025** | STORY-027 | REQ-216 | Live E2E Headless Test (`verify_live_e2e.py`) | 15-day date ribbon rendered; full 145 events rendered for 2026-11-09 with 0 truncation; 12 hourly active feeding columns displayed | **PASSED & CLOSED** |
 | **CR-026** | STORY-028 | REQ-217 | Live AWS API Endpoint & UI Inspection | Deterministic schedule calculation anchored to feeder daylight window and event sequence ($T_{k+1}$) | **PASSED & CLOSED** |
 | **CR-027** | STORY-029 | REQ-218 | Live E2E Headless Test (`verify_live_e2e.py`) | Power status dynamically bound to `LastVoltage_mV` (0.89V Bench Supply); window dynamically bound to `06:00 AM - 06:00 PM`; 5 diagnostics badges dynamically evaluated; fake setTimeout eradicated | **PASSED & CLOSED** |
+| **CR-028** | STORY-030 | REQ-219 | Live Headless E2E Test (`verify_enterprise_history.py`) | Date Explorer card aligned inside standard `.card` layout; available history dynamic (1 day on Feeder 04, 13 days on Feeder 02, zero forced 15 blank days); left/right chevrons, wheel horizontal scroll, and calendar picker fully operational; 0 hanging 'Loading dates...' states | **PASSED & CLOSED** |
+
+---
+
+## CR-028 / STORY-030: Enterprise History Date Explorer, Dynamic Available-Day History & Boundary Alignment
+
+### 1. Problem Description
+User review identified critical issues in the History tab UI:
+1. **Hanging State:** UI remained stuck displaying "Loading dates..." in `#history-active-date-lbl`.
+2. **Boundary Crossing & Misalignment:** The date selector ribbon was placed outside a `.card` container without margin alignment (`margin: 10px 0 14px`), causing it to spill 16px past the edges of the cards above and below it.
+3. **Scroll Deficiency:** The horizontal date ribbon lacked scroll controls (chevrons), mouse-wheel interception, or scroll-snap, making it difficult or impossible to scroll across dates on desktop and mobile.
+4. **Forced 15-Day History:** Devices with only 1 or 4 days of history (such as Feeder 04 with 1 day, or Feeder 02 with 5 days) were forced into 15 days of dummy placeholder records, displaying a cluttered ribbon of empty dates back into October.
+
+### 2. Engineering Solution
+1. **Dynamic Available-Day History (`api_lambda.py` & `app.js`):**
+   - In `GET /api/metrics/{deviceId}`, determine the earliest recorded activity date within the 15-day window.
+   - If a device has records from `2026-11-06`, span exactly 5 days (Nov 6 to Nov 10).
+   - If a device has 0 records prior to today (e.g. Feeder 04), span only 1 day (`Today`).
+   - Eliminate hardcoded 15-day fallbacks that generate fake empty days.
+2. **Enterprise Card Encapsulation (`index.html` & `styles.css`):**
+   - Wrap the date selector inside a standard dashboard card: `<div class="card history-date-card">`.
+   - Adhere strictly to the dashboard's `margin: 0 16px 14px` and border-radius rules.
+3. **Smooth Scroll & Navigation Chevrons (`index.html`, `styles.css`, `app.js`):**
+   - Add left (`◀`) and right (`▶`) navigation buttons with `scrollDateRibbon(delta)`.
+   - Add horizontal wheel event handler (`e.deltaY` translated to `scrollLeft`).
+   - Add native calendar picker `<input type="date">` for direct date selection.
+4. **Eliminate Hanging "Loading dates...":**
+   - Automatically hydrate `#history-active-date-lbl` upon render with selected date and dispensed quantity.
+   - Reset `appState.selectedHistoryDate` on feeder switch so dates re-anchor cleanly.

@@ -2396,5 +2396,16 @@
       "status:closed"
     ],
     "uid": "REQ-218"
+  },
+  {
+    "title": "[REQ-219] Enterprise History Date Explorer, Dynamic Available-Day History & Boundary Alignment",
+    "body": "### \ud83d\udccb Requirement Specification\n- **ID**: REQ-219\n- **Category**: Cat 13: Web & Mobile Dashboard UI Contract\n- **Verification Method**: [T] Test / [D] Demo\n- **Target Hardware**: aquaCON Commercial Feeders (Node 1\u20135)\n- **Source Reference**: api_lambda.py;web_dashboard/app.js;web_dashboard/index.html;web_dashboard/styles.css\n\n### \ud83d\udcdd Requirement Statement\n> The system SHALL render historical feed metrics anchored exclusively to the actual active days on record for each device (up to 15 days), rather than forcing 15 empty days when fewer days exist. The History date explorer SHALL be contained within a standard dashboard card aligned with container margins, eliminate 'Loading dates...' hanging states, support horizontal scroll with navigation chevrons, mouse wheel horizontal translation, and offer an integrated calendar date picker.\n\n---\n\n### \ud83e\uddea Verification & Acceptance Criteria\n- [x] /api/metrics/{deviceId} dynamically spans only from the device's earliest recorded date within the 15-day window to today, without forcing 15 empty days.\n- [x] New or single-day devices (e.g. Feeder 04) display only available history (1 day) rather than 15 blank filler days.\n- [x] Date Explorer is wrapped inside a standard `.card` component, perfectly aligned with dashboard 16px margins, eliminating overflow crossing boundaries.\n- [x] Left and right navigation chevrons and mouse wheel scrolling allow smooth, responsive navigation between date pills.\n- [x] 'Loading dates...' label immediately resolves to the selected date label upon rendering without hanging.\n- [x] Integrated native calendar picker (<input type=\"date\">) allows instantaneous jump to any date within the available date range.\n- [x] Switching active feeder resets selectedHistoryDate so the new feeder's actual dates load cleanly without stale date collision.",
+    "labels": [
+      "requirement",
+      "cat:cat-13",
+      "method:test",
+      "status:closed"
+    ],
+    "uid": "REQ-219"
   }
 ]

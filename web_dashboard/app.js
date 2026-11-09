@@ -691,6 +691,7 @@ function updatePondContextBar() {
 
 function switchActiveDevice(deviceId) {
   appState.selectedDeviceId = deviceId;
+  appState.selectedHistoryDate = null; // Reset so new feeder loads its own latest active date
   localStorage.setItem('aquacon_selected_device', deviceId);
   const dev = appState.devices.find(d => d.id === deviceId);
   if (dev && dev.pondId) {
@@ -1023,16 +1024,6 @@ function loadSelectedDeviceToUI() {
     }
   }
 
-  const pillWindowDot = document.getElementById('pill-window-dot');
-  const pillWindowStatus = document.getElementById('pill-window-status');
-  if (pillWindowDot && pillWindowStatus) {
-    pillWindowDot.className = 'pill-dot dot-available';
-    pillWindowStatus.textContent = `${timeFormatted} – ${endTimeFormatted}`;
-  }
-
-  updateDiagnosticsUI(dev, true, heroTitle);
-
-  
   // Operational Time & Schedule Completion Engine (strictly in Asia/Kolkata IST)
   const now = new Date();
   const istParts = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour12: false }).split(':').map(Number);
@@ -1054,6 +1045,15 @@ function loadSelectedDeviceToUI() {
   }
   const timeFormatted = formatTimeAmPm(sHour, sMin);
   const endTimeFormatted = formatTimeAmPm(eHour, eMin);
+
+  const pillWindowDot = document.getElementById('pill-window-dot');
+  const pillWindowStatus = document.getElementById('pill-window-status');
+  if (pillWindowDot && pillWindowStatus) {
+    pillWindowDot.className = 'pill-dot dot-available';
+    pillWindowStatus.textContent = `${timeFormatted} - ${endTimeFormatted}`;
+  }
+
+  updateDiagnosticsUI(dev, true, heroTitle);
 
   const isOvercurrent = dev.status === 'MOTOR JAM / OVERCURRENT' || dev.status === 'MOTOR OVERCURRENT' || ((dev.statusFlags || 0) & 0x02) !== 0;
   const isPaused = dev.status === 'PAUSED' || ((dev.statusFlags || 0) & 0x10) !== 0;
@@ -1772,45 +1772,36 @@ async function renderHistoryView() {
     }
   } catch (e) {}
 
-  // Fallback 15-day records if offline or pending
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+  // Fallback: Only show available day (Today) if no metrics found - NEVER force 15 empty days! (CR-028 / REQ-219)
   if (!metrics || metrics.length === 0) {
-    const today = new Date();
-    metrics = [];
-    const base = dev.targetKg || 15.0;
-    for (let i = 14; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dIso = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-      const dStr = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'numeric', day: 'numeric' });
-      const disp = (i === 0) ? Number(dev.dispensedKg || 0.0) : 0.0;
-      metrics.push({
-        Date: dIso,
-        dateLabel: dStr,
-        FeedDispensed_kg: disp,
-        Target_kg: base,
-        EventsCompleted: (i === 0) ? (dev.currentEvent || 0) : 0,
-        TotalEvents: dev.totalEvents || 150,
-        isToday: i === 0
-      });
-    }
+    metrics = [{
+      Date: todayIso,
+      dateLabel: 'Today',
+      FeedDispensed_kg: Number(dev.dispensedKg || 0.0),
+      Target_kg: dev.targetKg || 15.0,
+      EventsCompleted: Number(dev.currentEvent || 0),
+      TotalEvents: dev.totalEvents || 150,
+      isToday: true
+    }];
     appState.deviceMetrics[dev.id] = metrics;
   }
 
   // 2. Determine currently active/selected date in History tab
-  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  if (!appState.selectedHistoryDate) {
+  if (!appState.selectedHistoryDate || !metrics.some(m => m.Date === appState.selectedHistoryDate)) {
     const todayMetric = metrics.find(m => m.isToday || m.Date === todayIso);
     if (todayMetric && (todayMetric.FeedDispensed_kg > 0 || todayMetric.EventsCompleted > 0)) {
       appState.selectedHistoryDate = todayMetric.Date;
     } else {
       // Find the most recent active date with feed events
       const lastActive = metrics.slice().reverse().find(m => (m.FeedDispensed_kg || 0) > 0 || (m.EventsCompleted || 0) > 0);
-      appState.selectedHistoryDate = lastActive ? lastActive.Date : todayIso;
+      appState.selectedHistoryDate = lastActive ? lastActive.Date : (metrics[metrics.length - 1] ? metrics[metrics.length - 1].Date : todayIso);
     }
   }
 
-  // 3. Render 15-Day Date Selector Ribbon
-  renderDateSelectorRibbon(metrics);
+  // 3. Render Enterprise Date Selector Ribbon & update picker bounds
+  renderDateSelectorRibbon(metrics, dev);
 
   // 4. Fetch telemetry events for the selected date
   const targetDate = appState.selectedHistoryDate;
@@ -1917,30 +1908,88 @@ async function renderHistoryView() {
   renderEventsLog(dev, metrics, cleanEvents, targetDate);
 }
 
-function renderDateSelectorRibbon(metrics) {
+function renderDateSelectorRibbon(metrics, dev) {
   const container = document.getElementById('history-date-pills');
   const activeLbl = document.getElementById('history-active-date-lbl');
+  const subLbl = document.getElementById('history-date-range-sub');
+  const calPicker = document.getElementById('history-calendar-picker');
   if (!container) return;
 
   const sorted = metrics.slice().reverse();
   const selectedDate = appState.selectedHistoryDate;
+  const currentDev = dev || appState.devices.find(d => d.id === appState.selectedDeviceId);
+  const devName = currentDev ? currentDev.name : 'Feeder';
+
+  // Synchronize Calendar input bounds and value
+  if (calPicker && metrics.length > 0) {
+    calPicker.min = metrics[0].Date;
+    calPicker.max = metrics[metrics.length - 1].Date;
+    calPicker.value = selectedDate;
+  }
+
+  // Update active date header text immediately (eliminates hanging 'Loading dates...')
+  const curMetric = metrics.find(m => m.Date === selectedDate) || sorted[0];
+  if (curMetric) {
+    const dispVal = Number(curMetric.FeedDispensed_kg !== undefined ? curMetric.FeedDispensed_kg : (curMetric.feedKg || 0));
+    const label = curMetric.isToday ? 'Today' : (curMetric.dateLabel || curMetric.Date);
+    if (activeLbl) {
+      activeLbl.textContent = `${label} · ${dispVal.toFixed(1)} kg Dispensed`;
+    }
+  }
+  if (subLbl) {
+    subLbl.textContent = `Showing ${metrics.length} day${metrics.length === 1 ? '' : 's'} on record for ${devName}`;
+  }
 
   let html = '';
   sorted.forEach(m => {
     const isSel = (m.Date === selectedDate);
     const dispVal = Number(m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0));
     const label = m.isToday ? 'Today' : (m.dateLabel || m.Date);
-    if (isSel && activeLbl) {
-      activeLbl.textContent = `${m.isToday ? 'Today, ' : ''}${m.dateLabel || m.Date} (${dispVal.toFixed(1)} kg)`;
-    }
     html += `
-      <div class="date-pill ${isSel ? 'active' : ''} ${m.isToday ? 'is-today' : ''} ${dispVal > 0 ? 'has-feed' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')">
-        <span class="date-pill-day">${label}</span>
+      <div class="date-pill ${isSel ? 'active' : ''} ${m.isToday ? 'is-today' : ''} ${dispVal > 0 ? 'has-feed' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${dispVal.toFixed(1)} kg">
+        <div class="date-pill-top">
+          <span class="date-pill-dot"></span>
+          <span class="date-pill-day">${label}</span>
+        </div>
         <span class="date-pill-val">${dispVal > 0 ? dispVal.toFixed(1) + ' kg' : '0 kg'}</span>
       </div>
     `;
   });
   container.innerHTML = html;
+
+  // Horizontal wheel-scroll support (standard enterprise UX)
+  if (!container.__wheelBound) {
+    container.__wheelBound = true;
+    container.addEventListener('wheel', (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+
+  // Auto-scroll selected date into view
+  setTimeout(() => {
+    const activePill = container.querySelector('.date-pill.active');
+    if (activePill) {
+      activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, 40);
+}
+
+function scrollDateTrack(delta) {
+  const ribbon = document.getElementById('history-date-pills');
+  if (ribbon) ribbon.scrollBy({ left: delta, behavior: 'smooth' });
+}
+
+function onCalendarDatePicked(pickedDate) {
+  if (!pickedDate) return;
+  selectHistoryDate(pickedDate);
+}
+
+function selectTodayDate() {
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  selectHistoryDate(todayIso);
 }
 
 function selectHistoryDate(dateStr) {
@@ -1987,6 +2036,10 @@ function renderHourlyChart(hourlyKg, targetDate, totalDayKg) {
 
 function renderBarChart(metrics, targetKg) {
   const container = document.getElementById('history-chart-container');
+  const chartTitle = document.getElementById('history-barchart-title');
+  if (chartTitle) {
+    chartTitle.textContent = `Daily Feed Dispensed (${metrics.length} Day${metrics.length === 1 ? '' : 's'} on Record)`;
+  }
   if (!container) return;
 
   const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)));
