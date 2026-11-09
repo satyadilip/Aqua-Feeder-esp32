@@ -1832,6 +1832,9 @@ async function renderHistoryView() {
   // 3. Render Master Daily Feed Dispensed Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
 
+  // 4. Render Recent Feed Event Log (Last 20 Events on History Screen)
+  renderRecentEventsLog(dev, metrics);
+
   // 4. If the Day Inspector modal is currently open, re-hydrate it
   const modal = document.getElementById('day-inspector-modal');
   if (modal && modal.style.display === 'flex' && appState.selectedHistoryDate) {
@@ -1841,7 +1844,43 @@ async function renderHistoryView() {
 
 function scrollBarChart(delta) {
   const track = document.getElementById('history-chart-container');
-  if (track) track.scrollBy({ left: delta, behavior: 'smooth' });
+  if (!track) return;
+  if (typeof track.scrollBy === 'function') {
+    track.scrollBy({ left: delta, behavior: 'smooth' });
+  } else {
+    track.scrollLeft += delta;
+  }
+}
+
+function initBarChartNavigation() {
+  const btnLeft = document.getElementById('btn-chart-scroll-left');
+  const btnRight = document.getElementById('btn-chart-scroll-right');
+  const track = document.getElementById('history-chart-container');
+
+  if (btnLeft && !btnLeft.__navBound) {
+    btnLeft.__navBound = true;
+    const scrollL = (e) => { e.preventDefault(); e.stopPropagation(); scrollBarChart(-220); };
+    btnLeft.addEventListener('click', scrollL);
+    btnLeft.addEventListener('touchstart', scrollL, { passive: false });
+  }
+
+  if (btnRight && !btnRight.__navBound) {
+    btnRight.__navBound = true;
+    const scrollR = (e) => { e.preventDefault(); e.stopPropagation(); scrollBarChart(220); };
+    btnRight.addEventListener('click', scrollR);
+    btnRight.addEventListener('touchstart', scrollR, { passive: false });
+  }
+
+  if (track && !track.__clickBound) {
+    track.__clickBound = true;
+    track.addEventListener('click', (e) => {
+      const col = e.target.closest('.bar-column');
+      if (col) {
+        const d = col.getAttribute('data-date');
+        if (d) openDayInspector(d);
+      }
+    });
+  }
 }
 
 function renderBarChart(metrics, targetKg) {
@@ -1899,6 +1938,7 @@ function renderBarChart(metrics, targetKg) {
   });
 
   container.innerHTML = html;
+  initBarChartNavigation();
 
   // Horizontal mouse-wheel sliding interception
   if (!container.__wheelBound) {
@@ -1911,11 +1951,13 @@ function renderBarChart(metrics, targetKg) {
     }, { passive: false });
   }
 
-  // Smooth auto-centering of the active/selected bar
+  // Smooth auto-centering of the active/selected bar, or default scroll to latest dates on right
   setTimeout(() => {
     const selectedBar = container.querySelector('.bar-column.selected');
     if (selectedBar) {
       selectedBar.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    } else {
+      container.scrollLeft = container.scrollWidth;
     }
   }, 40);
 }
@@ -3462,9 +3504,7 @@ async function syncDevicesFromCloud() {
 
       loadSelectedDeviceToUI();
       updatePondContextBar();
-      if (appState.activeTab === 'tab-history') {
-        renderHistoryView();
-      } else if (appState.activeTab === 'tab-traycheck') {
+      if (appState.activeTab === 'tab-traycheck') {
         renderTrayChecksView();
       }
     }
@@ -3523,4 +3563,93 @@ function switchTroubleshootSubTab(subtab) {
       renderAlertContacts();
     }
   }
+}
+
+async function renderRecentEventsLog(dev, metrics) {
+  const container = document.getElementById('events-log-container');
+  const badgeEl = document.getElementById('log-count-badge');
+  const descEl = document.getElementById('log-date-label');
+  const titleEl = document.getElementById('log-main-title');
+  if (!container) return;
+
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  // Find latest active date
+  const lastActive = metrics.slice().reverse().find(m => (m.FeedDispensed_kg || 0) > 0 || (m.EventsCompleted || 0) > 0);
+  const targetDate = lastActive ? lastActive.Date : todayIso;
+
+  let telemetry = [];
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?date=${targetDate}&_t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
+      const d = await res.json();
+      if (d && d.telemetry) telemetry = d.telemetry;
+    }
+  } catch (e) {}
+
+  const cleanEvents = [];
+  const seenEvents = new Set();
+  for (const item of telemetry) {
+    const evNum = Math.round(Number(item.CurrentEvent || 0));
+    if (evNum <= 0) continue;
+    if (!seenEvents.has(evNum)) {
+      seenEvents.add(evNum);
+      let timeStr = item.Time || '';
+      if (timeStr && timeStr.includes(':')) {
+        const parts = timeStr.split(' ');
+        const timeParts = parts[0].split(':');
+        if (timeParts.length >= 2) {
+          timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
+        }
+      }
+      cleanEvents.push({
+        eventNumber: evNum,
+        time: timeStr,
+        grams: Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100),
+        cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
+        date: item.Date || targetDate
+      });
+    }
+  }
+  cleanEvents.sort((a, b) => b.eventNumber - a.eventNumber);
+  const totalEvents = cleanEvents.length;
+  const recent20 = cleanEvents.slice(0, 20);
+
+  if (titleEl) {
+    titleEl.textContent = (targetDate === todayIso) ? "Today's Recent Feed Events" : `Recent Feed Events (${formatHistoryDateTitle(targetDate)})`;
+  }
+  if (descEl) {
+    descEl.textContent = totalEvents > 0 
+      ? `Showing latest ${recent20.length} of ${totalEvents} completed pulses for ${targetDate}`
+      : `No feed events recorded for ${targetDate}`;
+  }
+  if (badgeEl) {
+    badgeEl.textContent = totalEvents > 0 ? `${totalEvents} Events` : '0 Events';
+  }
+
+  if (recent20.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding: 24px 16px; color: var(--text-muted); font-size: 13px;">
+        <div style="font-size: 22px; margin-bottom: 4px;">🌅</div>
+        <strong style="color:var(--text-main);">0 Events Recorded</strong>
+        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">
+          Feeding window runs 06:00 AM to 06:00 PM. Tap any past date above to inspect full day trends.
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  let html = '';
+  recent20.forEach(ev => {
+    html += `
+      <div class="event-log-item">
+        <div>
+          <span class="event-log-time">${ev.time || '--:--'}</span>
+          <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed ${ev.cumulativeGrams ? `(${ (ev.cumulativeGrams/1000).toFixed(2) } kg cumulative)` : ''}</div>
+        </div>
+        <span class="event-log-tag tag-completed">DISPENSED</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
 }

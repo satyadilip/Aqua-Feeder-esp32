@@ -17,7 +17,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <!-- Modern Application Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=2.5">
+  <link rel="stylesheet" href="styles.css?v=3.2.0">
   <!-- Critical Path: Prevent Flash of Unauthenticated Content (FOUC) -->
   <style>
     html.user-authenticated #screen-auth {
@@ -489,6 +489,23 @@
               </div>
             </div>
 
+                      <!-- Recent Feed Event Detailed Logs Table (Last 20 Events) -->
+            <div class="card log-card" id="history-recent-events-card">
+              <div class="card-header-row">
+                <div>
+                  <h3 class="section-title" id="log-main-title">Recent Feed Event Log</h3>
+                  <span class="section-desc" id="log-date-label">Showing recent completed feed events</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge-pill pill-emerald" id="log-count-badge">0 Events</span>
+                  <button type="button" class="btn-text-sm" onclick="refreshHistoryData()">↻ Refresh</button>
+                </div>
+              </div>
+
+              <div class="events-log-list" id="events-log-container">
+                <!-- Dynamically populated recent 20 events -->
+              </div>
+            </div>
           </section>
 
           <!-- ══════════════════════════════════════════════════════════════════
@@ -1442,7 +1459,7 @@
   <div id="app-toast" class="toast-banner"></div>
 
   <!-- Main Application Script -->
-  <script src="app.js?v=2.7"></script>
+  <script src="app.js?v=3.2.0"></script>
 </body>
 </html>
 

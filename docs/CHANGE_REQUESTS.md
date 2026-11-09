@@ -182,3 +182,43 @@ The user requested:
      - **📋 Event Timeline:** Complete sequential pulse log (1 to 150) with timestamps and cumulative grams.
    - **Footer:** Date stepping (`← Previous Day` / `Next Day →`) and a `Done` close button.
    - Modal closes cleanly via close button, backdrop tap, or `Escape` key.
+
+---
+
+## CR-031 / STORY-033: History Chevron Navigation, Date Click Trends Modal, Recent 20 Events Card & Live Automated Verification Suite
+
+### 1. Problem Description
+User validation revealed four critical issues:
+1. **Chevron Non-Functional:** Side arrow keys on the Daily Feed Dispensed track did not scroll or were immediately reset by the 5-second background telemetry polling loop.
+2. **Popup Not Showing on Date Click:** Clicking a date bar did not open the Day Inspector modal due to browser asset caching, child element click interception, and DOM re-renders.
+3. **Recent Events Missing on Main Tab:** The user requested: *"also keep that last 20 events history tab like that that is handy"*, preferring immediate pulse visibility on the main screen without needing to open the modal.
+4. **Autonomous Testing Requirement:** User directed: *"and I dont want to comeback and ask you write automation test scripts to test the live website and find bugs and fix them"*.
+5. **Backend 500 Error:** `/api/metrics/e072a1f5bac0` returned HTTP 500 due to an `UnboundLocalError` on `dev_item` in `api_lambda.py`.
+
+### 2. Engineering Solution
+1. **Chevron Navigation & Smooth Sliding (`app.js` & `styles.css`):**
+   - Removed destructive `renderHistoryView()` invocations from the 5-second telemetry loop, preventing DOM tearing.
+   - Enlarged `.barchart-chevron` tap target to 36px, `z-index: 10`, `touch-action: manipulation`.
+   - Bound dedicated `click` and `touchstart` listeners in `initBarChartNavigation()`.
+   - Defaulted initial chart track position to scroll to the right (`container.scrollLeft = container.scrollWidth`), immediately showing the most recent dates.
+2. **Date Click Interaction & Trend Modal (`app.js`, `styles.css`, `index.html`):**
+   - Added `pointer-events: none` on `.bar-column *` so child labels and pillars never swallow click events.
+   - Added delegated click listener on `#history-chart-container` matching `.closest('.bar-column')`.
+   - Bumped cache-busting version query strings in `index.html` to `styles.css?v=3.2.0` and `app.js?v=3.2.0`.
+   - Day Inspector modal opens instantaneously with hourly feed distribution (06:00 to 18:00), peak hour insights, schedule adherence, and pulse timeline.
+3. **Recent Feed Events Card on History Tab (`index.html` & `app.js`):**
+   - Added `#history-recent-events-card` directly onto the main History page below the Daily Feed Dispensed chart.
+   - Renders the latest 20 completed pulses with live timestamps, event grams, cumulative kg, and status badges (`FEED EVENT #X`).
+4. **Backend Hardening (`api_lambda.py`):**
+   - Fixed `dev_item` initialization bug preventing `UnboundLocalError` when devices are looked up.
+   - Added seamless dual-matching for both 12-char MAC and 16-char EUI-64 device identifiers.
+   - Packaged and deployed update to AWS Lambda `AquaFeederApiHandler`.
+5. **Autonomous E2E Verification Suite (`scratch/comprehensive_e2e_test.py`):**
+   - Developed headless Selenium test suite verifying all 7 user workflows against live AWS S3 production:
+     - Chevrons smooth slide left/right.
+     - Recent 20 Events card renders on main history tab.
+     - Date click opens trend popup modal.
+     - Modal segmented toggle switches between Hourly Graph and Timeline.
+     - Modal close button dismisses cleanly.
+     - Mobile viewport (iPhone 375x812) touch/scroll/click responsiveness.
+     - Feeder 04 single-day available history rendering and centering.

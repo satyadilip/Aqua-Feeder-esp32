@@ -683,3 +683,16 @@
 - **Root Cause & Technical Fix:**
   1. Date Explorer ribbon and inline charts cluttered the page, suffered from UTC timezone shift bugs on date names, and caused visual chaos.
   2. Fix: Implement master-detail modal architecture. Remove redundant ribbon and inline cards; render interactive bars with kg on top; clicking a bar opens `#day-inspector-modal` with KPI strip, dual-view switcher (`Hourly Graph` vs `Event Timeline`), date navigation controls, and small close button (`✕`).
+
+---
+
+### STORY-033: History Chevron Navigation, Date Click Trends Modal, Recent 20 Events Card & Live Automated Verification Suite (CR-031 / REQ-222)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farm Supervisor
+- **I want:** The History screen chevrons to smoothly scroll daily bars, clicking any date to open the Day Inspector trend modal, the latest 20 feed events to remain visible on the main screen for quick inspection, and the live application to be autonomously verified via automated end-to-end testing across desktop and mobile.
+- **Root Cause & Technical Fix:**
+  1. Side arrow keys were non-functional or reset by 5-second background polling. Fix: Removed `renderHistoryView()` from polling loop, enlarged chevron targets, added touch/click listeners.
+  2. Date click failed to open modal due to cached assets and child element interception. Fix: Added `pointer-events: none` on child elements, event delegation, and cache-busted to `v=3.2.0`.
+  3. Main History screen was missing recent pulses. Fix: Implemented `#history-recent-events-card` displaying the latest 20 pulses directly below the bar chart.
+  4. Backend Lambda threw 500 on `dev_item` uninitialized variable. Fix: Initialized `dev_item = {}` and supported dual 12/16-char MAC/DevEUI matching; deployed to `AquaFeederApiHandler`.
+  5. Built comprehensive autonomous E2E test suite (`comprehensive_e2e_test.py`) passing 100% against live production S3.

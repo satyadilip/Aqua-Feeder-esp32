@@ -1224,31 +1224,46 @@ def lambda_handler(event, context):
         # 8. Daily Metrics & Historical Trends
         elif path.startswith('/api/metrics/') and http_method == 'GET':
             device_id = path.split('/')[-1]
+            target_ids = [device_id]
+            if len(device_id) == 12:
+                target_ids.append(device_id[:6] + 'fffe' + device_id[6:])
+            elif len(device_id) == 16 and 'fffe' in device_id:
+                target_ids.append(device_id[:6] + device_id[10:])
+
             items = []
-            try:
-                response = metrics_table.query(
-                    KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
-                    ScanIndexForward=False,
-                    Limit=60
-                )
-                items = response.get('Items', [])
-            except Exception as e:
-                print("Metrics query error:", e)
+            for tid in target_ids:
+                try:
+                    response = metrics_table.query(
+                        KeyConditionExpression=boto3.dynamodb.conditions.Key('DeviceId').eq(tid),
+                        ScanIndexForward=False,
+                        Limit=60
+                    )
+                    items = response.get('Items', [])
+                    if items:
+                        break
+                except Exception as e:
+                    print(f"Metrics query error for {tid}:", e)
                 
-            base_qty = 50.0 if device_id == 'e072a1fffef6249c' else 15.0
+            base_qty = 50.0 if any(t == 'e072a1fffef6249c' for t in target_ids) else 15.0
             live_cur_ev = 0
             live_dispensed_kg = 0.0
-            try:
-                dev_res = devices_table.get_item(Key={'DeviceId': device_id})
-                dev_item = dev_res.get('Item', {})
-                if dev_item and 'FeedQuantity_kg' in dev_item:
-                    base_qty = float(dev_item['FeedQuantity_kg'])
-                if dev_item and 'CurrentEvent' in dev_item:
-                    live_cur_ev = float(dev_item['CurrentEvent'])
-                if dev_item and 'DispensedFeed_kg' in dev_item:
-                    live_dispensed_kg = float(dev_item['DispensedFeed_kg'])
-            except:
-                pass
+            dev_item = {}
+            for tid in target_ids:
+                try:
+                    dev_res = devices_table.get_item(Key={'DeviceId': tid})
+                    found_item = dev_res.get('Item')
+                    if found_item:
+                        dev_item = found_item
+                        break
+                except Exception as e:
+                    print(f"Device lookup error for {tid}:", e)
+
+            if dev_item and 'FeedQuantity_kg' in dev_item:
+                base_qty = float(dev_item['FeedQuantity_kg'])
+            if dev_item and 'CurrentEvent' in dev_item:
+                live_cur_ev = float(dev_item['CurrentEvent'])
+            if dev_item and 'DispensedFeed_kg' in dev_item:
+                live_dispensed_kg = float(dev_item['DispensedFeed_kg'])
                 
             # Indian Standard Time (+05:30) for farm calendar
             now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
