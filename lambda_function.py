@@ -515,12 +515,17 @@ def lambda_handler(event, context):
             s_time_fmt = f"{s_disph:02d}:{smin_val:02d} {s_ampm}"
             
             if status_str == 'FEEDING' and is_inside_schedule:
+                next_ev_num = int(live_cur_ev) + 1
                 next_ist_dt = now_ist_dt + timedelta(seconds=dynamic_gap_sec)
                 next_feed_str = next_ist_dt.strftime("%I:%M %p")
-                next_feed_sub = f"Every {dynamic_gap_sec}s ({dynamic_interval_min}m)"
+                rem_m = int(round(dynamic_gap_sec / 60.0))
+                if rem_m <= 1:
+                    next_feed_sub = f"Event {next_ev_num} of {tot_ev_calc} · Due now (Every {dynamic_interval_min}m)"
+                else:
+                    next_feed_sub = f"Event {next_ev_num} of {tot_ev_calc} · in {rem_m}m (Every {dynamic_interval_min}m)"
             elif status_str == 'COMPLETED' or now_ist_mins >= end_mins:
                 next_feed_str = s_time_fmt
-                next_feed_sub = f"Tomorrow at {s_time_fmt}"
+                next_feed_sub = f"Tomorrow at {s_time_fmt} ({live_disp_kg} kg completed)"
             elif now_ist_mins < start_mins:
                 next_feed_str = s_time_fmt
                 next_feed_sub = f"Starts today at {s_time_fmt}"

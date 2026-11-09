@@ -371,16 +371,16 @@
               <h3 class="section-title-sm">Operational Status</h3>
               <div class="health-pills-row">
                 <div class="health-pill">
-                  <span class="pill-dot dot-available"></span>
-                  <span class="pill-label">Power Supply: <strong>Battery / Solar OK</strong></span>
+                  <span class="pill-dot dot-available" id="pill-power-dot"></span>
+                  <span class="pill-label">Power Supply: <strong id="pill-power-status">Battery / Solar OK</strong></span>
                 </div>
                 <div class="health-pill">
                   <span class="pill-dot dot-available" id="pill-feed-dot"></span>
                   <span class="pill-label">Feed Status: <strong id="pill-feed-status">Feed Available</strong></span>
                 </div>
                 <div class="health-pill">
-                  <span class="pill-dot dot-available"></span>
-                  <span class="pill-label">Active Window: <strong>06:00 AM – 06:00 PM</strong></span>
+                  <span class="pill-dot dot-available" id="pill-window-dot"></span>
+                  <span class="pill-label">Active Window: <strong id="pill-window-status">06:00 AM – 06:00 PM</strong></span>
                 </div>
               </div>
             </div>
@@ -452,10 +452,21 @@
               </div>
             </div>
 
-            <!-- 7-Day Feed Consumption Bar Chart -->
+            <!-- 15-Day Date Selector Ribbon -->
+            <div class="date-selector-ribbon-wrap">
+              <div class="date-selector-header">
+                <span class="date-selector-title">Select Date (Past 15 Days):</span>
+                <span class="date-selected-indicator" id="history-active-date-lbl">Loading dates...</span>
+              </div>
+              <div class="date-selector-ribbon" id="history-date-pills">
+                <!-- Dynamically populated 15 date pills -->
+              </div>
+            </div>
+
+            <!-- 15-Day Feed Consumption Bar Chart -->
             <div class="card chart-card">
               <div class="card-header-row">
-                <h3 class="section-title">Daily Feed Dispensed (Last 7 Days)</h3>
+                <h3 class="section-title">Daily Feed Dispensed (Past 15 Days)</h3>
                 <span class="chart-legend-tag">Target: <strong id="chart-target-lbl">15.0 Kg</strong></span>
               </div>
 
@@ -465,14 +476,31 @@
               </div>
             </div>
 
+            <!-- Hourly Feeding Visualization for Selected Date -->
+            <div class="card hourly-chart-card" id="hourly-chart-card">
+              <div class="card-header-row">
+                <div>
+                  <h3 class="section-title">Hourly Feed Distribution (<span id="hourly-date-label">Selected Date</span>)</h3>
+                  <span class="section-desc" id="hourly-desc-label">Hourly feed consumption curve from 06:00 to 18:00</span>
+                </div>
+                <span class="badge-pill pill-cyan" id="hourly-day-total">-- Kg Dispensed</span>
+              </div>
+              <div class="hourly-bars-container" id="hourly-bars-container">
+                <!-- Dynamically populated 12 hourly pillars -->
+              </div>
+            </div>
+
             <!-- Feed Event Detailed Logs Table -->
             <div class="card log-card">
               <div class="card-header-row">
                 <div>
-                  <h3 class="section-title">Today's Feed Event Log</h3>
+                  <h3 class="section-title" id="log-main-title">Feed Event Log</h3>
                   <span class="section-desc" id="log-date-label">Showing completed feed events</span>
                 </div>
-                <button type="button" class="btn-text-sm" onclick="refreshHistoryData()">↻ Refresh</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="badge-pill pill-emerald" id="log-count-badge">0 Events</span>
+                  <button type="button" class="btn-text-sm" onclick="refreshHistoryData()">↻ Refresh</button>
+                </div>
               </div>
 
               <div class="events-log-list" id="events-log-container">
@@ -865,57 +893,57 @@
               <div class="diag-list" id="diag-checklist-container">
                 <div class="diag-item">
                   <div class="diag-item-left">
-                    <span class="diag-check-icon icon-pass">✔</span>
+                    <span class="diag-check-icon icon-pass" id="diag-clock-icon">✔</span>
                     <div>
                       <strong class="diag-name">System Clock & Timers</strong>
-                      <div class="diag-desc">Accurate • Synced with daily schedule</div>
+                      <div class="diag-desc" id="diag-clock-desc">Accurate • Synced with daily schedule</div>
                     </div>
                   </div>
-                  <span class="badge-state b-done">PASSED</span>
+                  <span class="badge-state b-done" id="diag-clock-badge">PASSED</span>
                 </div>
 
                 <div class="diag-item">
                   <div class="diag-item-left">
-                    <span class="diag-check-icon icon-pass">✔</span>
+                    <span class="diag-check-icon icon-pass" id="diag-spreader-icon">✔</span>
                     <div>
                       <strong class="diag-name">Feed Spreader Motor</strong>
-                      <div class="diag-desc">Passed • Normal load • No jam detected</div>
+                      <div class="diag-desc" id="diag-spreader-desc">Passed • Normal load • No jam detected</div>
                     </div>
                   </div>
-                  <span class="badge-state b-done">PASSED</span>
+                  <span class="badge-state b-done" id="diag-spreader-badge">PASSED</span>
                 </div>
 
                 <div class="diag-item">
                   <div class="diag-item-left">
-                    <span class="diag-check-icon icon-pass">✔</span>
+                    <span class="diag-check-icon icon-pass" id="diag-feed-icon">✔</span>
                     <div>
                       <strong class="diag-name">Feed Availability Sensor</strong>
-                      <div class="diag-desc">Passed • Feed available for scheduled events</div>
+                      <div class="diag-desc" id="diag-feed-desc">Passed • Feed available for scheduled events</div>
                     </div>
                   </div>
-                  <span class="badge-state b-done">PASSED</span>
+                  <span class="badge-state b-done" id="diag-feed-badge">PASSED</span>
                 </div>
 
                 <div class="diag-item">
                   <div class="diag-item-left">
-                    <span class="diag-check-icon icon-pass">✔</span>
+                    <span class="diag-check-icon icon-pass" id="diag-power-icon">✔</span>
                     <div>
                       <strong class="diag-name">Power & Solar Charging</strong>
-                      <div class="diag-desc">Passed • Battery healthy • Solar charging normal</div>
+                      <div class="diag-desc" id="diag-power-desc">Passed • Battery healthy • Solar charging normal</div>
                     </div>
                   </div>
-                  <span class="badge-state b-done">PASSED</span>
+                  <span class="badge-state b-done" id="diag-power-badge">PASSED</span>
                 </div>
 
                 <div class="diag-item">
                   <div class="diag-item-left">
-                    <span class="diag-check-icon icon-pass">✔</span>
+                    <span class="diag-check-icon icon-pass" id="diag-rf-icon">✔</span>
                     <div>
                       <strong class="diag-name">Wireless Hub Connection</strong>
-                      <div class="diag-desc">Passed • Strong link • 100% signal quality</div>
+                      <div class="diag-desc" id="diag-rf-desc">Passed • Strong link • 100% signal quality</div>
                     </div>
                   </div>
-                  <span class="badge-state b-done">PASSED</span>
+                  <span class="badge-state b-done" id="diag-rf-badge">PASSED</span>
                 </div>
               </div>
             </div>

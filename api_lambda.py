@@ -493,14 +493,28 @@ def lambda_handler(event, context):
                             gap_s = base_gap_s
                         dyn_interval_m = round(gap_s / 60.0, 1)
 
+                        next_ev_num = live_cur_ev + 1
                         last_seen_epoch = int(d.get('LastSeenEpoch', 0))
-                        if last_seen_epoch > 0 and (now_epoch - last_seen_epoch) < (gap_s + 30):
+                        # Deterministic scheduled event timeline from morning start:
+                        midnight_ist_epoch = now_epoch - sec_since_midnight
+                        start_epoch_today = midnight_ist_epoch + (start_min * 60)
+                        sched_epoch = start_epoch_today + int(live_cur_ev * (single_ev_s + gap_s))
+                        
+                        if last_seen_epoch > 0 and 0 < (now_epoch - last_seen_epoch) < (gap_s + 60):
                             next_feed_epoch = last_seen_epoch + gap_s
+                        elif sched_epoch > now_epoch:
+                            next_feed_epoch = sched_epoch
                         else:
                             next_feed_epoch = now_epoch + gap_s
+                            
                         next_ist = datetime.utcfromtimestamp(next_feed_epoch) + timedelta(hours=5, minutes=30)
                         next_feed_str = next_ist.strftime("%I:%M %p")
-                        next_feed_sub = f"Interval: {dyn_interval_m}m ({gap_s}s)"
+                        rem_seconds = max(0, next_feed_epoch - now_epoch)
+                        rem_m = int(round(rem_seconds / 60.0))
+                        if rem_m <= 1:
+                            next_feed_sub = f"Event {next_ev_num} of {live_tot_ev} · Due now (Every {dyn_interval_m}m)"
+                        else:
+                            next_feed_sub = f"Event {next_ev_num} of {live_tot_ev} · in {rem_m}m (Every {dyn_interval_m}m)"
 
                     # Phase 5: Standby / Scheduled before first pulse during window or after hours with 0 events
                     else:
@@ -827,9 +841,10 @@ def lambda_handler(event, context):
                 'count': len(checks)
             })
 
-        # 6. Fetch Device Telemetry (Collects actual pulse events across pages)
+        # 6. Fetch Device Telemetry (Supports ?date=YYYY-MM-DD, 15-day lookup & hourly distribution)
         elif path.startswith('/api/telemetry/') and http_method == 'GET':
             device_id = path.split('/')[-1]
+            req_date = (query_params.get('date') or '').strip()
             try:
                 now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
                 today_date_str = now_ist.strftime("%Y-%m-%d")
@@ -837,7 +852,11 @@ def lambda_handler(event, context):
                 raw_items = []
                 lek = None
                 pages = 0
-                while len(raw_items) < 400 and pages < 10:
+                target_date = req_date if req_date else None
+                is_fallback = False
+
+                # Paged DynamoDB query scanning backwards from newest entries
+                while len(raw_items) < 600 and pages < 15:
                     pages += 1
                     q_args = {
                         'KeyConditionExpression': boto3.dynamodb.conditions.Key('DeviceId').eq(device_id),
@@ -848,18 +867,41 @@ def lambda_handler(event, context):
                         q_args['ExclusiveStartKey'] = lek
                     response = telemetry_table.query(**q_args)
                     cur_items = response.get('Items', [])
-                    reached_yesterday = False
+                    if not cur_items:
+                        break
+
+                    # If no target date requested, determine if today has active events;
+                    # if today has 0 events (e.g. pre-dawn before 06:00), automatically anchor
+                    # to the most recent calendar day that contains completed pulses!
+                    if not target_date:
+                        has_today = any(datetime.utcfromtimestamp(int(x.get('Timestamp', 0))).strftime("%Y-%m-%d") == today_date_str and int(x.get('CurrentEvent', 0)) > 0 for x in cur_items)
+                        if has_today:
+                            target_date = today_date_str
+                        else:
+                            for it in cur_items:
+                                ev_num = int(it.get('CurrentEvent', 0))
+                                if ev_num > 0:
+                                    cand_date = datetime.utcfromtimestamp(int(it.get('Timestamp', 0))).strftime("%Y-%m-%d")
+                                    target_date = cand_date
+                                    if target_date != today_date_str:
+                                        is_fallback = True
+                                    break
+                            if not target_date:
+                                target_date = today_date_str
+
+                    reached_past = False
                     for it in cur_items:
                         ts = int(it.get('Timestamp', 0))
                         dt = datetime.utcfromtimestamp(ts)
                         d_str = dt.strftime("%Y-%m-%d")
-                        if d_str == today_date_str:
+                        if d_str == target_date:
                             raw_items.append(it)
-                        elif d_str < today_date_str:
-                            reached_yesterday = True
+                        elif d_str < target_date:
+                            reached_past = True
                             break
+
                     lek = response.get('LastEvaluatedKey')
-                    if reached_yesterday or not lek:
+                    if reached_past or not lek:
                         break
 
                 # Deduplicate by CurrentEvent:
@@ -882,7 +924,7 @@ def lambda_handler(event, context):
                             if is_daytime and not prev_is_daytime:
                                 distinct_by_ev[ev] = it
                             elif is_daytime and prev_is_daytime and raw_ts < prev_ts:
-                                # Retain the earliest daytime packet (the exact moment event was dispensed, not later heartbeats/resumes)
+                                # Retain the earliest daytime packet (the exact moment event was dispensed)
                                 distinct_by_ev[ev] = it
 
                 sorted_ev_nums = sorted(distinct_by_ev.keys())
@@ -897,13 +939,14 @@ def lambda_handler(event, context):
                         calculated_pulse_grams[ev] = fg - prev_fg
                     prev_fg = fg
 
+                hourly_grams = [0] * 24
                 for ev in sorted_ev_nums:
                     it = distinct_by_ev[ev]
                     ev_num = int(it.get('CurrentEvent', 0))
                     if ev_num in calculated_pulse_grams:
                         it['EventGrams'] = calculated_pulse_grams[ev_num]
                     elif 'EventGrams' not in it or it['EventGrams'] is None or int(it.get('EventGrams', 0)) == 0:
-                        it['EventGrams'] = int(it.get('FeedPerEvent_g', 250))
+                        it['EventGrams'] = int(it.get('FeedPerEvent_g', 100))
                     raw_ts = int(it.get('Timestamp', 0))
                     if 1700000000 <= raw_ts <= 2000000000:
                         dt = datetime.utcfromtimestamp(raw_ts)
@@ -915,15 +958,33 @@ def lambda_handler(event, context):
                         it['Time'] = f"{disph:02d}:{nm:02d}:{ns:02d} {ampm}"
                         it['Date'] = dt.strftime("%Y-%m-%d")
                         it['DateLabel'] = dt.strftime("%a %m/%d")
+                        if 0 <= nh < 24:
+                            hourly_grams[nh] += int(it['EventGrams'])
                     else:
                         it['Time'] = ""
                         it['Date'] = ""
 
                 items = [distinct_by_ev[ev] for ev in reversed(sorted_ev_nums)]
+                total_dispensed_g = sum(int(distinct_by_ev[ev].get('EventGrams', 0)) for ev in sorted_ev_nums)
+                hourly_kg = [round(g / 1000.0, 3) for g in hourly_grams]
             except Exception as e:
                 print(f"Telemetry history fetch error: {e}")
                 items = []
-            return build_response(200, {'deviceId': device_id, 'telemetry': items})
+                target_date = today_date_str
+                is_fallback = False
+                total_dispensed_g = 0
+                hourly_kg = [0.0] * 24
+
+            return build_response(200, {
+                'deviceId': device_id,
+                'date': target_date or today_date_str,
+                'isToday': (target_date == today_date_str),
+                'isHistoricalFallback': is_fallback,
+                'totalEvents': len(sorted_ev_nums) if 'sorted_ev_nums' in locals() else len(items),
+                'totalDispensedKg': round(total_dispensed_g / 1000.0, 2),
+                'hourlyKg': hourly_kg,
+                'telemetry': items
+            })
 
         # 7. Device Settings (GET / POST - Calculate and save feed schedule)
         elif path.startswith('/api/settings/'):
@@ -1255,9 +1316,15 @@ def lambda_handler(event, context):
             if not is_today_live_event and live_cur_ev > 0:
                 is_today_live_event = True
 
-            # Build rolling 7-day calendar window ending today (IST)
-            rolling_7_days = []
-            for i in range(6, -1, -1):
+            # Build rolling calendar window ending today (IST) - Default 15 days
+            try:
+                num_days = int(query_params.get('days', 15))
+            except:
+                num_days = 15
+            num_days = max(7, min(30, num_days))
+
+            rolling_days = []
+            for i in range(num_days - 1, -1, -1):
                 day_date = today_ist - timedelta(days=i)
                 d_str = day_date.strftime("%Y-%m-%d")
                 weekday_name = day_date.strftime("%a %m/%d")
@@ -1266,9 +1333,9 @@ def lambda_handler(event, context):
                     record = dict(db_by_date[d_str])
                     record['dateLabel'] = weekday_name
                     record['isToday'] = (i == 0)
-                    rolling_7_days.append(record)
+                    rolling_days.append(record)
                 elif i == 0 and is_today_live_event and live_dispensed_kg > 0:
-                    rolling_7_days.append({
+                    rolling_days.append({
                         'DeviceId': device_id,
                         'Date': d_str,
                         'dateLabel': weekday_name,
@@ -1280,7 +1347,7 @@ def lambda_handler(event, context):
                         'isToday': True
                     })
                 else:
-                    rolling_7_days.append({
+                    rolling_days.append({
                         'DeviceId': device_id,
                         'Date': d_str,
                         'dateLabel': weekday_name,
@@ -1292,7 +1359,7 @@ def lambda_handler(event, context):
                         'isToday': (i == 0)
                     })
                     
-            return build_response(200, {'deviceId': device_id, 'metrics': rolling_7_days})
+            return build_response(200, {'deviceId': device_id, 'metrics': rolling_days})
 
         return build_response(404, {'error': f'Route {http_method} {path} not found'})
 

@@ -2363,5 +2363,38 @@
       "status:pending"
     ],
     "uid": "REQ-215"
+  },
+  {
+    "title": "[REQ-216] 15-Day History Date Selector, Full Event Logs & Hourly Visualization",
+    "body": "### \ud83d\udccb Requirement Specification\n- **ID**: REQ-216\n- **Category**: Cat 13: Web & Mobile Dashboard UI Contract\n- **Verification Method**: [T] Test / [D] Demo\n- **Target Hardware**: aquaCON Commercial Feeders (Node 1\u20135)\n- **Source Reference**: \u0007pi_lambda.py;web_dashboard/app.js;web_dashboard/index.html\n\n### \ud83d\udcdd Requirement Statement\n> The system SHALL allow users to select any past calendar date from at least the past 15 days for each device. When a date is selected, the UI SHALL display that day's total dispensed kg, full timeline of distinct feed events without arbitrary 20-event truncation, and an hourly feeding distribution visualization.\n\n---\n\n### \ud83e\uddea Verification & Acceptance Criteria\n- [x] Multi-day date selector bar/strip rendered in History tab with active date highlighting.\n- [x] /api/telemetry/{deviceId}?date=YYYY-MM-DD returns all distinct daytime feed events for the requested historical date.\n- [x] Fallback logic ensures that on day rollover (e.g., pre-dawn 00:00 to 06:00 IST), the most recent active session is seamlessly available.\n- [x] Hourly distribution graph or timeline visually depicts feeding progress across 06:00 to 18:00.\n- [x] All completed events (up to full daily count, e.g. 150 events) are viewable.",
+    "labels": [
+      "requirement",
+      "cat:cat-13",
+      "method:test",
+      "status:closed"
+    ],
+    "uid": "REQ-216"
+  },
+  {
+    "title": "[REQ-217] Deterministic Next Event Schedule Calculation Anchored to Saved Settings",
+    "body": "### \ud83d\udccb Requirement Specification\n- **ID**: REQ-217\n- **Category**: Cat 12: Cloud Telemetry & Feeding Algorithm\n- **Verification Method**: [T] Test / [A] Analysis\n- **Target Hardware**: aquaCON Commercial Feeders (Node 1\u20135)\n- **Source Reference**: \u0007pi_lambda.py;lambda_function.py;web_dashboard/app.js\n\n### \ud83d\udcdd Requirement Statement\n> The Next Feed metric displayed on the dashboard SHALL deterministically anchor to the feeder's configured operating window (StartHour:StartMinute to EndHour:EndMinute) and event sequence. During active feeding, the next feed time SHALL be anchored to the actual scheduled pulse time or last event timestamp + gap interval, rather than defaulting to now + ~4 minutes on every page refresh.\n\n---\n\n### \ud83e\uddea Verification & Acceptance Criteria\n- [x] When completed or past schedule: next feed displays configured start time for tomorrow.\n- [x] When in pre-dawn: next feed displays configured start time for today.\n- [x] When actively feeding: next feed displays accurate timestamp of Event N+1 with clear subtext (e.g., 'Event 76 of 150 \u00b7 in 3 mins (Every 4.7m)').\n- [x] Interval calculation strictly matches the saved settings (Total Feed, Feed Per Event, Start/End times).",
+    "labels": [
+      "requirement",
+      "cat:cat-12",
+      "method:test",
+      "status:closed"
+    ],
+    "uid": "REQ-217"
+  },
+  {
+    "title": "[REQ-218] Hardware Data Grounding: Dynamic Battery, Solar, Window & Diagnostics",
+    "body": "### \ud83d\udccb Requirement Specification\n- **ID**: REQ-218\n- **Category**: Cat 13: Web & Mobile Dashboard UI Contract\n- **Verification Method**: [D] Demo / [I] Inspection\n- **Target Hardware**: aquaCON Commercial Feeders (Node 1\u20135)\n- **Source Reference**: web_dashboard/index.html;web_dashboard/app.js\n\n### \ud83d\udcdd Requirement Statement\n> The UI SHALL NOT present static or simulated placeholder status cards. All cards including Power Supply (Battery/Solar), Active Feeding Window, Connection Signal Quality, Diagnostics Checklist, and Calibration Note SHALL reflect authentic hardware telemetry and user-configured parameters.\n\n---\n\n### \ud83e\uddea Verification & Acceptance Criteria\n- [x] Operational Status card dynamically displays real battery voltage (from INA219 LastVoltage_mV) and solar charging health instead of static 'Battery / Solar OK'.\n- [x] Operational Status card displays the feeder's actual configured operating window (e.g. 06:00 AM \u2013 06:00 PM).\n- [x] System Health Checklist items dynamically evaluate hardware flags (RTC clock sync, motor trip flag, hopper empty flag, voltage, connection freshness) rather than hardcoded static HTML.\n- [x] Run Health Check button performs genuine telemetry validation instead of a fake 1.2s timeout.\n- [x] Calibration note hydrates with the device's actual discharge rate (g/s) on page load.",
+    "labels": [
+      "requirement",
+      "cat:cat-13",
+      "method:demo",
+      "status:closed"
+    ],
+    "uid": "REQ-218"
   }
 ]

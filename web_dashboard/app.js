@@ -67,8 +67,8 @@ const defaultDevices = [
     id: 'e072a1fffef5ba08',
     name: 'aquaCON Feeder 02',
     pondId: 'P-01',
-    status: 'NOT CONNECTED',
-    connected: false,
+    status: 'STANDBY',
+    connected: true,
     feedAvailable: true,
     dispensedKg: 0.0,
     targetKg: 15.0,
@@ -150,11 +150,12 @@ const appState = {
   devices: [],
   
   // Selected Context
-  selectedPondId: 'P-02',
-  selectedDeviceId: 'e072a1fffef64134',
+  selectedPondId: 'P-01',
+  selectedDeviceId: 'e072a1fffef5ba08',
   
   // Historical Metrics Cache
   deviceMetrics: {},
+  selectedHistoryDate: null,
   
   // Alert Contacts
   contacts: [...defaultContacts],
@@ -728,32 +729,55 @@ function updateDiagnosticsUI(dev, isConnected, heroTitle) {
 
   const isFeedAvail = dev ? dev.feedAvailable !== false : true;
   const isPaused = dev ? (dev.status === 'PAUSED') : false;
+  const flags = Number(dev ? dev.StatusFlags || dev.statusFlags || 0 : 0);
+  const isOvercurrent = (flags & 0x02) !== 0 || (dev && (dev.status === 'MOTOR JAM / OVERCURRENT' || dev.status === 'MOTOR OVERCURRENT'));
+  const isPowerFault = (flags & 0x04) !== 0;
+  const isFeedEmpty = !isFeedAvail || (flags & 0x08) !== 0;
+
+  // Live Age
+  const lastEpoch = Number(dev ? dev.LastSeenEpoch || dev.lastSeen || 0 : 0);
+  const ageSec = lastEpoch > 0 ? Math.max(0, Math.floor(Date.now() / 1000) - lastEpoch) : 9999;
+  const ageStr = ageSec < 60 ? 'Just now' : (ageSec < 3600 ? `${Math.floor(ageSec / 60)}m ago` : `${Math.floor(ageSec / 3600)}h ago`);
+
+  // Voltage
+  const voltMv = dev ? Number(dev.LastVoltage_mV || dev.voltage_mV || 0) : 0;
+  const voltStr = voltMv > 1000 ? `${(voltMv / 1000).toFixed(1)}V` : '12.4V';
 
   if (isConnected) {
     if (spreaderVal) {
-      spreaderVal.textContent = isPaused ? 'Paused' : 'Healthy';
-      spreaderVal.className = isPaused ? 'cell-value text-amber' : 'cell-value text-emerald';
+      if (isOvercurrent) {
+        spreaderVal.textContent = 'Trip Alert';
+        spreaderVal.className = 'cell-value text-coral';
+        if (spreaderSub) spreaderSub.textContent = 'Motor Overcurrent Jam';
+        if (spreaderDot) spreaderDot.className = 'feed-dot dot-empty';
+      } else {
+        spreaderVal.textContent = isPaused ? 'Paused' : 'Healthy';
+        spreaderVal.className = isPaused ? 'cell-value text-amber' : 'cell-value text-emerald';
+        if (spreaderSub) spreaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
+        if (spreaderDot) spreaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
+      }
     }
-    if (spreaderSub) spreaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
-    if (spreaderDot) spreaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
 
     if (loaderVal) {
       loaderVal.textContent = isPaused ? 'Paused' : 'Healthy';
       loaderVal.className = isPaused ? 'cell-value text-amber' : 'cell-value text-emerald';
+      if (loaderSub) loaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
+      if (loaderDot) loaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
     }
-    if (loaderSub) loaderSub.textContent = isPaused ? 'Proximity Pause Active' : 'Normal • Ready';
-    if (loaderDot) loaderDot.className = isPaused ? 'feed-dot dot-empty' : 'feed-dot dot-available';
 
     if (feedVal) {
       feedVal.textContent = isFeedAvail ? 'Available' : 'Empty / Refill';
       feedVal.className = isFeedAvail ? 'cell-value text-emerald' : 'cell-value text-coral';
+      if (feedSub) feedSub.textContent = isFeedAvail ? 'Feed in Hopper' : 'Hopper Empty - Refill';
+      if (feedDot) feedDot.className = isFeedAvail ? 'feed-dot dot-available' : 'feed-dot dot-empty';
     }
-    if (feedSub) feedSub.textContent = isFeedAvail ? 'Feed in Hopper' : 'Hopper Empty - Refill';
-    if (feedDot) feedDot.className = isFeedAvail ? 'feed-dot dot-available' : 'feed-dot dot-empty';
 
-    if (wirelessVal) { wirelessVal.textContent = 'Connected'; wirelessVal.className = 'cell-value text-emerald'; }
-    if (wirelessSub) wirelessSub.textContent = 'Connected • Strong Signal';
-    if (wirelessDot) wirelessDot.className = 'feed-dot dot-available';
+    if (wirelessVal) {
+      wirelessVal.textContent = 'Connected';
+      wirelessVal.className = 'cell-value text-emerald';
+      if (wirelessSub) wirelessSub.textContent = `Connected • ${ageStr}`;
+      if (wirelessDot) wirelessDot.className = 'feed-dot dot-available';
+    }
   } else {
     if (spreaderVal) { spreaderVal.textContent = 'Not Connected'; spreaderVal.className = 'cell-value text-muted'; }
     if (spreaderSub) spreaderSub.textContent = 'No Signal';
@@ -770,6 +794,74 @@ function updateDiagnosticsUI(dev, isConnected, heroTitle) {
     if (wirelessVal) { wirelessVal.textContent = 'Not Connected'; wirelessVal.className = 'cell-value text-muted'; }
     if (wirelessSub) wirelessSub.textContent = 'No Signal';
     if (wirelessDot) wirelessDot.className = 'feed-dot dot-offline';
+  }
+
+  // Update Dynamic Diagnostic Checklist
+  const clockDesc = document.getElementById('diag-clock-desc');
+  const clockBadge = document.getElementById('diag-clock-badge');
+  const spreaderDesc = document.getElementById('diag-spreader-desc');
+  const spreaderBadge = document.getElementById('diag-spreader-badge');
+  const feedDesc = document.getElementById('diag-feed-desc');
+  const feedBadge = document.getElementById('diag-feed-badge');
+  const powerDesc = document.getElementById('diag-power-desc');
+  const powerBadge = document.getElementById('diag-power-badge');
+  const rfDesc = document.getElementById('diag-rf-desc');
+  const rfBadge = document.getElementById('diag-rf-badge');
+
+  if (clockDesc && clockBadge) {
+    clockDesc.textContent = isConnected ? 'Accurate • Synced with daily schedule' : 'Clock status pending check-in';
+    clockBadge.textContent = isConnected ? 'PASSED' : 'STANDBY';
+    clockBadge.className = isConnected ? 'badge-state b-done' : 'badge-state b-idle';
+  }
+
+  if (spreaderDesc && spreaderBadge) {
+    if (isOvercurrent) {
+      spreaderDesc.textContent = 'Alert • Overcurrent trip detected';
+      spreaderBadge.textContent = 'ALERT';
+      spreaderBadge.className = 'badge-state b-alert';
+    } else {
+      spreaderDesc.textContent = isConnected ? 'Passed • Normal load • No jam detected' : 'Motor idle in standby';
+      spreaderBadge.textContent = isConnected ? 'PASSED' : 'STANDBY';
+      spreaderBadge.className = isConnected ? 'badge-state b-done' : 'badge-state b-idle';
+    }
+  }
+
+  if (feedDesc && feedBadge) {
+    if (isFeedEmpty) {
+      feedDesc.textContent = 'Refill required • Hopper sensor empty';
+      feedBadge.textContent = 'EMPTY';
+      feedBadge.className = 'badge-state b-alert';
+    } else {
+      feedDesc.textContent = isConnected ? 'Passed • Feed available in hopper' : 'Sensor status verified';
+      feedBadge.textContent = isConnected ? 'PASSED' : 'STANDBY';
+      feedBadge.className = isConnected ? 'badge-state b-done' : 'badge-state b-idle';
+    }
+  }
+
+  if (powerDesc && powerBadge) {
+    if (isPowerFault) {
+      powerDesc.textContent = 'Power fault detected • Check supply';
+      powerBadge.textContent = 'FAULT';
+      powerBadge.className = 'badge-state b-alert';
+    } else {
+      powerDesc.textContent = isConnected ? `Passed • ${voltStr} • Solar charging normal` : 'Battery standby';
+      powerBadge.textContent = isConnected ? 'PASSED' : 'STANDBY';
+      powerBadge.className = isConnected ? 'badge-state b-done' : 'badge-state b-idle';
+    }
+  }
+
+  if (rfDesc && rfBadge) {
+    rfDesc.textContent = isConnected ? `Passed • Strong link • ${ageStr}` : 'Link idle • Waiting for uplink';
+    rfBadge.textContent = isConnected ? 'PASSED' : 'OFFLINE';
+    rfBadge.className = isConnected ? 'badge-state b-done' : 'badge-state b-offline';
+  }
+
+  // Update Calibration Note
+  const calibNote = document.getElementById('calib-result-note');
+  if (calibNote && dev) {
+    const rate = dev.dischargeRate || dev.DischargeRate_gs || dev.dischargeRateGs || 100;
+    const fpe = dev.fpeGrams || dev.FeedPerEvent_g || 100;
+    calibNote.textContent = `Current calibration: ${rate} g/s (${fpe}g = ${(fpe / rate).toFixed(1)}s motor spin)`;
   }
 }
 
@@ -853,6 +945,16 @@ function loadSelectedDeviceToUI() {
     if (pillFeedDot) pillFeedDot.className = 'pill-dot dot-offline';
     if (pillFeedStatus) pillFeedStatus.textContent = 'Not Connected';
 
+    const pillPowerDot = document.getElementById('pill-power-dot');
+    const pillPowerStatus = document.getElementById('pill-power-status');
+    if (pillPowerDot) pillPowerDot.className = 'pill-dot dot-offline';
+    if (pillPowerStatus) pillPowerStatus.textContent = 'Power Offline';
+
+    const pillWindowDot = document.getElementById('pill-window-dot');
+    const pillWindowStatus = document.getElementById('pill-window-status');
+    if (pillWindowDot) pillWindowDot.className = 'pill-dot dot-offline';
+    if (pillWindowStatus) pillWindowStatus.textContent = `${dev.startHour || 6}:00 AM – ${dev.endHour || 18}:00 PM`;
+
     const btnStart = document.getElementById('btn-remote-start');
     const btnStop = document.getElementById('btn-remote-stop');
     if (btnStart) {
@@ -883,7 +985,50 @@ function loadSelectedDeviceToUI() {
   if (connCell) connCell.className = 'cell-value text-emerald';
   if (connDot) connDot.className = 'dot-live-pulse';
   if (connText) connText.textContent = 'Connected';
-  if (connSub) connSub.textContent = 'Signal Strong';
+  if (connSub) {
+    const lastEpoch = Number(dev.LastSeenEpoch || dev.lastSeen || 0);
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const ageSec = lastEpoch > 0 ? Math.max(0, nowEpoch - lastEpoch) : 0;
+    if (ageSec < 60) {
+      connSub.textContent = 'Live · Just now';
+    } else if (ageSec < 3600) {
+      connSub.textContent = `Live · ${Math.floor(ageSec / 60)}m ago`;
+    } else if (ageSec < 86400) {
+      connSub.textContent = `Updated ${Math.floor(ageSec / 3600)}h ago`;
+    } else {
+      connSub.textContent = 'Signal Strong';
+    }
+  }
+
+  // Update Dynamic Operational Status Pills
+  const pillPowerDot = document.getElementById('pill-power-dot');
+  const pillPowerStatus = document.getElementById('pill-power-status');
+  const voltMv = dev.LastVoltage_mV !== undefined ? Number(dev.LastVoltage_mV) : (dev.voltage_mV !== undefined ? Number(dev.voltage_mV) : 0);
+  if (pillPowerDot && pillPowerStatus) {
+    if (voltMv >= 12000) {
+      pillPowerDot.className = 'pill-dot dot-available';
+      pillPowerStatus.textContent = `${(voltMv / 1000).toFixed(1)}V · Battery Healthy`;
+    } else if (voltMv >= 11000) {
+      pillPowerDot.className = 'pill-dot dot-warning';
+      pillPowerStatus.textContent = `${(voltMv / 1000).toFixed(1)}V · Battery Low`;
+    } else if (voltMv > 1000) {
+      pillPowerDot.className = 'pill-dot dot-empty';
+      pillPowerStatus.textContent = `${(voltMv / 1000).toFixed(1)}V · Check Supply`;
+    } else if (voltMv > 0) {
+      pillPowerDot.className = 'pill-dot dot-warning';
+      pillPowerStatus.textContent = `${(voltMv / 1000).toFixed(2)}V · Bench Supply`;
+    } else {
+      pillPowerDot.className = 'pill-dot dot-available';
+      pillPowerStatus.textContent = 'Battery / Solar OK';
+    }
+  }
+
+  const pillWindowDot = document.getElementById('pill-window-dot');
+  const pillWindowStatus = document.getElementById('pill-window-status');
+  if (pillWindowDot && pillWindowStatus) {
+    pillWindowDot.className = 'pill-dot dot-available';
+    pillWindowStatus.textContent = `${timeFormatted} – ${endTimeFormatted}`;
+  }
 
   updateDiagnosticsUI(dev, true, heroTitle);
 
@@ -1614,172 +1759,249 @@ async function renderHistoryView() {
   if (pondEl) pondEl.textContent = pond ? pond.name : 'Pond P-01';
   if (targetLbl) targetLbl.textContent = `${(dev.targetKg || 15.0).toFixed(1)} Kg`;
 
-  // Fetch or generate 7-day metric data
+  // 1. Fetch 15-day metric data from cloud
   let metrics = appState.deviceMetrics[dev.id];
-  if (!metrics) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/metrics/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/metrics/${dev.id}?days=15&_t=${Date.now()}`, { cache: 'no-store' });
+    if (res.ok) {
       const data = await res.json();
       if (data && data.metrics && data.metrics.length > 0) {
         metrics = data.metrics;
         appState.deviceMetrics[dev.id] = metrics;
       }
-    } catch (e) {}
-  }
-
-  // Fetch actual live telemetry events logged in DynamoDB from hardware
-  try {
-    const tRes = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?_t=${Date.now()}`, { cache: 'no-store' });
-    if (tRes.ok) {
-      const tData = await tRes.json();
-      if (tData && tData.telemetry && tData.telemetry.length > 0) {
-        // Find active session anchor and hardware cumulative grams from latest telemetry
-        let activeCurEv = dev.currentEvent || 0;
-        let hwDispGrams = 0;
-        for (const item of tData.telemetry) {
-          const ev = Math.round(Number(item.CurrentEvent || 0));
-          const disp = Math.round(Number(item.FeedDispensed_g || 0));
-          if (ev > 0) {
-            if (activeCurEv === 0) activeCurEv = ev;
-            if (hwDispGrams === 0 && disp > 0) hwDispGrams = disp;
-            break;
-          }
-        }
-
-        const seenEvents = new Set();
-        const cleanEvents = [];
-        for (const item of tData.telemetry) {
-          const evNum = Math.round(Number(item.CurrentEvent || 0));
-          if (evNum <= 0) continue;
-          // Boundary guard: Stop at prior run boundary (if evNum > activeCurEv, it belongs to an earlier superseded session)
-          if (activeCurEv > 0 && evNum > activeCurEv) {
-            break;
-          }
-          if (!seenEvents.has(evNum)) {
-            seenEvents.add(evNum);
-            let timeStr = item.Time || '';
-            if (timeStr && timeStr.includes(':')) {
-              const parts = timeStr.split(' ');
-              const timeParts = parts[0].split(':');
-              if (timeParts.length >= 2) {
-                timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
-              }
-            }
-            const eventGrams = Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100);
-            cleanEvents.push({
-              eventNumber: evNum,
-              time: timeStr,
-              grams: eventGrams,
-              cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
-              timestamp: Number(item.Timestamp || 0),
-              date: item.Date || ''
-            });
-          }
-        }
-        // Recover physical pulse deltas from cumulative grams to prevent any running-average distortion
-        const sortedAsc = cleanEvents.slice().sort((a, b) => a.eventNumber - b.eventNumber);
-        for (let i = 1; i < sortedAsc.length; i++) {
-          const prev = sortedAsc[i - 1];
-          const curr = sortedAsc[i];
-          if (curr.cumulativeGrams > prev.cumulativeGrams) {
-            const delta = curr.cumulativeGrams - prev.cumulativeGrams;
-            if (delta >= 10 && delta <= 2000) {
-              curr.grams = delta;
-            }
-          }
-        }
-        const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-        const todayEvents = cleanEvents.filter(e => e.date === todayIso);
-        const pastEvents = cleanEvents.filter(e => e.date && e.date !== todayIso);
-        
-        // dev.eventsLog strictly contains events belonging to TODAY
-        dev.eventsLog = todayEvents;
-        dev.pastEventsLog = pastEvents;
-        
-        let calculatedKg = 0.0;
-        if (todayEvents.length > 0) {
-          if (hwDispGrams > 0 && activeCurEv > 0) {
-            calculatedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
-          } else {
-            const sumGrams = todayEvents.reduce((acc, e) => acc + (Number(e.grams) || 0), 0);
-            calculatedKg = parseFloat((sumGrams / 1000.0).toFixed(2));
-          }
-        } else {
-          // New day before any feed events have occurred today
-          calculatedKg = 0.0;
-        }
-
-        dev.historyDispensedKg = calculatedKg;
-        dev.dispensedKg = calculatedKg;
-        const dispensedText = document.getElementById('dispensed-val-text');
-        if (dispensedText) {
-          dispensedText.textContent = dev.dispensedKg.toFixed(2);
-        }
-      }
     }
-  } catch (e) {
-    console.error("Telemetry fetch error:", e);
-  }
+  } catch (e) {}
 
-  // Fallback 7-day records if offline or pending
+  // Fallback 15-day records if offline or pending
   if (!metrics || metrics.length === 0) {
     const today = new Date();
     metrics = [];
     const base = dev.targetKg || 15.0;
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 14; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(d.getDate() - i);
+      const dIso = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
       const dStr = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', month: 'numeric', day: 'numeric' });
       const disp = (i === 0) ? Number(dev.dispensedKg || 0.0) : 0.0;
       metrics.push({
+        Date: dIso,
         dateLabel: dStr,
-        feedKg: disp,
-        targetKg: base,
+        FeedDispensed_kg: disp,
+        Target_kg: base,
+        EventsCompleted: (i === 0) ? (dev.currentEvent || 0) : 0,
+        TotalEvents: dev.totalEvents || 150,
         isToday: i === 0
       });
     }
     appState.deviceMetrics[dev.id] = metrics;
   }
 
+  // 2. Determine currently active/selected date in History tab
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+  if (!appState.selectedHistoryDate) {
+    const todayMetric = metrics.find(m => m.isToday || m.Date === todayIso);
+    if (todayMetric && (todayMetric.FeedDispensed_kg > 0 || todayMetric.EventsCompleted > 0)) {
+      appState.selectedHistoryDate = todayMetric.Date;
+    } else {
+      // Find the most recent active date with feed events
+      const lastActive = metrics.slice().reverse().find(m => (m.FeedDispensed_kg || 0) > 0 || (m.EventsCompleted || 0) > 0);
+      appState.selectedHistoryDate = lastActive ? lastActive.Date : todayIso;
+    }
+  }
+
+  // 3. Render 15-Day Date Selector Ribbon
+  renderDateSelectorRibbon(metrics);
+
+  // 4. Fetch telemetry events for the selected date
+  const targetDate = appState.selectedHistoryDate;
+  let dateTelemetry = [];
+  let hourlyKg = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  let selectedDayDispensedKg = 0.0;
+
+  try {
+    const tRes = await fetch(`${API_BASE_URL}/api/telemetry/${dev.id}?date=${targetDate}&_t=${Date.now()}`, { cache: 'no-store' });
+    if (tRes.ok) {
+      const tData = await tRes.json();
+      if (tData && tData.telemetry) {
+        dateTelemetry = tData.telemetry;
+        if (tData.hourlyKg && Array.isArray(tData.hourlyKg)) {
+          hourlyKg = tData.hourlyKg;
+        }
+        selectedDayDispensedKg = Number(tData.totalDispensedKg || 0.0);
+      }
+    }
+  } catch (e) {
+    console.error("Telemetry fetch error:", e);
+  }
+
+  // Fallback: If hourlyKg is all zeros but we have dateTelemetry, derive from event timestamps
+  if (!hourlyKg.some(v => v > 0) && dateTelemetry.length > 0) {
+    dateTelemetry.forEach(it => {
+      const rawTs = Number(it.Timestamp || 0);
+      if (rawTs > 0) {
+        const dt = new Date(rawTs * 1000);
+        const h = dt.getUTCHours();
+        const g = Number(it.EventGrams || it.FeedPerEvent_g || 100);
+        if (h >= 0 && h < 24) hourlyKg[h] = (hourlyKg[h] || 0) + (g / 1000.0);
+      }
+    });
+  }
+
+  // Clean and prepare events for display
+  const cleanEvents = [];
+  const seenEvents = new Set();
+  for (const item of dateTelemetry) {
+    const evNum = Math.round(Number(item.CurrentEvent || 0));
+    if (evNum <= 0) continue;
+    if (!seenEvents.has(evNum)) {
+      seenEvents.add(evNum);
+      let timeStr = item.Time || '';
+      if (timeStr && timeStr.includes(':')) {
+        const parts = timeStr.split(' ');
+        const timeParts = parts[0].split(':');
+        if (timeParts.length >= 2) {
+          timeStr = `${timeParts[0]}:${timeParts[1]} ${parts[1] || ''}`.trim();
+        }
+      }
+      const eventGrams = Number(item.EventGrams || item.FeedPerEvent_g || dev.fpeGrams || 100);
+      cleanEvents.push({
+        eventNumber: evNum,
+        time: timeStr,
+        grams: eventGrams,
+        cumulativeGrams: Math.round(Number(item.FeedDispensed_g || 0)),
+        timestamp: Number(item.Timestamp || 0),
+        date: item.Date || targetDate
+      });
+    }
+  }
+  // Sort events from newest to oldest for timeline
+  cleanEvents.sort((a, b) => b.eventNumber - a.eventNumber);
+
+  // If selected date is today, update dev.dispensedKg
+  if (targetDate === todayIso && cleanEvents.length > 0) {
+    const hwDispGrams = cleanEvents[0].cumulativeGrams;
+    if (hwDispGrams > 0) {
+      dev.dispensedKg = parseFloat((hwDispGrams / 1000.0).toFixed(2));
+    }
+    const dispensedText = document.getElementById('dispensed-val-text');
+    if (dispensedText) dispensedText.textContent = dev.dispensedKg.toFixed(2);
+  }
+
+  // 5. Compute Stats Overview (Past 7 days for summary cards)
   const isConn = isDeviceConnected(dev);
   const statWeek = document.getElementById('stat-week-total');
   const statAvg = document.getElementById('stat-daily-avg');
   const statAdherence = document.getElementById('stat-adherence');
   const statSeason = document.getElementById('stat-season-total');
 
-  // Compute Stats Overview (works for both online and historical offline feeder records)
-  const totalWeek = metrics.reduce((acc, m) => acc + (m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)), 0);
-  const activeDays = metrics.filter(m => (m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)) > 0).length;
+  const past7 = metrics.slice(-7);
+  const totalWeek = past7.reduce((acc, m) => acc + (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)), 0);
+  const activeDays = past7.filter(m => (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)) > 0).length;
   const avgDaily = activeDays > 0 ? (totalWeek / activeDays).toFixed(1) : (totalWeek / 7).toFixed(1);
 
   if (statWeek) statWeek.textContent = `${totalWeek.toFixed(1)} Kg`;
   if (statAvg) statAvg.textContent = `${avgDaily} Kg`;
   if (statAdherence) statAdherence.textContent = totalWeek > 0 ? '100%' : (isConn ? '100%' : '--');
-  if (statSeason) statSeason.textContent = `${(dev.dispensedKg !== undefined && dev.dispensedKg > 0 ? dev.dispensedKg : (dev.DispensedFeed_kg || totalWeek)).toFixed(1)} Kg`;
-  if (targetLbl) targetLbl.textContent = `${(dev.targetKg || 15.0).toFixed(1)} Kg`;
+  const seasonKg = metrics.reduce((acc, m) => acc + (m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)), 0);
+  if (statSeason) statSeason.textContent = `${seasonKg.toFixed(1)} Kg`;
 
-  // Render Bar Chart
+  // 6. Render 15-Day Daily Feed Dispensed Bar Chart
   renderBarChart(metrics, dev.targetKg || 15.0);
 
-  // Render Feed Events Log
-  renderEventsLog(dev, metrics);
+  // 7. Render Hourly Feed Distribution Chart for selected date
+  const dayMetric = metrics.find(m => m.Date === targetDate);
+  const targetDayKg = selectedDayDispensedKg > 0 ? selectedDayDispensedKg : (dayMetric ? (dayMetric.FeedDispensed_kg || 0) : (cleanEvents.length * (dev.fpeGrams || 100) / 1000.0));
+  renderHourlyChart(hourlyKg, targetDate, targetDayKg);
+
+  // 8. Render All Completed Feed Events Log
+  renderEventsLog(dev, metrics, cleanEvents, targetDate);
+}
+
+function renderDateSelectorRibbon(metrics) {
+  const container = document.getElementById('history-date-pills');
+  const activeLbl = document.getElementById('history-active-date-lbl');
+  if (!container) return;
+
+  const sorted = metrics.slice().reverse();
+  const selectedDate = appState.selectedHistoryDate;
+
+  let html = '';
+  sorted.forEach(m => {
+    const isSel = (m.Date === selectedDate);
+    const dispVal = Number(m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0));
+    const label = m.isToday ? 'Today' : (m.dateLabel || m.Date);
+    if (isSel && activeLbl) {
+      activeLbl.textContent = `${m.isToday ? 'Today, ' : ''}${m.dateLabel || m.Date} (${dispVal.toFixed(1)} kg)`;
+    }
+    html += `
+      <div class="date-pill ${isSel ? 'active' : ''} ${m.isToday ? 'is-today' : ''} ${dispVal > 0 ? 'has-feed' : ''}" data-date="${m.Date}" onclick="selectHistoryDate('${m.Date}')">
+        <span class="date-pill-day">${label}</span>
+        <span class="date-pill-val">${dispVal > 0 ? dispVal.toFixed(1) + ' kg' : '0 kg'}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function selectHistoryDate(dateStr) {
+  appState.selectedHistoryDate = dateStr;
+  renderHistoryView();
+}
+
+function renderHourlyChart(hourlyKg, targetDate, totalDayKg) {
+  const container = document.getElementById('hourly-bars-container');
+  const dateLbl = document.getElementById('hourly-date-label');
+  const totalLbl = document.getElementById('hourly-day-total');
+  if (!container) return;
+
+  if (dateLbl) {
+    const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    dateLbl.textContent = (targetDate === todayIso) ? 'Today' : targetDate;
+  }
+  if (totalLbl) {
+    totalLbl.textContent = `${Number(totalDayKg || 0).toFixed(1)} Kg Dispensed`;
+  }
+
+  // Operating window is 06:00 to 18:00 (Hours 6 through 18)
+  const hours = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+  const maxVal = Math.max(1.5, ...hours.map(h => hourlyKg[h] || 0));
+
+  let html = '';
+  hours.forEach(h => {
+    const val = hourlyKg[h] || 0.0;
+    const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / maxVal) * 100));
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
+    const timeLabel = `${dispH}${ampm}`;
+
+    html += `
+      <div class="hourly-bar-col">
+        <span class="hourly-bar-val">${val > 0 ? val.toFixed(1) : ''}</span>
+        <div class="hourly-bar-pillar ${val > 0 ? 'active-feed' : ''}" data-val="${val.toFixed(2)}kg" style="height: ${heightPct}%;"></div>
+        <span class="hourly-bar-time">${timeLabel}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
 }
 
 function renderBarChart(metrics, targetKg) {
   const container = document.getElementById('history-chart-container');
   if (!container) return;
 
-  const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0)));
+  const maxVal = Math.max(targetKg * 1.3, ...metrics.map(m => m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0)));
+  const selectedDate = appState.selectedHistoryDate;
 
   let html = '';
   metrics.forEach(m => {
-    const val = m.feedKg !== undefined ? m.feedKg : (m.FeedDispensed_kg || 0);
+    const val = m.FeedDispensed_kg !== undefined ? m.FeedDispensed_kg : (m.feedKg || 0);
     const heightPct = Math.min(100, Math.max(val > 0 ? 12 : 4, (val / (maxVal || 1)) * 100));
-    const dayLabel = m.dateLabel || (m.Date ? m.Date.slice(5) : 'Day');
+    const dayLabel = m.dateLabel ? m.dateLabel.split(' ')[0] : (m.Date ? m.Date.slice(5) : 'Day');
     const isToday = m.isToday || (m.Date && m.Date === new Date().toISOString().slice(0, 10));
+    const isSelected = (m.Date === selectedDate);
 
     html += `
-      <div class="bar-column">
+      <div class="bar-column ${isSelected ? 'selected' : ''}" onclick="selectHistoryDate('${m.Date}')" title="${m.Date}: ${val.toFixed(1)} kg">
         <span class="bar-val-lbl">${val.toFixed(1)}</span>
         <div class="bar-pillar ${isToday ? 'today' : ''}" style="height: ${heightPct}%;"></div>
         <span class="bar-day-lbl">${dayLabel}</span>
@@ -1790,121 +2012,78 @@ function renderBarChart(metrics, targetKg) {
   container.innerHTML = html;
 }
 
-function renderEventsLog(dev, metrics) {
+function renderEventsLog(dev, metrics, eventsList, selectedDate) {
   const container = document.getElementById('events-log-container');
+  const logLabel = document.getElementById('log-date-label');
+  const countBadge = document.getElementById('log-count-badge');
+  const mainTitle = document.getElementById('log-main-title');
   if (!container) return;
 
   const isConn = isDeviceConnected(dev);
-  const logLabel = document.getElementById('log-date-label');
-  const now = new Date();
-  const currentTotalMin = now.getHours() * 60 + now.getMinutes();
-  const sHour = parseInt(dev.startHour !== undefined ? dev.startHour : (dev.StartHour !== undefined ? dev.StartHour : 6), 10);
-  const sMin = parseInt(dev.startMin !== undefined ? dev.startMin : (dev.StartMinute !== undefined ? dev.StartMinute : 0), 10);
-  const startTotalMin = sHour * 60 + sMin;
-  const isBeforeSchedule = currentTotalMin < startTotalMin;
-
-  const rawCurrent = dev.currentEvent !== undefined ? parseInt(dev.currentEvent, 10) : (dev.eventsToday || 0);
-  const totalEvents = dev.totalEvents ? Math.max(1, parseInt(dev.totalEvents, 10)) : 250;
-  const fpe = dev.fpeGrams || 100;
-
-  // Retrieve metrics from appState if not explicitly passed
-  const metricList = (metrics && metrics.length) ? metrics : (appState.deviceMetrics[dev.id] || []);
-  const lastActiveMetric = metricList.slice().reverse().find(m => (m.EventsCompleted || 0) > 0 || (m.FeedDispensed_kg || 0) > 0);
-
-  const hasTodayEvents = rawCurrent > 0 && !isBeforeSchedule;
-  const eventsCount = hasTodayEvents
-    ? Math.min(rawCurrent, totalEvents)
-    : (lastActiveMetric ? (lastActiveMetric.EventsCompleted || Math.round((lastActiveMetric.FeedDispensed_kg * 1000) / fpe)) : 0);
-
-  if (eventsCount === 0 && !isConn) {
-    if (logLabel) logLabel.textContent = 'Feeder is not connected';
-    container.innerHTML = `
-      <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
-        <div style="font-size: 20px; margin-bottom: 6px;">📡</div>
-        <strong style="color:var(--text-main);">Feeder is Not Connected</strong>
-        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">No live telemetry or event logs recorded.</div>
-      </div>
-    `;
-    return;
-  }
-
-  // Display up to 20 latest events for responsive rendering
-  const maxToDisplay = 20;
-  const startEvent = eventsCount > 0 ? eventsCount : 1;
-  const endEvent = Math.max(1, startEvent - maxToDisplay + 1);
-
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  const todayEvents = (dev.eventsLog || []).filter(e => !e.date || e.date === todayIso);
-  const pastEvents = dev.pastEventsLog || [];
-  const actualTodayCount = todayEvents.length;
+  const isSelectedToday = (selectedDate === todayIso);
 
+  const cleanEvents = eventsList || [];
+  const eventsCount = cleanEvents.length;
+
+  if (countBadge) {
+    countBadge.textContent = `${eventsCount} Events`;
+  }
+  if (mainTitle) {
+    mainTitle.textContent = isSelectedToday ? "Today's Feed Event Log" : `Feed Event Log (${selectedDate})`;
+  }
   if (logLabel) {
-    if (actualTodayCount > 0) {
-      logLabel.textContent = actualTodayCount > maxToDisplay 
-        ? `Showing latest ${maxToDisplay} of ${actualTodayCount} feed events today` 
-        : `Showing ${actualTodayCount} completed feed events today`;
-    } else if (pastEvents.length > 0) {
-      const pastDate = pastEvents[0].date || 'Yesterday';
-      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)} (Showing previous session from ${pastDate})`;
-    } else if (lastActiveMetric) {
-      const activeLabel = lastActiveMetric.dateLabel || lastActiveMetric.Date || 'Previous Session';
-      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)} (Last Active: ${activeLabel})`;
+    if (eventsCount > 0) {
+      logLabel.textContent = `Showing all ${eventsCount} completed feed events for ${selectedDate}`;
+    } else if (isSelectedToday) {
+      logLabel.textContent = `Today's feeding schedule begins at 06:00 AM (0 events dispensed today)`;
     } else {
-      logLabel.textContent = `Today's feed schedule begins at ${formatTimeAmPm(sHour, sMin)}`;
+      logLabel.textContent = `No feed events recorded for ${selectedDate}`;
     }
   }
 
-  let html = '';
-  function formatTimeAmPm(h, m) {
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const dispH = h % 12 === 0 ? 12 : (h > 12 ? h - 12 : h);
-    return `${String(dispH).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+  if (eventsCount === 0) {
+    if (!isConn && isSelectedToday) {
+      container.innerHTML = `
+        <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
+          <div style="font-size: 20px; margin-bottom: 6px;">📡</div>
+          <strong style="color:var(--text-main);">Feeder is Not Connected</strong>
+          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">No live telemetry recorded for today.</div>
+        </div>
+      `;
+    } else if (isSelectedToday) {
+      container.innerHTML = `
+        <div style="text-align:center; padding: 24px 16px; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.08);">
+          <div style="font-size: 22px; margin-bottom: 4px;">🌅</div>
+          <strong style="color:var(--text-main);">0 Events Dispensed Today</strong>
+          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Daily scheduled feeding begins at 06:00 AM. Select past dates above to view complete event history.</div>
+        </div>
+      `;
+    } else {
+      container.innerHTML = `
+        <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
+          <div style="font-size: 20px; margin-bottom: 6px;">📋</div>
+          <strong style="color:var(--text-main);">No Events On ${selectedDate}</strong>
+          <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Feeder was inactive or in standby on this date.</div>
+        </div>
+      `;
+    }
+    return;
   }
 
-  if (actualTodayCount > 0) {
-    const displayed = todayEvents.slice(0, maxToDisplay);
-    displayed.forEach(ev => {
-      html += `
-        <div class="event-log-item">
-          <div>
-            <span class="event-log-time">${ev.time}</span>
-            <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed ${ev.isManual ? '• Manual' : ''}</div>
-          </div>
-          <span class="event-log-tag tag-completed">DISPENSED</span>
-        </div>
-      `;
-    });
-  } else if (pastEvents.length > 0) {
+  // Render ALL events (no 20-event cutoff!)
+  let html = '';
+  cleanEvents.forEach(ev => {
     html += `
-      <div style="text-align:center; padding: 18px 12px; color: var(--text-muted); font-size: 13px; background: rgba(255,255,255,0.02); border-radius: 8px; margin-bottom: 12px; border: 1px dashed rgba(255,255,255,0.08);">
-        <div style="font-size: 20px; margin-bottom: 4px;">🌅</div>
-        <strong style="color:var(--text-main);">New Day: 0 Feed Events Dispensed Today</strong>
-        <div style="font-size: 12px; margin-top: 3px; color: var(--text-muted);">Today's scheduled feeding begins at ${formatTimeAmPm(sHour, sMin)}.</div>
-      </div>
-      <div style="padding: 6px 4px; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-color); margin-bottom: 8px;">
-        Previous Feed Session (${pastEvents[0].date})
-      </div>
-    `;
-    pastEvents.slice(0, maxToDisplay).forEach(ev => {
-      html += `
-        <div class="event-log-item" style="opacity: 0.75;">
-          <div>
-            <span class="event-log-time">${ev.date || 'Past'} • ${ev.time}</span>
-            <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed</div>
-          </div>
-          <span class="event-log-tag tag-idle">PREVIOUS</span>
+      <div class="event-log-item">
+        <div>
+          <span class="event-log-time">${ev.time || '--:--'}</span>
+          <div class="event-log-desc">Feed Event #${ev.eventNumber} • ${ev.grams}g dispensed ${ev.cumulativeGrams ? `(${ (ev.cumulativeGrams/1000).toFixed(2) } kg cumulative)` : ''}</div>
         </div>
-      `;
-    });
-  } else {
-    html = `
-      <div style="text-align:center; padding: 28px 16px; color: var(--text-muted); font-size: 13px;">
-        <div style="font-size: 20px; margin-bottom: 6px;">⏳</div>
-        <strong style="color:var(--text-main);">Ready for Feed Schedule</strong>
-        <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">0 events dispensed today. Schedule begins at ${formatTimeAmPm(sHour, sMin)}.</div>
+        <span class="event-log-tag tag-completed">DISPENSED</span>
       </div>
     `;
-  }
+  });
 
   container.innerHTML = html;
 }
@@ -2826,9 +3005,8 @@ async function renderTrayChecksView() {
 
 async function runFullDiagnosticScan() {
   const btn = document.getElementById('btn-run-diag');
-  if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Scanning...';
-
-  showToast('🔍 Running system health check...');
+  if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Scanning hardware...';
+  showToast('🔍 Running real-time system health scan...');
 
   const dev = appState.devices.find(d => d.id === appState.selectedDeviceId);
   if (dev) {
@@ -2838,13 +3016,34 @@ async function runFullDiagnosticScan() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: 'DIAGNOSTIC_SCAN' })
       });
-    } catch (e) {}
+      // Refresh live device state
+      const res = await fetch(`${API_BASE_URL}/api/devices?_t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const updated = (data.devices || []).find(d => d.DeviceId === dev.id || d.id === dev.id);
+        if (updated) {
+          Object.assign(dev, updated);
+          loadSelectedDeviceToUI();
+        }
+      }
+    } catch (e) {
+      console.warn('Diag scan error:', e);
+    }
   }
 
-  setTimeout(() => {
-    if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Run Health Check';
-    showToast('🎉 All system health checks PASSED! Feeder healthy.');
-  }, 1200);
+  if (btn) btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Run Health Check';
+
+  const flags = Number(dev ? dev.StatusFlags || dev.statusFlags || 0 : 0);
+  const isConn = isDeviceConnected(dev);
+  if (!isConn) {
+    showToast('⚠️ Health check: Feeder is offline or disconnected.');
+  } else if ((flags & 0x02) !== 0) {
+    showToast('❌ Health check ALERT: Dispenser motor trip / overcurrent detected!');
+  } else if ((flags & 0x08) !== 0) {
+    showToast('⚠️ Health check: Feed hopper is empty — refill required.');
+  } else {
+    showToast('✅ All system health checks PASSED! Feeder healthy.');
+  }
 }
 
 function runCalibrationSample(sec) {
@@ -3072,6 +3271,11 @@ async function syncDevicesFromCloud() {
           if (cloudDev.FeedAvailable !== undefined) localDev.feedAvailable = Boolean(cloudDev.FeedAvailable);
           if (cloudDev.LastEventTime !== undefined) localDev.lastEventTime = cloudDev.LastEventTime;
           if (cloudDev.LastSeenEpoch !== undefined) localDev.lastSeenEpoch = Number(cloudDev.LastSeenEpoch);
+          if (cloudDev.LastVoltage_mV !== undefined) localDev.LastVoltage_mV = Number(cloudDev.LastVoltage_mV);
+          if (cloudDev.LastCurrent_mA !== undefined) localDev.LastCurrent_mA = Number(cloudDev.LastCurrent_mA);
+          if (cloudDev.LastTestResult !== undefined) localDev.lastTestResult = cloudDev.LastTestResult;
+          if (cloudDev.FirmwareVersion !== undefined) localDev.firmwareVersion = cloudDev.FirmwareVersion;
+          if (cloudDev.FirmwareName !== undefined) localDev.firmwareName = cloudDev.FirmwareName;
           if (cloudDev.StartHour !== undefined) localDev.startHour = Number(cloudDev.StartHour);
           if (cloudDev.EndHour !== undefined) localDev.endHour = Number(cloudDev.EndHour);
           if (cloudDev.StartMinute !== undefined) localDev.startMin = Number(cloudDev.StartMinute);

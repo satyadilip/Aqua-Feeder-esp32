@@ -36,6 +36,10 @@
 | | | | **STORY-022** (Senior Test Engineer Cloud Audit & Defect Resolution) `CLOSED` |
 | | | | **STORY-023** (Eradicate Running-Average Distortion on FeedPerEvent Changes in Event History) `CLOSED` |
 | | | | **STORY-024** (Firmware & Cloud Forensic Review: Stop Feed State Preservation, Telemetry Parity, Dynamic Schedule Timing) `CLOSED` |
+| | | | **STORY-026** (Eradication of Ghost Telemetry Aggregation & Contradictory Status Subtext) `CLOSED` |
+| | **STORY-027** (15-Day History Date Selector & Hourly Visualizer) `REQ-216` | | |
+| | **STORY-028** (Deterministic Next Event Schedule Anchoring) `REQ-217` | | |
+| | **STORY-029** (Hardware Data Grounding: Dynamic Battery, Solar & Diagnostics) `REQ-218` | | |
 
 ---
 
@@ -608,3 +612,37 @@
     - Burst Count Sub: `Starts at 06:00 AM (163 Events)`
     - Dispensed kg: `0.00` (14.33 kg completely eradicated)
     - 0 SEVERE browser console errors.
+
+
+---
+
+### STORY-027: 15-Day History Date Selector, Full Event Logs & Hourly Visualizer (CR-025 / REQ-216)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farmer & Pond Supervisor
+- **I want:** To select any past date from at least the past 15 days in the History tab, view the complete timeline of feed events without 20-event truncation, and see an hourly feeding distribution visualization.
+- **Root Cause & Technical Fix:**
+  1. `api_lambda.py#L856-L860` broke query iteration when `d_str < today_date_str`, causing 0 events on day rollover. Fix: Support `?date=YYYY-MM-DD` and default to latest active day when today has 0 events.
+  2. `web_dashboard/app.js` truncated events list to `maxToDisplay = 20`. Fix: Remove truncation, render all completed events.
+  3. UI lacked date picker and hourly graph. Fix: Add 15-day selector bar and hourly distribution graph.
+
+---
+
+### STORY-028: Deterministic Next Event Schedule Anchoring to Saved Settings (CR-026 / REQ-217)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farmer
+- **I want:** The Next Feed metric to accurately reflect the feeder's configured schedule and event sequence rather than always jumping to `now + ~4 minutes` on every page refresh.
+- **Root Cause & Technical Fix:**
+  1. `api_lambda.py` and `lambda_function.py` re-anchored `next_feed_epoch = now_epoch + gap_s` on every refresh during active feeding.
+  2. Fix: Calculate deterministic event timestamp $T_{k+1}$ from schedule start and gap interval; display exact time and countdown context (e.g. `Event 76 of 150 · in 3 mins (Every 4.7m)`).
+
+---
+
+### STORY-029: Hardware Data Grounding: Dynamic Battery, Solar & Diagnostics Checklist (CR-027 / REQ-218)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Quality Assurance Engineer
+- **I want:** All dashboard status indicators, power supply badges, active window labels, and diagnostic checklist items to reflect authentic hardware telemetry and configuration instead of static HTML or simulated timeouts.
+- **Root Cause & Technical Fix:**
+  1. Operational Status power pill was hardcoded static HTML. Fix: Bind to `LastVoltage_mV` and `StatusFlags & 0x04`.
+  2. Operational Status active window was hardcoded to `06:00 AM – 06:00 PM`. Fix: Bind to dynamic `StartHour:StartMinute` – `EndHour:EndMinute`.
+  3. Troubleshoot checklist had 5 static HTML PASSED items. Fix: Bind each item to live hardware telemetry flags and sensor readings.
+  4. `runFullDiagnosticScan()` used a dummy 1200ms `setTimeout`. Fix: Execute genuine validation of device telemetry.

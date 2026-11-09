@@ -3512,3 +3512,178 @@ html, body {
   color: var(--brand-sage, #059669) !important;
   font-weight: 900 !important;
 }
+
+
+/* ==========================================================================
+   15-DAY DATE SELECTOR RIBBON & HOURLY DISTRIBUTION STYLES (CR-025 / STORY-027)
+   ========================================================================== */
+.date-selector-ribbon-wrap {
+  margin: 10px 0 14px;
+}
+
+.date-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.date-selector-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.date-selected-indicator {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--brand-teal, #059669);
+}
+
+.date-selector-ribbon {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.date-selector-ribbon::-webkit-scrollbar {
+  height: 4px;
+}
+
+.date-selector-ribbon::-webkit-scrollbar-thumb {
+  background: var(--cell-border, #CBD5E1);
+  border-radius: 4px;
+}
+
+.date-pill {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 68px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--card-subtle, #F8FAFC);
+  border: 1px solid var(--cell-border, #E2E8F0);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.date-pill:hover {
+  border-color: var(--brand-teal, #059669);
+  background: rgba(5, 150, 105, 0.05);
+}
+
+.date-pill.active {
+  background: var(--brand-teal, #059669) !important;
+  border-color: var(--brand-teal, #059669) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);
+}
+
+.date-pill-day {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.date-pill.active .date-pill-day {
+  color: #FFFFFF;
+}
+
+.date-pill-val {
+  font-size: 9.5px;
+  font-weight: 800;
+  margin-top: 3px;
+  opacity: 0.85;
+}
+
+.date-pill.active .date-pill-val {
+  color: #FFFFFF;
+  opacity: 1;
+}
+
+.date-pill.has-feed:not(.active) .date-pill-val {
+  color: var(--brand-teal, #059669);
+}
+
+.date-pill.is-today:not(.active) {
+  border-color: var(--brand-teal, #059669);
+}
+
+/* Hourly Feeding Visualization */
+.hourly-chart-card {
+  margin-top: 14px;
+}
+
+.hourly-bars-container {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  height: 140px !important;
+  gap: 6px !important;
+  padding: 14px 8px 6px !important;
+  background: var(--card-subtle, #F8FAFC);
+  border-radius: 14px;
+  border: 1px solid var(--cell-border, #E2E8F0);
+  overflow-x: auto;
+}
+
+.hourly-bar-col {
+  flex: 1;
+  min-width: 20px;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  height: 100% !important;
+  justify-content: flex-end !important;
+}
+
+.hourly-bar-val {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.hourly-bar-pillar {
+  width: 100%;
+  max-width: 18px;
+  background: #CBD5E1;
+  border-radius: 4px 4px 0 0;
+  transition: height 0.5s ease;
+  min-height: 3px;
+}
+
+.hourly-bar-pillar.active-feed {
+  background: linear-gradient(180deg, #10B981 0%, #059669 100%);
+}
+
+.hourly-bar-time {
+  font-size: 9px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.bar-pillar {
+  cursor: pointer;
+}
+
+.bar-pillar:hover {
+  filter: brightness(0.92);
+}
+
+.bar-column.selected .bar-pillar {
+  background: var(--brand-teal, #059669) !important;
+  box-shadow: 0 0 0 2px var(--brand-teal, #059669);
+}
