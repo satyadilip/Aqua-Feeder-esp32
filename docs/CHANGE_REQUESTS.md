@@ -222,3 +222,33 @@ User validation revealed four critical issues:
      - Modal close button dismisses cleanly.
      - Mobile viewport (iPhone 375x812) touch/scroll/click responsiveness.
      - Feeder 04 single-day available history rendering and centering.
+
+---
+
+## CR-032 / STORY-034: PWA Installation Architecture, Search Engine Protection, Offline Resilience UX & Security Hardening
+
+### 1. Problem Description
+An external technical audit identified five foundational gaps in the aquaCON dashboard:
+1. **PWA Inoperability:** The dashboard lacked a Web App Manifest (`manifest.json`), service worker (`sw.js`), app icons, and could not be installed as a Progressive Web App on mobile devices.
+2. **Search Engine Exposure:** The dashboard lacked `<meta name="robots" content="noindex, nofollow">` and `robots.txt`, risking indexing of private pond and feeder operational data by search engines.
+3. **Hardcoded Fallbacks:** Initial HTML contained static strings (`Pond P-02 (2.2 Acres)`, `aquaCON Feeder 03`, `Target: 15.0 Kg`) before JavaScript hydrated the DOM.
+4. **Indeterminate Offline State:** When network connectivity dropped or API Gateway polling timed out, the dashboard remained permanently stuck on `"Waiting for feeder..."` without user feedback or an active retry mechanism.
+5. **CloudFront Infrastructure:** Direct S3 website endpoints are restricted to HTTP. CloudFront distribution creation returned an AWS account verification requirement with AWS Support.
+
+### 2. Engineering Solution
+1. **PWA Enablement (`manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png`):**
+   - Implemented compliant `manifest.json` specifying app identity, standalone display mode, theme colors (`#0D9488`), and masked icons.
+   - Designed high-resolution PNG brand icons (192x192 and 512x512) featuring the aquaCON feeder droplet and pellets motif.
+   - Built `sw.js` implementing a resilient caching strategy: cached static UI shell assets and enforced direct network-first routing for real-time telemetry APIs.
+   - Registered the Service Worker in `app.js` upon `DOMContentLoaded`.
+2. **Search Engine Directives (`index.html` & `robots.txt`):**
+   - Embedded `<meta name="robots" content="noindex, nofollow">` in `<head>`.
+   - Deployed `robots.txt` (`Disallow: /`) to the S3 bucket root.
+3. **Network Resilience & Connection Drop UX (`index.html`, `styles.css`, `app.js`):**
+   - Created `#network-offline-banner` with smooth slide-down animation, warning iconography, and an immediate `"Retry Now"` button.
+   - Added `online` and `offline` event listeners in `app.js`.
+   - Tracked consecutive sync failures; if API polling fails 2+ times, the alert banner alerts the operator with dynamic status (`Device offline` vs. `Cloud sync unreachable`).
+4. **Dynamic Hydration Cleanup (`index.html`):**
+   - Replaced static placeholder text with clean neutral loading states (`Loading Feeder...`, `Loading Pond...`, `--:-- - --:--`) before device telemetry resolves.
+5. **CloudFront Distribution Setup:**
+   - Scripted automated CloudFront provisioning with `redirect-to-https`, SPA error routing (404/403 to `index.html`), and query-string forwarding. Documented the AWS one-time support verification step for account authorization.

@@ -173,6 +173,15 @@ let feederMapMarkers = [];
 
 // DOM Ready Initialization
 document.addEventListener('DOMContentLoaded', () => {
+  // Register PWA Service Worker for Offline & Installable App Capabilities
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('[PWA] Service Worker registered:', reg.scope))
+        .catch(err => console.log('[PWA] Service Worker registration failed:', err));
+    });
+  }
+
   loadDataFromStorage();
   initAuthSession();
   initAuthUI();
@@ -3414,10 +3423,52 @@ function toggleFeedStockState() {
   }
 }
 
+/* ==========================================================================
+   NETWORK RESILIENCE & OFFLINE UX CONTROLLER (CR-032 / AUDIT REMEDIATION)
+   ========================================================================== */
+let consecutiveSyncFailures = 0;
+
+function handleNetworkStatusChange(isOnline) {
+  const banner = document.getElementById('network-offline-banner');
+  const msgEl = document.getElementById('offline-banner-msg');
+  if (!banner) return;
+  if (!isOnline) {
+    if (msgEl) msgEl.textContent = 'Device offline · No internet connection detected';
+    banner.classList.add('active'); banner.style.display = 'flex';
+  } else if (consecutiveSyncFailures === 0) {
+    banner.classList.remove('active'); banner.style.display = 'none';
+  }
+}
+
+window.addEventListener('offline', () => handleNetworkStatusChange(false));
+window.addEventListener('online', () => {
+  handleNetworkStatusChange(true);
+  triggerManualSyncRetry();
+});
+
+async function triggerManualSyncRetry() {
+  const btn = document.querySelector('.btn-offline-retry');
+  if (btn) btn.textContent = 'Retrying...';
+  try {
+    await syncDevicesFromCloud();
+    const banner = document.getElementById('network-offline-banner');
+    if (banner && navigator.onLine) banner.classList.remove('active'); banner.style.display = 'none';
+    showToast('✓ Cloud connection restored');
+  } catch (e) {
+    console.warn('[Sync] Manual retry failed:', e);
+  } finally {
+    if (btn) btn.textContent = 'Retry Now';
+  }
+}
+
 async function syncDevicesFromCloud() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/devices?_t=${Date.now()}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    consecutiveSyncFailures = 0;
+    const banner = document.getElementById('network-offline-banner');
+    if (banner && navigator.onLine) banner.classList.remove('active'); banner.style.display = 'none';
 
     if (data && data.devices) {
       const validCloudIds = new Set(data.devices.map(d => d.DeviceId));
@@ -3508,7 +3559,19 @@ async function syncDevicesFromCloud() {
         renderTrayChecksView();
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    consecutiveSyncFailures++;
+    if (consecutiveSyncFailures >= 2) {
+      const banner = document.getElementById('network-offline-banner');
+      const msgEl = document.getElementById('offline-banner-msg');
+      if (banner && msgEl) {
+        msgEl.textContent = navigator.onLine 
+          ? 'Cloud sync unreachable · Retrying in background...' 
+          : 'Device offline · No internet connection detected';
+        banner.classList.add('active'); banner.style.display = 'flex';
+      }
+    }
+  }
 }
 
 function startTelemetryLoop() {

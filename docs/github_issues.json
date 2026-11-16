@@ -2444,5 +2444,20 @@
     "created_at": "2026-11-10T02:45:00Z",
     "closed_at": "2026-11-10T03:05:00Z",
     "body": "User reported that chevron side arrows were non-functional, clicking a date did not show the popup modal with trends, and requested keeping the last 20 events history card on the main history screen along with comprehensive automated testing against live production.\n\nResolution:\n- Fixed chevron navigation with touch and click bindings and isolated from 5-second polling reset\n- Fixed date bar click delegation and child element event pass-through\n- Added Recent 20 Feed Events Card on main History screen\n- Fixed backend Lambda UnboundLocalError and deployed AquaFeederApiHandler\n- Created autonomous live verification suite passing 100% on desktop and iPhone mobile viewports."
+  },
+  {
+    "id": 223,
+    "title": "REQ-223: PWA Installation Architecture, Search Engine Protection, Offline Resilience UX & Security Hardening",
+    "state": "closed",
+    "labels": [
+      "enhancement",
+      "pwa",
+      "security",
+      "resilience",
+      "verified"
+    ],
+    "created_at": "2026-11-16T06:10:00Z",
+    "closed_at": "2026-11-16T06:22:00Z",
+    "body": "Remediated technical audit findings: deployed PWA manifest and service worker, added search engine crawler blocking, built dynamic offline warning banner with retry UX, replaced hardcoded HTML placeholders, and verified live on production S3."
   }
 ]

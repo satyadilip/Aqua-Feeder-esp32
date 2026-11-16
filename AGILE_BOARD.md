@@ -696,3 +696,15 @@
   3. Main History screen was missing recent pulses. Fix: Implemented `#history-recent-events-card` displaying the latest 20 pulses directly below the bar chart.
   4. Backend Lambda threw 500 on `dev_item` uninitialized variable. Fix: Initialized `dev_item = {}` and supported dual 12/16-char MAC/DevEUI matching; deployed to `AquaFeederApiHandler`.
   5. Built comprehensive autonomous E2E test suite (`comprehensive_e2e_test.py`) passing 100% against live production S3.
+
+---
+
+### STORY-034: PWA Installation Architecture, Search Engine Protection, Offline Resilience UX & Security Hardening (CR-032 / REQ-223)
+- **Status:** `COMPLETED / CLOSED`
+- **As a:** Commercial Shrimp Farm Supervisor
+- **I want:** The dashboard to be installable as a mobile Progressive Web App (PWA), protected against search engine indexing, resilient to network drops with a clear retry banner, and devoid of misleading static placeholder text during startup.
+- **Root Cause & Technical Fix:**
+  1. No Web App Manifest or Service Worker existed. Fix: Created `manifest.json`, `sw.js`, and high-resolution icons (192px/512px); registered in `app.js`.
+  2. Robots directive missing. Fix: Added `robots.txt` and `<meta name="robots" content="noindex, nofollow">`.
+  3. UI had no connection drop feedback. Fix: Implemented `#network-offline-banner` with auto-detection and retry handler in `app.js` and `styles.css`.
+  4. Static strings in HTML. Fix: Refactored to neutral loading states.
